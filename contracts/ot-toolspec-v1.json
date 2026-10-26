@@ -1,0 +1,47 @@
+{
+  "schema": "ot-toolspec/v1",
+  "spec_id": "ot-setpoint-toolspec-v1",
+  "deployment": "simulated_pilot",
+  "building_id": "demo-building-001",
+  "policy_version": "ot-setpoint-policy/v1",
+  "units": "degC",
+  "resolution_c": 0.1,
+  "comment": "Deployment-owned, signed tool contract (SDD-OT-001 §4, D-05). REMORA is the sole authority that binds and verifies this spec at assess/dispatch time (INV-03). The bounds below are an additional declared constraint that MUST agree with the twin's local interlock (twin/guard.py); they never replace REMORA authorization. The signature block is applied in the protected deployment and is never committed to git.",
+  "tools": [
+    {
+      "tool_name": "read_zone_state",
+      "effect": "READ",
+      "credential_holder": "read_only_adapter_identity",
+      "arguments": {
+        "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}
+      }
+    },
+    {
+      "tool_name": "read_building_energy",
+      "effect": "READ",
+      "credential_holder": "read_only_adapter_identity",
+      "arguments": {}
+    },
+    {
+      "tool_name": "set_zone_setpoint",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+        "setpoint_c": {"minimum": 19.0, "maximum": 23.0, "multiple_of": 0.1}
+      },
+      "limits": {
+        "max_delta_c": 1.0,
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 2,
+        "max_observation_age_seconds": 600
+      }
+    }
+  ],
+  "signature": {
+    "algorithm": "HMAC-SHA256",
+    "key_id": "NOT_ESTABLISHED",
+    "value": "NOT_ESTABLISHED",
+    "note": "Deployment-owner attestation over the canonical spec (all keys except this block). Signed at deploy time with OT_TOOLSPEC_SIGNING_KEY; never commit a real key or value. REMORA's own binding of the signed ToolSpec is authoritative and separate from this attestation."
+  }
+}

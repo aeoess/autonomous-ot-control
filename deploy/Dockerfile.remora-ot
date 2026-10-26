@@ -1,0 +1,65 @@
+# Protected REMORA execution image + deployment-owned OT adapter (OT-003/OT-004).
+#
+# This is the ONLY image that holds the twin's actuator credential
+# (TWIN_ACTUATOR_TOKEN) and the ONLY process attached to the plant-private
+# network. It pins REMORA to the exact commit in upstream/remora.lock.json and
+# installs the small adapter from this repository as a deployment module.
+#
+# Status: IMPLEMENTED, NOT_ESTABLISHED as a build. REMORA-research is a separate,
+# pinned upstream project; building this image requires access to it and the
+# real server registration contract at the pinned commit (D-03). The exact
+# REMORA install/entrypoint and the REMORA_TOOL_REGISTRY_MODULE hook MUST be
+# reconciled against that commit by an integration test before this image's
+# governed-dispatch claim is promoted. Do NOT hardcode credentials here.
+#
+# Build arguments:
+#   REMORA_REPO    git URL of the pinned REMORA upstream (may be private)
+#   REMORA_COMMIT  40-hex commit; must match upstream/remora.lock.json
+ARG REMORA_REPO=https://github.com/darklordVirtual/REMORA-research
+ARG REMORA_COMMIT=2594d08b592e61f3d0f436671a230faaa311db9a
+
+FROM python:3.12-slim AS remora-src
+ARG REMORA_REPO
+ARG REMORA_COMMIT
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+# Pinned, shallow fetch of the exact commit. A private upstream needs build
+# credentials supplied out of band (e.g. BuildKit --ssh / --secret); none are
+# baked into this image.
+WORKDIR /src
+RUN git init -q remora \
+    && cd remora \
+    && git remote add origin "${REMORA_REPO}" \
+    && git fetch --depth 1 origin "${REMORA_COMMIT}" \
+    && git checkout -q FETCH_HEAD \
+    && test "$(git rev-parse HEAD)" = "${REMORA_COMMIT}"
+
+FROM python:3.12-slim
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
+WORKDIR /app
+
+# Install REMORA from the pinned source. The concrete install target/extra is
+# reconciled against the pinned commit's packaging (pyproject/setup).
+COPY --from=remora-src /src/remora /opt/remora
+RUN pip install /opt/remora
+
+# Deployment-owned OT adapter and the contracts it binds. Only these two trees
+# plus the twin's actuator-facing schema are needed on the execution side.
+COPY adapter /app/adapter
+COPY contracts /app/contracts
+COPY twin/state.py /app/twin/state.py
+COPY twin/__init__.py /app/twin/__init__.py
+COPY upstream /app/upstream
+
+# REMORA discovers the adapter through its deployment registry hook. The exact
+# environment variable name and server entrypoint are version-pinned (D-03).
+ENV REMORA_TOOL_REGISTRY_MODULE=adapter.registry \
+    OT_TOOLSPEC_PATH=/app/contracts/ot-toolspec-v1.json
+
+RUN useradd --create-home --uid 10002 remora
+USER remora
+
+# The execution server entrypoint comes from REMORA at the pinned commit; it is
+# intentionally left to be reconciled rather than guessed here.
+# ENTRYPOINT ["<pinned-remora-execution-server-entrypoint>"]
