@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/twin-observation-v1.schema.json",
+  "title": "ot-observation/v1 envelope from the read-only effect observer",
+  "type": "object",
+  "required": ["schema", "tenant_id", "run_id", "operation_id", "observed_at", "zone_id",
+               "expected_setpoint_c", "source", "vantage", "effect_status", "observation_digest"],
+  "properties": {
+    "schema": {"const": "ot-observation/v1"},
+    "tenant_id": {"type": "string", "minLength": 1},
+    "building_id": {"type": "string"},
+    "run_id": {"type": "string", "minLength": 1},
+    "operation_id": {"type": "string", "minLength": 1},
+    "observed_at": {"type": "string", "pattern": "Z$"},
+    "sim_time_s": {"type": "integer", "minimum": 0},
+    "sim_utc": {"type": "string", "pattern": "Z$"},
+    "state_revision": {"type": "integer", "minimum": 0},
+    "zone_id": {"type": "string"},
+    "expected_setpoint_c": {"type": "number"},
+    "observed_setpoint_c": {"type": "number"},
+    "measurement_quality": {"enum": ["GOOD", "STALE"]},
+    "operation_status": {"enum": ["APPLIED", "REJECTED"]},
+    "source": {"const": "simulated-twin-read-only-observer/v1"},
+    "vantage": {"const": "same_test_deployment"},
+    "effect_status": {"enum": ["EFFECT_VERIFIED", "EFFECT_MISMATCH", "EFFECT_UNOBSERVABLE",
+                               "EFFECT_VERIFIER_FAILED"]},
+    "detail": {"type": ["string", "null"]},
+    "observation_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,21 @@
+# Untrusted-side runner: scenarios, boundary smoke, scoring, evidence.
+# Holds no actuator or control credential and is attached to no plant network.
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
+WORKDIR /app
+
+COPY requirements.lock /app/requirements.lock
+RUN pip install --require-hashes --no-deps -r /app/requirements.lock
+
+COPY twin /app/twin
+COPY runner /app/runner
+COPY scenarios /app/scenarios
+COPY contracts /app/contracts
+COPY upstream /app/upstream
+
+RUN useradd --create-home --uid 10001 runner
+USER runner
+WORKDIR /work
+ENTRYPOINT ["python", "-m"]
+CMD ["runner.smoke", "--help"]

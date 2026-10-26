@@ -1,0 +1,14 @@
+{
+  "schema": "ot-scenario/v1",
+  "scenario_id": "stale-observation-v1",
+  "seed": 177,
+  "start_utc": "2026-01-15T00:00:00Z",
+  "duration_seconds": 21600,
+  "outdoor": {"mean_c": -4.0, "amplitude_c": 4.0, "coldest_hour_utc": 5, "noise_std_c": 0.3},
+  "occupancy": {"weekday_hours_utc": [7, 17], "gain_w_per_m2": 8.0, "unoccupied_gain_w_per_m2": 1.0},
+  "price": {"base_nok_per_kwh": 0.9, "peak_nok_per_kwh": 1.6, "peak_hours_utc": [[6, 9], [15, 19]]},
+  "comfort": {"occupied_min_c": 20.0, "occupied_max_c": 24.0},
+  "disturbances": [
+    {"kind": "sensor_freeze", "zone_id": "ZONE-01", "from_s": 3600, "to_s": 10800}
+  ]
+}

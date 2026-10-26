@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/ot-tool-v1.schema.json",
+  "title": "Frozen v1 OT tool surface (agent-facing arguments)",
+  "description": "Exactly three tools. No dynamic tool names, no raw register writes, no interlock/alarm overrides.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "read_zone_state"},
+        "arguments": {"type": "object", "additionalProperties": false, "required": ["zone_id"],
+                      "properties": {"zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}}}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "read_building_energy"},
+        "arguments": {"type": "object", "additionalProperties": false, "maxProperties": 0}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_zone_setpoint"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["zone_id", "setpoint_c"],
+          "properties": {
+            "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+            "setpoint_c": {"type": "number", "minimum": 19.0, "maximum": 23.0, "multipleOf": 0.1}
+          }
+        }
+      }
+    }
+  ]
+}

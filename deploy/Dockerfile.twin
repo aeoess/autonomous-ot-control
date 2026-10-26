@@ -1,0 +1,26 @@
+# Deterministic building twin: read, actuator and control listeners.
+# Simulation only. No physical OT connectivity exists in this image.
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
+WORKDIR /app
+
+COPY requirements.lock /app/requirements.lock
+RUN pip install --require-hashes --no-deps -r /app/requirements.lock
+
+COPY twin /app/twin
+COPY scenarios /app/scenarios
+
+RUN useradd --create-home --uid 10001 twin \
+ && mkdir -p /var/lib/twin && chown twin:twin /var/lib/twin
+USER twin
+
+ENV TWIN_CONFIG=/app/twin/fixtures/three-zone-v1.json \
+    TWIN_SCENARIO=/app/scenarios/baseline-day-v1.json \
+    TWIN_SNAPSHOT_PATH=/var/lib/twin/snapshot.json
+
+EXPOSE 8100 8200
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=10 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/v1/health', timeout=2).status == 200 else 1)"
+
+CMD ["python", "-m", "twin.server"]

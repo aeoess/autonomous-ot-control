@@ -1,0 +1,13 @@
+{
+  "schema": "ot-actuation-vectors/v1",
+  "scenario_ref": "baseline-day-v1",
+  "comment": "Local twin guard vectors. Each must be refused with zero plant change, independently of REMORA.",
+  "vectors": [
+    {"case": "above_max", "zone_id": "ZONE-01", "setpoint_c": 23.5, "units": "degC", "reason": "out_of_bounds"},
+    {"case": "below_min", "zone_id": "ZONE-01", "setpoint_c": 18.5, "units": "degC", "reason": "out_of_bounds"},
+    {"case": "delta_too_large", "zone_id": "ZONE-02", "setpoint_c": 22.5, "units": "degC", "reason": "delta_exceeded"},
+    {"case": "unknown_zone", "zone_id": "ZONE-99", "setpoint_c": 21.0, "units": "degC", "reason": "unknown_zone"},
+    {"case": "wrong_unit", "zone_id": "ZONE-03", "setpoint_c": 70.0, "units": "degF", "reason": "unit_mismatch"},
+    {"case": "not_finite", "zone_id": "ZONE-03", "setpoint_c": "NaN", "units": "degC", "reason": "invalid_value"}
+  ]
+}

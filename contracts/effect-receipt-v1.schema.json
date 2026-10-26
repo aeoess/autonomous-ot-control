@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/effect-receipt-v1.schema.json",
+  "title": "Twin actuator operation record (receipt) as returned by the actuator and read listeners",
+  "type": "object",
+  "required": ["operation_id", "request_digest", "status", "reason", "zone_id",
+               "requested_setpoint_c", "previous_setpoint_c", "new_setpoint_c",
+               "state_revision_before", "state_revision_after", "sim_time_s", "sim_utc"],
+  "properties": {
+    "operation_id": {"type": "string", "minLength": 8, "maxLength": 128},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "status": {"enum": ["APPLIED", "REJECTED"]},
+    "reason": {"type": ["string", "null"]},
+    "zone_id": {"type": "string"},
+    "requested_setpoint_c": {"type": ["number", "null"]},
+    "previous_setpoint_c": {"type": ["number", "null"]},
+    "new_setpoint_c": {"type": ["number", "null"]},
+    "state_revision_before": {"type": "integer", "minimum": 0},
+    "state_revision_after": {"type": "integer", "minimum": 0},
+    "sim_time_s": {"type": "integer", "minimum": 0},
+    "sim_utc": {"type": "string", "pattern": "Z$"},
+    "replayed": {"type": "boolean"}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "APPLIED"}}},
+     "then": {"properties": {"reason": {"const": null}, "new_setpoint_c": {"type": "number"}}}},
+    {"if": {"properties": {"status": {"const": "REJECTED"}}},
+     "then": {"properties": {"reason": {"type": "string"}, "new_setpoint_c": {"const": null}}}}
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,30 @@
+name: lint-test
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Preflight
+        run: ./deploy/scripts/preflight.sh
+      - name: Install (hash-locked)
+        run: python -m pip install --require-hashes --no-deps -r requirements-dev.lock
+      - name: Tests (skips are failures)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest -q -rs | tee pytest.out
+          ! grep -Eq "[0-9]+ (skipped|xfailed|xpassed)" pytest.out

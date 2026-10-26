@@ -1,0 +1,81 @@
+# SDD-OT-001 — PR 1 (OT-001 + OT-002): simulator and boundary only.
+#
+#   ./deploy/scripts/run-demo.sh          # build, start, smoke, baseline, evidence
+#   docker compose down -v                # tear down
+#
+# Networks (SDD §8):
+#   observe        read-only measurements; runner/agents live here
+#   plant-private  actuator listener only; reserved for the REMORA dispatcher (PR 2)
+# Both are `internal`: no egress, nothing published to the host.
+# The actuator listener binds ONLY the twin's fixed plant-private address, so it
+# is not reachable from `observe` even with a guessed URL; auth is enforced
+# independently on top. The control listener binds loopback inside the twin.
+
+name: autonomous-ot-control
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=16m"]
+  pids_limit: 128
+  mem_limit: 512m
+  cpus: 1.0
+
+networks:
+  observe:
+    internal: true
+  plant-private:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
+
+volumes:
+  twin-state:
+
+services:
+  twin:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.twin
+    environment:
+      TWIN_READ_BIND: 0.0.0.0
+      TWIN_READ_PORT: "8100"
+      TWIN_ACTUATOR_BIND: 172.31.250.10
+      TWIN_ACTUATOR_PORT: "8200"
+      TWIN_CONTROL_BIND: 127.0.0.1
+      TWIN_CONTROL_PORT: "8300"
+      TWIN_AUTOPLAY_SPEEDUP: ${TWIN_AUTOPLAY_SPEEDUP:-}
+      TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?run deploy/scripts/run-demo.sh to generate .env}
+      TWIN_ACTUATOR_TOKEN: ${TWIN_ACTUATOR_TOKEN:?missing}
+      TWIN_CONTROL_TOKEN: ${TWIN_CONTROL_TOKEN:?missing}
+    volumes:
+      - twin-state:/var/lib/twin
+    networks:
+      observe:
+        aliases: [twin]
+      plant-private:
+        ipv4_address: 172.31.250.10
+
+  runner:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.runner
+    profiles: [run]
+    user: "${OT_UID:-10001}:${OT_GID:-10001}"
+    depends_on:
+      twin:
+        condition: service_healthy
+    environment:
+      TWIN_READ_URL: http://twin:8100
+      TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
+      TWIN_ACTUATOR_PROBE_URL: http://172.31.250.10:8200
+      TWIN_CONTROL_PROBE_URL: http://twin:8300
+      OT_GIT_SHA: ${OT_GIT_SHA:-UNKNOWN}
+      # Deliberately absent: TWIN_ACTUATOR_TOKEN, TWIN_CONTROL_TOKEN.
+    volumes:
+      - ./artifacts:/work/artifacts
+    networks: [observe]
