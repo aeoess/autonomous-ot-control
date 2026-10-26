@@ -1,15 +1,25 @@
-# SDD-OT-001 — PR 1 (OT-001 + OT-002): simulator and boundary only.
+# SDD-OT-001 — PR 1 (OT-001 + OT-002) simulator + PR 2 (OT-003 + OT-004) governed boundary.
 #
-#   ./deploy/scripts/run-demo.sh          # build, start, smoke, baseline, evidence
+#   ./deploy/scripts/run-demo.sh          # default profile: build, smoke, baseline, evidence
 #   docker compose down -v                # tear down
+#
+# The default profiles (none / `run`) cover the simulator + boundary demo and
+# need no REMORA access. The `governed` profile adds PostgreSQL, the protected
+# REMORA execution image (deploy/Dockerfile.remora-ot) and the SDK proposing
+# runner; it requires access to the pinned REMORA upstream to build, so the
+# governed-dispatch claim stays NOT_ESTABLISHED until that image is built.
 #
 # Networks (SDD §8):
 #   observe        read-only measurements; runner/agents live here
-#   plant-private  actuator listener only; reserved for the REMORA dispatcher (PR 2)
-# Both are `internal`: no egress, nothing published to the host.
-# The actuator listener binds ONLY the twin's fixed plant-private address, so it
-# is not reachable from `observe` even with a guessed URL; auth is enforced
-# independently on top. The control listener binds loopback inside the twin.
+#   authority      proposing runner <-> REMORA API, and REMORA <-> PostgreSQL
+#   plant-private  actuator listener only; ONLY the twin and the REMORA dispatcher
+# All are `internal`: no egress, nothing published to the host.
+# Token custody (INV-02): TWIN_ACTUATOR_TOKEN is injected ONLY into `twin`
+# (to verify) and `remora` (to present). No runner/agent/contributor service
+# receives it or joins plant-private. The actuator listener binds ONLY the twin's
+# fixed plant-private address, so it is unreachable from `observe`/`authority`
+# even with a guessed URL; auth is enforced independently on top. The control
+# listener binds loopback inside the twin.
 
 name: autonomous-ot-control
 
@@ -25,6 +35,8 @@ x-hardening: &hardening
 networks:
   observe:
     internal: true
+  authority:
+    internal: true
   plant-private:
     internal: true
     ipam:
@@ -33,6 +45,7 @@ networks:
 
 volumes:
   twin-state:
+  pg-data:
 
 services:
   twin:
@@ -79,3 +92,86 @@ services:
     volumes:
       - ./artifacts:/work/artifacts
     networks: [observe]
+
+  # --- governed profile (PR 2, OT-003 + OT-004): REMORA-governed dispatch ---
+  # Requires access to the pinned REMORA upstream to build deploy/Dockerfile.remora-ot.
+  #   docker compose --profile governed up --build -d --wait postgres remora twin
+  #   docker compose --profile governed run --rm governed \
+  #       runner.governed --setpoint 20.5 --intent-ref WORK-ORDER-001
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: [governed]
+    environment:
+      POSTGRES_DB: ${REMORA_PG_DB:?set in .env}
+      POSTGRES_USER: ${REMORA_PG_USER:?set in .env}
+      POSTGRES_PASSWORD: ${REMORA_PG_PASSWORD:?set in .env}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt: ["no-new-privileges:true"]
+    networks: [authority]
+
+  remora:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.remora-ot
+      args:
+        REMORA_REPO: ${REMORA_REPO:-https://github.com/darklordVirtual/REMORA-research}
+        REMORA_COMMIT: ${REMORA_COMMIT:-2594d08b592e61f3d0f436671a230faaa311db9a}
+    profiles: [governed]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=16m"]
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      twin:
+        condition: service_healthy
+    environment:
+      # Authority state (durable, single-use ledger) lives in PostgreSQL.
+      REMORA_DATABASE_URL: postgresql://${REMORA_PG_USER}:${REMORA_PG_PASSWORD}@postgres:5432/${REMORA_PG_DB}
+      REMORA_POLICY_VERSION: ot-setpoint-policy/v1
+      OT_TWIN_ACTUATOR_URL: http://172.31.250.10:8200
+      # Custody: the ONLY service besides the twin that holds the write credential.
+      TWIN_ACTUATOR_TOKEN: ${TWIN_ACTUATOR_TOKEN:?missing}
+      # Deployment-owner attestation key for the signed ToolSpec (dev value in .env).
+      OT_TOOLSPEC_SIGNING_KEY: ${OT_TOOLSPEC_SIGNING_KEY:?missing}
+    networks:
+      authority:
+        aliases: [remora]
+      plant-private:
+        ipv4_address: 172.31.250.20
+
+  governed:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.runner
+    profiles: [governed]
+    user: "${OT_UID:-10001}:${OT_GID:-10001}"
+    depends_on:
+      remora:
+        condition: service_started
+      twin:
+        condition: service_healthy
+    environment:
+      # Proposing actor: operator SDK token + read token only. No actuator token,
+      # not on plant-private (INV-01/INV-02) — zero direct effect from SDK-only actor.
+      REMORA_URL: http://remora:8080
+      REMORA_OPERATOR_TOKEN: ${REMORA_OPERATOR_TOKEN:?missing}
+      TWIN_READ_URL: http://twin:8100
+      TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
+      OT_GIT_SHA: ${OT_GIT_SHA:-UNKNOWN}
+      # Deliberately absent: TWIN_ACTUATOR_TOKEN, TWIN_CONTROL_TOKEN.
+    volumes:
+      - ./artifacts:/work/artifacts
+    networks: [observe, authority]

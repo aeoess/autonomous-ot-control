@@ -19,7 +19,7 @@ dependencies = [
 dev = ["pytest>=8", "jsonschema>=4.22"]
 
 [tool.setuptools.packages.find]
-include = ["twin*", "runner*"]
+include = ["twin*", "runner*", "adapter*"]
 
 [tool.setuptools.package-data]
 twin = ["fixtures/*.json"]

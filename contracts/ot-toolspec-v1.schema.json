@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/ot-toolspec-v1.schema.json",
+  "title": "Deployment-owned signed OT ToolSpec (v1)",
+  "description": "The deployment-owned tool contract REMORA binds and verifies (SDD-OT-001 §4, INV-03). Declares exactly the frozen v1 tool surface, the single WRITE tool and its limits. The simulator's local interlock is an additional check, never the source of authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "spec_id", "deployment", "building_id", "policy_version", "units",
+               "resolution_c", "tools", "signature"],
+  "properties": {
+    "schema": {"const": "ot-toolspec/v1"},
+    "spec_id": {"type": "string", "minLength": 1},
+    "deployment": {"type": "string", "minLength": 1},
+    "building_id": {"type": "string", "minLength": 1},
+    "policy_version": {"type": "string", "minLength": 1},
+    "units": {"const": "degC"},
+    "resolution_c": {"type": "number", "exclusiveMinimum": 0},
+    "comment": {"type": "string"},
+    "tools": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tool_name", "effect", "credential_holder", "arguments"],
+        "properties": {
+          "tool_name": {"enum": ["read_zone_state", "read_building_energy", "set_zone_setpoint"]},
+          "effect": {"enum": ["READ", "WRITE"]},
+          "credential_holder": {"type": "string", "minLength": 1},
+          "arguments": {"type": "object"},
+          "limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["max_delta_c", "min_interval_seconds", "max_changes_per_hour",
+                         "max_observation_age_seconds"],
+            "properties": {
+              "max_delta_c": {"type": "number", "exclusiveMinimum": 0},
+              "min_interval_seconds": {"type": "integer", "minimum": 0},
+              "max_changes_per_hour": {"type": "integer", "minimum": 1},
+              "max_observation_age_seconds": {"type": "integer", "exclusiveMinimum": 0}
+            }
+          }
+        },
+        "allOf": [
+          {"if": {"properties": {"effect": {"const": "WRITE"}}},
+           "then": {"required": ["limits"]}}
+        ]
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": {"const": "HMAC-SHA256"},
+        "key_id": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "minLength": 1},
+        "note": {"type": "string"}
+      }
+    }
+  }
+}
