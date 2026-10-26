@@ -46,6 +46,7 @@ networks:
 volumes:
   twin-state:
   pg-data:
+  remora-state:
 
 services:
   twin:
@@ -93,23 +94,33 @@ services:
       - ./artifacts:/work/artifacts
     networks: [observe]
 
-  # --- governed profile (PR 2, OT-003 + OT-004): REMORA-governed dispatch ---
-  # Requires access to the pinned REMORA upstream to build deploy/Dockerfile.remora-ot.
+
+  # --- governed profile (PR 2, OT-003 + OT-004): REMORA-governed dispatch -----
+  # Modeled on the pinned upstream deploy/ot-pilot/docker-compose.yml: REMORA in
+  # REMORA_ENV=production with the fail-closed prerequisites bound (durable
+  # execution state + envelope store in PostgreSQL, a role-separated token
+  # table). Requires access to the pinned REMORA upstream to build; the governed
+  # end-to-end effect is NOT_ESTABLISHED until this image is built and run.
+  #
+  #   ./deploy/scripts/governed-bootstrap.sh    # writes .env dev tokens/keys
   #   docker compose --profile governed up --build -d --wait postgres remora twin
   #   docker compose --profile governed run --rm governed \
   #       runner.governed --setpoint 20.5 --intent-ref WORK-ORDER-001
+  #
+  # The dev tokens/signing keys below are LOCAL PILOT VALUES (as upstream's are):
+  # a real deployment injects them from a secret manager.
 
   postgres:
     image: postgres:16-alpine
     profiles: [governed]
     environment:
-      POSTGRES_DB: ${REMORA_PG_DB:?set in .env}
-      POSTGRES_USER: ${REMORA_PG_USER:?set in .env}
-      POSTGRES_PASSWORD: ${REMORA_PG_PASSWORD:?set in .env}
+      POSTGRES_DB: ${REMORA_PG_DB:-remora}
+      POSTGRES_USER: ${REMORA_PG_USER:-remora}
+      POSTGRES_PASSWORD: ${REMORA_PG_PASSWORD:?run deploy/scripts/governed-bootstrap.sh}
     volumes:
       - pg-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-remora} -d $${POSTGRES_DB:-remora}"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -124,10 +135,7 @@ services:
         REMORA_REPO: ${REMORA_REPO:-https://github.com/darklordVirtual/REMORA-research}
         REMORA_COMMIT: ${REMORA_COMMIT:-2594d08b592e61f3d0f436671a230faaa311db9a}
     profiles: [governed]
-    read_only: true
-    cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
-    tmpfs: ["/tmp:size=16m"]
     pids_limit: 256
     mem_limit: 1g
     cpus: 1.0
@@ -137,37 +145,72 @@ services:
       twin:
         condition: service_healthy
     environment:
-      # Authority state (durable, single-use ledger) lives in PostgreSQL.
-      REMORA_DATABASE_URL: postgresql://${REMORA_PG_USER}:${REMORA_PG_PASSWORD}@postgres:5432/${REMORA_PG_DB}
-      REMORA_POLICY_VERSION: ot-setpoint-policy/v1
+      REMORA_ENV: production
+      REMORA_ENABLED_SURFACES: execution
+      # Fail-closed prerequisites: durable execution state + envelope store.
+      REMORA_PG_DSN: postgresql://${REMORA_PG_USER:-remora}:${REMORA_PG_PASSWORD}@postgres:5432/${REMORA_PG_DB:-remora}
+      REMORA_CONTROL_PLANE_DSN: postgresql://${REMORA_PG_USER:-remora}:${REMORA_PG_PASSWORD}@postgres:5432/${REMORA_PG_DB:-remora}
+      # Role-separated token table: operator cannot approve; approver/supervisor
+      # (admin) can; viewer is read-only. Each token names its actor for audit.
+      REMORA_API_TOKENS: >-
+        {"${REMORA_OPERATOR_TOKEN:-ot-agent}":{"tenant":"ot-pilot","role":"operator","actor_id":"ot-agent"},
+         "${REMORA_APPROVER_TOKEN:-ot-approver}":{"tenant":"ot-pilot","role":"admin","actor_id":"ot-approver"},
+         "${REMORA_SUPERVISOR_TOKEN:-ot-supervisor}":{"tenant":"ot-pilot","role":"admin","actor_id":"ot-supervisor"},
+         "${REMORA_VIEWER_TOKEN:-ot-viewer}":{"tenant":"ot-pilot","role":"viewer","actor_id":"ot-viewer"}}
+      REMORA_API_BEARER_TOKEN: ${REMORA_OPERATOR_TOKEN:-ot-agent}
+      # Signing keys (local pilot values; inject from a vault in reality).
+      REMORA_PDP_SIGNING_KEY: ${REMORA_PDP_SIGNING_KEY:-pilot-pdp-key-change-me}
+      REMORA_LEASE_SIGNING_KEY: ${REMORA_LEASE_SIGNING_KEY:-pilot-lease-key-change-me}
+      REMORA_AUDIT_SIGNING_KEY: ${REMORA_AUDIT_SIGNING_KEY:-pilot-audit-key-change-me}
+      REMORA_ENVELOPE_SIGNING_KEY: ${REMORA_ENVELOPE_SIGNING_KEY:-pilot-envelope-key-change-me}
+      # Deployment-owned semantics.
+      REMORA_TOOL_REGISTRY_MODULE: ot_registry
+      REMORA_SEMANTIC_BUNDLE_MODULE: ot_bundle
+      REMORA_INTENT_SOURCE_FILE: /app/ot_intents.json
+      REMORA_EXECUTION_ARTIFACT_DIR: /var/lib/remora/artifacts
+      # OT adapter wiring. Custody: the actuator token is injected ONLY here and
+      # in the twin; the dispatcher also reads the twin to bind the revision.
       OT_TWIN_ACTUATOR_URL: http://172.31.250.10:8200
-      # Custody: the ONLY service besides the twin that holds the write credential.
+      OT_TWIN_READ_URL: http://twin:8100
+      OT_TOOLSPEC_PATH: /app/contracts/ot-toolspec-v1.json
       TWIN_ACTUATOR_TOKEN: ${TWIN_ACTUATOR_TOKEN:?missing}
-      # Deployment-owner attestation key for the signed ToolSpec (dev value in .env).
-      OT_TOOLSPEC_SIGNING_KEY: ${OT_TOOLSPEC_SIGNING_KEY:?missing}
+      TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
+      PYTHONPATH: /app
+    volumes:
+      - remora-state:/var/lib/remora
     networks:
       authority:
         aliases: [remora]
+      observe: {}
       plant-private:
         ipv4_address: 172.31.250.20
 
   governed:
-    <<: *hardening
     build:
       context: .
-      dockerfile: deploy/Dockerfile.runner
+      dockerfile: deploy/Dockerfile.governed
+      args:
+        REMORA_REPO: ${REMORA_REPO:-https://github.com/darklordVirtual/REMORA-research}
+        REMORA_COMMIT: ${REMORA_COMMIT:-2594d08b592e61f3d0f436671a230faaa311db9a}
     profiles: [governed]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=16m"]
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
     user: "${OT_UID:-10001}:${OT_GID:-10001}"
     depends_on:
       remora:
-        condition: service_started
+        condition: service_healthy
       twin:
         condition: service_healthy
     environment:
-      # Proposing actor: operator SDK token + read token only. No actuator token,
-      # not on plant-private (INV-01/INV-02) — zero direct effect from SDK-only actor.
-      REMORA_URL: http://remora:8080
-      REMORA_OPERATOR_TOKEN: ${REMORA_OPERATOR_TOKEN:?missing}
+      # Proposing actor: operator SDK token + read token only. No actuator
+      # token, not on plant-private (INV-01/INV-02) — zero direct effect.
+      REMORA_URL: http://remora:8000
+      REMORA_OPERATOR_TOKEN: ${REMORA_OPERATOR_TOKEN:-ot-agent}
       TWIN_READ_URL: http://twin:8100
       TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
       OT_GIT_SHA: ${OT_GIT_SHA:-UNKNOWN}

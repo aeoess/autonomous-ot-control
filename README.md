@@ -32,10 +32,11 @@ until the pinned REMORA execution image is built (it requires the pinned upstrea
 | Rule baseline, scoring, evidence manifest | `TESTED_LOCALLY` |
 | Signed ToolSpec (bounds mirror the guard; deploy-time attestation) | `TESTED_LOCALLY` |
 | Deployment-owned callable: one governed effect, idempotent, fail-closed | `TESTED_LOCALLY` |
+| Registry/SDK/effect contracts reconciled against REMORA @ `2594d08b` | `TESTED_LOCALLY` |
 | SDK proposing runner: never self-approves, fail-closed, `UNKNOWN` not retried | `TESTED_LOCALLY` |
 | Actuator-credential custody + plant-private fencing (twin + REMORA only) | `TESTED_LOCALLY` (structural) |
-| REMORA execution image + registry hook (`deploy/Dockerfile.remora-ot`) | `IMPLEMENTED` — needs pinned upstream to build |
-| Authorized effect **through REMORA's dispatcher**; SDK-only actor → zero effect | `NOT_ESTABLISHED` — requires the built REMORA image |
+| REMORA execution image (`servers.api:app`) + deployment modules | `IMPLEMENTED` — needs pinned upstream to build |
+| Authorized effect **through REMORA's dispatcher**; SDK-only actor → zero effect | `NOT_ESTABLISHED` — requires the built image + PostgreSQL |
 | Human review flow, governed-agent vs baseline comparison | `NOT_ESTABLISHED` (PR 3) |
 | Miniflare / Cloudflare / federation | `NOT_ESTABLISHED` (PR 4–6) |
 | Real-building savings | `NOT_ESTABLISHED` — synthetic model only |
@@ -59,29 +60,33 @@ python -m runner.baseline --run-id local-1 --out artifacts
 
 ### Governed profile (PR 2)
 
-The governed path adds PostgreSQL, the protected REMORA execution image and the
-SDK proposing runner. Building `deploy/Dockerfile.remora-ot` requires access to
-the pinned REMORA upstream, so this path is opt-in and its end-to-end claim is
-`NOT_ESTABLISHED` here:
+The governed path runs REMORA (`uvicorn servers.api:app`, production mode) with
+PostgreSQL plus the SDK proposing runner, wired to the real REMORA contracts
+verified at the pinned commit (see `docs/integration-contracts.md`). Building
+`deploy/Dockerfile.remora-ot` requires the pinned REMORA upstream, so this path
+is opt-in and its end-to-end claim is `NOT_ESTABLISHED` here:
 
 ```bash
+./deploy/scripts/governed-bootstrap.sh   # writes local dev tokens/keys to .env
 docker compose --profile governed up --build -d --wait postgres remora twin
 docker compose --profile governed run --rm governed \
   runner.governed --setpoint 20.5 --intent-ref WORK-ORDER-001
 ```
 
 The proposing runner holds only an operator SDK token and the read token — no
-actuator credential, no plant-private route. See `docs/integration-contracts.md`.
+actuator credential, no plant-private route. The actuator credential lives only
+in the `twin` and `remora` services.
 
 ## Layout
 
 ```
 twin/       model, clock, scenarios, guard (local interlock), api (3 listeners), server, effect_observer, ctl
-adapter/    deployment-owned REMORA bridge: contracts (signed ToolSpec), registry (callable + hook), verifier
+adapter/    REMORA-free helpers: contracts (signed ToolSpec), actuation (effect primitive), verifier (SDK effect API)
+deploy/ot/  deployment modules loaded inside the REMORA image: ot_registry (register_tools), ot_bundle, intents, limits
 runner/     baseline, scoring, evidence, smoke (boundary probes), governed (SDK propose harness)
 contracts/  ot-tool-v1, ot-toolspec-v1, twin-observation-v1, effect-receipt-v1 JSON Schemas
 scenarios/  baseline day, stale observation, refusal vectors
-deploy/     Dockerfiles (twin, runner, remora-ot) and scripts; compose.yaml at repo root
+deploy/     Dockerfiles (twin, runner, remora-ot, governed) and scripts; compose.yaml at repo root
 docs/       SDD-OT-001, integration-contracts, adr/
 upstream/   pinned REMORA commit
 ```

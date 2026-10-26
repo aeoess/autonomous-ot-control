@@ -1,0 +1,51 @@
+{
+  "schema": "remora-cumulative-limits/v1",
+  "comment": "Reference cumulative-limits policy for the OT setpoint pilot (UNSIGNED). REMORA verifies a SIGNED envelope (remora-cumulative-limits-signed/v1): sign this with the authority Ed25519 key via REMORA's scripts/sign_limit_policy.py, publish only the public key in REMORA_LIMITS_TRUSTED_KEYS, and set REMORA_REQUIRE_LIMITS=1 to enforce. Movement is observed from the twin (ot_registry.observe_limit_value), not from what REMORA last allowed.",
+  "coverage": "all_writes",
+  "meters": {
+    "set_zone_setpoint": [
+      {
+        "quantity": "setpoint_movement",
+        "kind": "change",
+        "argument": "setpoint_c",
+        "scale": 10,
+        "unit": "decidegrees",
+        "resource_argument": "zone_id",
+        "observed": true,
+        "previous_field": "previous_setpoint_c"
+      }
+    ]
+  },
+  "limits": [
+    {
+      "limit_id": "zone-01-movement",
+      "tenant": "ot-pilot",
+      "quantity": "setpoint_movement",
+      "unit": "decidegrees",
+      "resource": "ZONE-01",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 3600
+    },
+    {
+      "limit_id": "zone-02-movement",
+      "tenant": "ot-pilot",
+      "quantity": "setpoint_movement",
+      "unit": "decidegrees",
+      "resource": "ZONE-02",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 3600
+    },
+    {
+      "limit_id": "zone-03-movement",
+      "tenant": "ot-pilot",
+      "quantity": "setpoint_movement",
+      "unit": "decidegrees",
+      "resource": "ZONE-03",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 3600
+    }
+  ]
+}

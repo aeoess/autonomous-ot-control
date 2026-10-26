@@ -6,8 +6,8 @@ no route to the twin's write listener. It proposes a ``set_zone_setpoint`` call
 to REMORA via ``remora.sdk`` and reacts to REMORA's decision. It never
 self-approves and never dispatches an effect itself: the only path to the
 actuator is REMORA's protected dispatcher and the deployment-owned callable in
-``adapter.registry`` (INV-01, INV-02, INV-06). This substantiates the OT-003
-gate "zero direct effect from SDK-only actor".
+``deploy/ot/ot_registry.py`` (INV-01, INV-02, INV-06). This substantiates the
+OT-003 gate "zero direct effect from SDK-only actor".
 
 The decision branching is a pure function (``decide``) so it is testable without
 the SDK installed. Actual proposal/execution requires the pinned ``remora.sdk``
@@ -30,11 +30,13 @@ STATE_DISPATCHED = "DISPATCHED"
 STATE_UNKNOWN = "UNKNOWN"
 
 # Canonical REMORA decision actions. The runner branches on the action *name*
-# so the logic needs no import of the SDK enum; the set must match the pinned
-# ``remora.sdk.DecisionAction`` (reconciled by the contract-drift check).
+# so the logic needs no import of the SDK enum. Verified against
+# remora.policy.report.DecisionAction at commit 2594d08b: the members are
+# ACCEPT, VERIFY, ABSTAIN, ESCALATE (there is no REFUSE/DENY). Any unmapped
+# action fails closed below.
 ACTION_ACCEPT = "ACCEPT"
 REVIEW_ACTIONS = frozenset({"VERIFY", "ESCALATE"})
-REFUSE_ACTIONS = frozenset({"REFUSE", "ABSTAIN", "DENY"})
+REFUSE_ACTIONS = frozenset({"ABSTAIN"})
 
 
 class GovernedError(RuntimeError):

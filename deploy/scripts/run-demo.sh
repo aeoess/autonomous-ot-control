@@ -10,13 +10,11 @@ cd "$(dirname "$0")/../.."
 if [[ ! -f .env ]]; then
   python3 - > .env <<'PY'
 import secrets
-for k in ("TWIN_READ_TOKEN", "TWIN_ACTUATOR_TOKEN", "TWIN_CONTROL_TOKEN",
-          "REMORA_OPERATOR_TOKEN", "OT_TOOLSPEC_SIGNING_KEY", "REMORA_PG_PASSWORD"):
+for k in ("TWIN_READ_TOKEN", "TWIN_ACTUATOR_TOKEN", "TWIN_CONTROL_TOKEN"):
     print(f"{k}=dev-{secrets.token_urlsafe(32)}")
-# Non-secret governed-profile settings (safe defaults; override as needed).
-print("REMORA_PG_DB=remora")
-print("REMORA_PG_USER=remora")
 PY
+  # Governed profile (PR 2) needs more dev values; generate them on demand with
+  # ./deploy/scripts/governed-bootstrap.sh (appends to this same .env).
   chmod 600 .env
   echo "run-demo: generated local dev tokens in .env (gitignored)"
 fi

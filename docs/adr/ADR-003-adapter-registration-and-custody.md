@@ -15,16 +15,22 @@ the simulated write route.
 
 ## Decision
 
-**Registration (D-03).** The adapter exposes `adapter.registry.register()`,
-discovered by REMORA through its deployment registry hook
-(`REMORA_TOOL_REGISTRY_MODULE`). It depends on a minimal, duck-typed `Registrar`
-protocol — `register_tool(tool_name, effect, callable, spec)` — and registers
-exactly the three frozen v1 tools, giving the actuator-backed callable only to
-`set_zone_setpoint`. The adapter constructs no grant, lease or policy; REMORA
-authorizes and binds every call (INV-03, INV-11). The concrete registrar shape at
-the pinned commit is treated as an **integration risk**: it must be reconciled by
-a test against the running REMORA execution image before the Docker image's
-governed-dispatch claim is promoted beyond `IMPLEMENTED`.
+**Registration (D-03).** Reconciled against the real REMORA source at commit
+`2594d08b`: `REMORA_TOOL_REGISTRY_MODULE` names a module exposing
+`register_tools(register)`, and REMORA calls `register(name, callable)` where each
+callable is `fn(arguments: dict) -> dict` closing over its credentials app-side
+(`servers/tool_registry_research.py`, `deploy/ot-pilot/ot_registry.py`). Our
+deployment module `deploy/ot/ot_registry.py` follows this exactly and registers
+the three frozen v1 tools, giving the actuator-backed callable only to
+`set_zone_setpoint`. (An earlier draft invented a `register(registrar, …)` /
+`Registrar.register_tool(…)` shape; that did not match upstream and was corrected
+here.) The write callable binds REMORA's proposal id (via the
+`servers.execution_api.CURRENT_PROPOSAL_ID` contextvar) as the twin's single-use
+operation id and returns the stored outcome on a re-invocation. It constructs no
+grant, lease or policy; REMORA authorizes and binds every call (INV-03, INV-11).
+The contextvar access and the running registration remain an **integration
+risk** to confirm against the live image before the governed-dispatch claim is
+promoted beyond `IMPLEMENTED`.
 
 **Limits (D-05).** The signed ToolSpec (`contracts/ot-toolspec-v1.json`) declares
 hard bounds and cumulative limits for `set_zone_setpoint`. These must equal the

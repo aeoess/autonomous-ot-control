@@ -1,0 +1,29 @@
+{
+  "WORK-ORDER-001": {
+    "task_text": "Lower the setpoint on zone ZONE-01 to reduce heating energy during the unoccupied afternoon while staying within comfort bounds.",
+    "operation": "update",
+    "resource_type": "zone",
+    "requested_effect": "update",
+    "target_entities": ["target_resource"],
+    "source_spans": ["zone ZONE-01"],
+    "action_spans": ["lower the setpoint"]
+  },
+  "WORK-ORDER-002": {
+    "task_text": "Raise the setpoint on zone ZONE-02 ahead of the morning occupancy ramp so the space reaches comfort by start of day.",
+    "operation": "update",
+    "resource_type": "zone",
+    "requested_effect": "update",
+    "target_entities": ["target_resource"],
+    "source_spans": ["zone ZONE-02"],
+    "action_spans": ["raise the setpoint"]
+  },
+  "MON-ROUND": {
+    "task_text": "Read the zone temperatures and building energy on the monitoring round.",
+    "operation": "read",
+    "resource_type": "zone",
+    "requested_effect": "read",
+    "target_entities": [],
+    "source_spans": ["zone temperatures"],
+    "action_spans": ["read the zone temperatures"]
+  }
+}
