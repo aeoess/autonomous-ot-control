@@ -12,7 +12,7 @@
   "zones": [
     {
       "id": "ZONE-01",
-      "tfm": "DEMO=360.001",
+      "tfm": "+DEMO01=564.001-RT601",
       "area_m2": 120.0,
       "ua_w_per_k": 110.0,
       "capacity_j_per_k": 6000000.0,
@@ -26,7 +26,7 @@
     },
     {
       "id": "ZONE-02",
-      "tfm": "DEMO=360.002",
+      "tfm": "+DEMO01=564.001-RT602",
       "area_m2": 90.0,
       "ua_w_per_k": 85.0,
       "capacity_j_per_k": 4500000.0,
@@ -40,7 +40,7 @@
     },
     {
       "id": "ZONE-03",
-      "tfm": "DEMO=360.003",
+      "tfm": "+DEMO01=564.001-RT603",
       "area_m2": 60.0,
       "ua_w_per_k": 70.0,
       "capacity_j_per_k": 3000000.0,

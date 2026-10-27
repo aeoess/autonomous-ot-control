@@ -4,6 +4,8 @@
 
 Every value the simulated building exposes or accepts. The twin is synthetic and uncalibrated (ADR-007); ranges are plausibility bounds for validation, not design values. Writable points change only through the governed tools below, never directly.
 
+Every point names the TFM object behind it (Statsbygg PA 0802; `docs/tfm.md`) and its role: `measured` by a sensor, `setpoint` written to a controller, `state` of equipment, `calculated` in central operations, or `input` with no building object. The TFM identifiers belong to the fictitious building `+DEMO01`.
+
 110 points, 11 interlocks, 10 tools, 5 procedures, 7 documented cascades.
 
 Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` computed binary; `CV` counter; `EX` exogenous input; `SP` writable setpoint; `SB` writable command.
@@ -12,178 +14,178 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 
 ### outdoor
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `OUT-01.Temp` | EX | degC | -40 .. 35 | Outdoor air temperature (2 m). | scenario outdoor series (ERA5 snapshot or declared curve) | `AHU-01.HRV_AfterTemp`, `HP-01.COP`, `HP-01.HeatOutput`, `HYD-01.SupplyTemp`, `CH-01.EER`, `ZONE-01.AirTemp`, `ZONE-02.AirTemp`, `ZONE-03.AirTemp` |  |
-| `OUT-01.Solar` | EX | W/m2 | 0 .. 1000 | Global horizontal irradiance. | scenario solar series | `ZONE-01.SolarGain`, `ZONE-01.Daylight`, `ZONE-02.SolarGain`, `ZONE-02.Daylight`, `ZONE-03.SolarGain`, `ZONE-03.Daylight` |  |
-| `OUT-01.RH` | EX | % | 0 .. 100 | Outdoor relative humidity. | scenario humidity series | `HP-01.Defrost` |  |
-| `OUT-01.Precipitation` | EX | mm/h | 0 .. 50 | Precipitation, preceding hour. | scenario precipitation series | `OUT-01.IcingRisk` |  |
-| `OUT-01.IcingRisk` | BV | bool | 0 .. 1 | Outdoor -6..+2 degC with precipitation within 3 h either side. | Scenario.icing_risk | `CABLE-RAMP.Power`, `CABLE-GUTTER.Power` |  |
-| `OUT-01.SurfaceWet` | AI | bool | 0 .. 1 | Ground moisture sensor at the ramp: the surface is wet, snowy or iced (twin surface model: wet after precipitation; above +2 degC dries in 2 h; at or below +2 degC stays until the snow-melt cable has run 1 h without new precipitation). | Twin._surface_wet | `CABLE-RAMP.Power`, `CABLE-GUTTER.Power`, `CABLE-RAMP.IcingHazardUncovered`, `CABLE-GUTTER.IcingHazardUncovered` |  |
-| `OUT-01.Temp24hMean` | AV | degC | -40 .. 35 | Mean outdoor temperature over the preceding 24 h; drives the summer stop. | Scenario.mean_outdoor_24h | `HYD-01.HeatingSeason` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `OUT-01.Temp` | `+DEMO01=320.001-RT901` (measured) | EX | degC | -40 .. 35 | Outdoor air temperature (2 m). | scenario outdoor series (ERA5 snapshot or declared curve) | `AHU-01.HRV_AfterTemp`, `HP-01.COP`, `HP-01.HeatOutput`, `HYD-01.SupplyTemp`, `CH-01.EER`, `ZONE-01.AirTemp`, `ZONE-02.AirTemp`, `ZONE-03.AirTemp` |  |
+| `OUT-01.Solar` | `+DEMO01=564.001-RJ901` (measured) | EX | W/m2 | 0 .. 1000 | Global horizontal irradiance. | scenario solar series | `ZONE-01.SolarGain`, `ZONE-01.Daylight`, `ZONE-02.SolarGain`, `ZONE-02.Daylight`, `ZONE-03.SolarGain`, `ZONE-03.Daylight` |  |
+| `OUT-01.RH` | `+DEMO01=564.001-RH901` (measured) | EX | % | 0 .. 100 | Outdoor relative humidity. | scenario humidity series | `HP-01.Defrost` |  |
+| `OUT-01.Precipitation` | `+DEMO01=745.001-QH901` (measured) | EX | mm/h | 0 .. 50 | Precipitation, preceding hour. | scenario precipitation series | `OUT-01.IcingRisk` |  |
+| `OUT-01.IcingRisk` | `+DEMO01=562.001-OF001` (calculated) | BV | bool | 0 .. 1 | Outdoor -6..+2 degC with precipitation within 3 h either side. | Scenario.icing_risk | `CABLE-RAMP.Power`, `CABLE-GUTTER.Power` |  |
+| `OUT-01.SurfaceWet` | `+DEMO01=745.001-QH902` (measured) | AI | bool | 0 .. 1 | Ground moisture sensor at the ramp: the surface is wet, snowy or iced (twin surface model: wet after precipitation; above +2 degC dries in 2 h; at or below +2 degC stays until the snow-melt cable has run 1 h without new precipitation). | Twin._surface_wet | `CABLE-RAMP.Power`, `CABLE-GUTTER.Power`, `CABLE-RAMP.IcingHazardUncovered`, `CABLE-GUTTER.IcingHazardUncovered` |  |
+| `OUT-01.Temp24hMean` | `+DEMO01=562.001-OF001` (calculated) | AV | degC | -40 .. 35 | Mean outdoor temperature over the preceding 24 h; drives the summer stop. | Scenario.mean_outdoor_24h | `HYD-01.HeatingSeason` |  |
 
 ### market
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `GRID-01.SpotPrice` | EX | NOK/kWh | -1 .. 20 | Day-ahead spot price for the site's area (NO3), spot only. | scenario price series (hvakosterstrommen.no snapshot) | `EM-01.Cost` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `GRID-01.SpotPrice` | (input) | EX | NOK/kWh | -1 .. 20 | Day-ahead spot price for the site's area (NO3), spot only. | scenario price series (hvakosterstrommen.no snapshot) | `EM-01.Cost` |  |
 
 ### energy
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `EM-01.Cost` | AV | NOK | 0 .. 10000000 | Accumulated simulated energy cost: electricity at spot, district heat at the declared tariff. | Twin._step |  |  |
-| `EM-01.ElectricPower` | AI | W | 0 .. 200000 | Building electricity meter: fans, chiller, heat pump, backup, boiler, lights, equipment, cables. | plant | `EM-01.Cost` |  |
-| `EM-01.DistrictHeatPower` | AI | W | 0 .. 100000 | District heat meter. | plant | `EM-01.Cost` |  |
-| `EM-01.MonthlyPeakKw` | AV | kW | 0 .. 500 | The month's highest hourly mean electric power: the basis of the grid tariff's power charge. | Twin._grid_tariff | `EM-01.GridCost` |  |
-| `EM-01.GridCost` | AV | NOK | 0 .. 10000000 | Declared reference grid tariff (ASSUMPTION): energy part per kWh plus the monthly power part. | Twin.grid_power_cost |  |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `EM-01.Cost` | `+DEMO01=562.001-OF001` (calculated) | AV | NOK | 0 .. 10000000 | Accumulated simulated energy cost: electricity at spot, district heat at the declared tariff. | Twin._step |  |  |
+| `EM-01.ElectricPower` | `+DEMO01=432.001-RE001` (measured) | AI | W | 0 .. 200000 | Building electricity meter: fans, chiller, heat pump, backup, boiler, lights, equipment, cables. | plant | `EM-01.Cost` |  |
+| `EM-01.DistrictHeatPower` | `+DEMO01=320.001-OE001` (measured) | AI | W | 0 .. 100000 | District heat meter. | plant | `EM-01.Cost` |  |
+| `EM-01.MonthlyPeakKw` | `+DEMO01=562.001-OF001` (calculated) | AV | kW | 0 .. 500 | The month's highest hourly mean electric power: the basis of the grid tariff's power charge. | Twin._grid_tariff | `EM-01.GridCost` |  |
+| `EM-01.GridCost` | `+DEMO01=562.001-OF001` (calculated) | AV | NOK | 0 .. 10000000 | Declared reference grid tariff (ASSUMPTION): energy part per kWh plus the monthly power part. | Twin.grid_power_cost |  |  |
 
 ### ZONE-01
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `ZONE-01.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, open-plan office. | zone RC node (Twin._step) | `ZONE-01.RadiatorValve`, `ZONE-01.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
-| `ZONE-01.Occupants` | EX | persons | 0 .. 50 | People present, open-plan office. | calendar x design_occupants | `ZONE-01.CO2`, `ZONE-01.Airflow`, `ZONE-01.LightingPower`, `ZONE-01.EquipmentPower`, `ZONE-01.AirTemp` |  |
-| `ZONE-01.LightingMode` | SB | presence|schedule | 0 .. 1 | Lighting control, open-plan office: lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_mode` (IL-08) |
-| `ZONE-01.DaylightHarvesting` | SB | bool | 0 .. 1 | Daylight dimming, open-plan office: electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_mode` (IL-08) |
-| `ZONE-01.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, open-plan office (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-01.EquipmentPower` |  |
-| `ZONE-01.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, open-plan office: the radiator valve's target. | supervisory (governed) | `ZONE-01.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
-| `ZONE-01.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, open-plan office: zone cooling starts above it. | supervisory (governed) | `ZONE-01.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
-| `ZONE-01.CO2Setpoint` | SP | ppm | 600 .. 1000 | DCV target, open-plan office: airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-01.Airflow` | `set_zone_co2_setpoint` (IL-07) |
-| `ZONE-01.LuxSetpoint` | SP | lux | 0 .. 750 | Maintained illuminance while occupied, open-plan office; daylight counts toward it. | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_setpoint` (IL-08) |
-| `ZONE-01.RadiatorValve` | AV | 0..1 | 0 .. 1 | Radiator valve opening (proportional over 1 K around the heating setpoint). | plant local loop | `ZONE-01.RadiatorPower` |  |
-| `ZONE-01.RadiatorPower` | AV | W | 0 .. 20000 | Heat from the radiators (EN 442, capped by supply water temperature). | plant.radiator_output_w | `HYD-01.HeatDemand`, `ZONE-01.AirTemp` |  |
-| `ZONE-01.CoolingPower` | AV | W | 0 .. 10000 | Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint. | plant local loop | `CH-01.CoolingLoad`, `ZONE-01.AirTemp` |  |
-| `ZONE-01.Airflow` | AI | l/s | 0 .. 1000 | Supply airflow to the zone (material minimum + per person + DCV boost). | plant DCV | `AHU-01.Airflow`, `ZONE-01.CO2`, `ZONE-01.AirTemp` |  |
-| `ZONE-01.CO2` | AI | ppm | 400 .. 5000 | Room CO2 concentration. | well-mixed CO2 balance | `ZONE-01.Airflow` |  |
-| `ZONE-01.Daylight` | AV | lux | 0 .. 100000 | Daylight on the work plane (daylight factor x outdoor illuminance). | plant.outdoor_lux | `ZONE-01.LightingPower` |  |
-| `ZONE-01.Illuminance` | AI | lux | 0 .. 100000 | Work-plane illuminance, daylight plus electric. | plant lighting loop |  |  |
-| `ZONE-01.LightingPower` | AI | W | 0 .. 10000 | Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone. | plant lighting loop | `EM-01.ElectricPower`, `ZONE-01.AirTemp` |  |
-| `ZONE-01.EquipmentPower` | AI | W | 0 .. 20000 | Plug and process load; becomes heat. | config equipment densities | `EM-01.ElectricPower`, `ZONE-01.AirTemp` |  |
-| `ZONE-01.SolarGain` | AV | W | 0 .. 20000 | Solar heat through glazing. | window area x g-value x irradiance | `ZONE-01.AirTemp` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `ZONE-01.AirTemp` | `+DEMO01=564.001-RT601` (measured) | AI | degC | -10 .. 40 | Room air temperature, open-plan office. | zone RC node (Twin._step) | `ZONE-01.RadiatorValve`, `ZONE-01.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
+| `ZONE-01.Occupants` | `+DEMO01=564.001-RB601` (measured) | EX | persons | 0 .. 50 | People present, open-plan office. | calendar x design_occupants | `ZONE-01.CO2`, `ZONE-01.Airflow`, `ZONE-01.LightingPower`, `ZONE-01.EquipmentPower`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.LightingMode` | `+DEMO01=564.001-OU601` (setpoint) | SB | presence|schedule | 0 .. 1 | Lighting control, open-plan office: lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-01.DaylightHarvesting` | `+DEMO01=564.001-OU601` (setpoint) | SB | bool | 0 .. 1 | Daylight dimming, open-plan office: electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-01.EquipmentFactor` | (input) | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, open-plan office (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-01.EquipmentPower` |  |
+| `ZONE-01.HeatingSetpoint` | `+DEMO01=564.001-OU601` (setpoint) | SP | degC | 8 .. 23 | Heating setpoint, open-plan office: the radiator valve's target. | supervisory (governed) | `ZONE-01.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
+| `ZONE-01.CoolingSetpoint` | `+DEMO01=564.001-OU601` (setpoint) | SP | degC | 20 .. 28 | Cooling setpoint, open-plan office: zone cooling starts above it. | supervisory (governed) | `ZONE-01.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
+| `ZONE-01.CO2Setpoint` | `+DEMO01=564.001-OU601` (setpoint) | SP | ppm | 600 .. 1000 | DCV target, open-plan office: airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-01.Airflow` | `set_zone_co2_setpoint` (IL-07) |
+| `ZONE-01.LuxSetpoint` | `+DEMO01=564.001-OU601` (setpoint) | SP | lux | 0 .. 750 | Maintained illuminance while occupied, open-plan office; daylight counts toward it. | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_setpoint` (IL-08) |
+| `ZONE-01.RadiatorValve` | `+DEMO01=564.001-KA101` (state) | AV | 0..1 | 0 .. 1 | Radiator valve opening (proportional over 1 K around the heating setpoint). | plant local loop | `ZONE-01.RadiatorPower` |  |
+| `ZONE-01.RadiatorPower` | `+DEMO01=320.002-LH001` (state) | AV | W | 0 .. 20000 | Heat from the radiators (EN 442, capped by supply water temperature). | plant.radiator_output_w | `HYD-01.HeatDemand`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.CoolingPower` | `+DEMO01=370.001-LC001` (state) | AV | W | 0 .. 10000 | Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint. | plant local loop | `CH-01.CoolingLoad`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.Airflow` | `+DEMO01=360.001-SQ401` (state) | AI | l/s | 0 .. 1000 | Supply airflow to the zone (material minimum + per person + DCV boost). | plant DCV | `AHU-01.Airflow`, `ZONE-01.CO2`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.CO2` | `+DEMO01=564.001-RY601` (measured) | AI | ppm | 400 .. 5000 | Room CO2 concentration. | well-mixed CO2 balance | `ZONE-01.Airflow` |  |
+| `ZONE-01.Daylight` | `+DEMO01=564.001-RJ601` (measured) | AV | lux | 0 .. 100000 | Daylight on the work plane (daylight factor x outdoor illuminance). | plant.outdoor_lux | `ZONE-01.LightingPower` |  |
+| `ZONE-01.Illuminance` | `+DEMO01=564.001-RJ601` (measured) | AI | lux | 0 .. 100000 | Work-plane illuminance, daylight plus electric. | plant lighting loop |  |  |
+| `ZONE-01.LightingPower` | `+DEMO01=442.001-SI001` (state) | AI | W | 0 .. 10000 | Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone. | plant lighting loop | `EM-01.ElectricPower`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.EquipmentPower` | `+DEMO01=433.001-UE101` (measured) | AI | W | 0 .. 20000 | Plug and process load; becomes heat. | config equipment densities | `EM-01.ElectricPower`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.SolarGain` | `+DEMO01=562.001-OF001` (calculated) | AV | W | 0 .. 20000 | Solar heat through glazing. | window area x g-value x irradiance | `ZONE-01.AirTemp` |  |
 
 ### ZONE-02
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `ZONE-02.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, meeting room. | zone RC node (Twin._step) | `ZONE-02.RadiatorValve`, `ZONE-02.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
-| `ZONE-02.Occupants` | EX | persons | 0 .. 50 | People present, meeting room. | calendar x design_occupants | `ZONE-02.CO2`, `ZONE-02.Airflow`, `ZONE-02.LightingPower`, `ZONE-02.EquipmentPower`, `ZONE-02.AirTemp` |  |
-| `ZONE-02.LightingMode` | SB | presence|schedule | 0 .. 1 | Lighting control, meeting room: lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_mode` (IL-08) |
-| `ZONE-02.DaylightHarvesting` | SB | bool | 0 .. 1 | Daylight dimming, meeting room: electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_mode` (IL-08) |
-| `ZONE-02.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, meeting room (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-02.EquipmentPower` |  |
-| `ZONE-02.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, meeting room: the radiator valve's target. | supervisory (governed) | `ZONE-02.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
-| `ZONE-02.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, meeting room: zone cooling starts above it. | supervisory (governed) | `ZONE-02.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
-| `ZONE-02.CO2Setpoint` | SP | ppm | 600 .. 1000 | DCV target, meeting room: airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-02.Airflow` | `set_zone_co2_setpoint` (IL-07) |
-| `ZONE-02.LuxSetpoint` | SP | lux | 0 .. 750 | Maintained illuminance while occupied, meeting room; daylight counts toward it. | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_setpoint` (IL-08) |
-| `ZONE-02.RadiatorValve` | AV | 0..1 | 0 .. 1 | Radiator valve opening (proportional over 1 K around the heating setpoint). | plant local loop | `ZONE-02.RadiatorPower` |  |
-| `ZONE-02.RadiatorPower` | AV | W | 0 .. 20000 | Heat from the radiators (EN 442, capped by supply water temperature). | plant.radiator_output_w | `HYD-01.HeatDemand`, `ZONE-02.AirTemp` |  |
-| `ZONE-02.CoolingPower` | AV | W | 0 .. 10000 | Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint. | plant local loop | `CH-01.CoolingLoad`, `ZONE-02.AirTemp` |  |
-| `ZONE-02.Airflow` | AI | l/s | 0 .. 1000 | Supply airflow to the zone (material minimum + per person + DCV boost). | plant DCV | `AHU-01.Airflow`, `ZONE-02.CO2`, `ZONE-02.AirTemp` |  |
-| `ZONE-02.CO2` | AI | ppm | 400 .. 5000 | Room CO2 concentration. | well-mixed CO2 balance | `ZONE-02.Airflow` |  |
-| `ZONE-02.Daylight` | AV | lux | 0 .. 100000 | Daylight on the work plane (daylight factor x outdoor illuminance). | plant.outdoor_lux | `ZONE-02.LightingPower` |  |
-| `ZONE-02.Illuminance` | AI | lux | 0 .. 100000 | Work-plane illuminance, daylight plus electric. | plant lighting loop |  |  |
-| `ZONE-02.LightingPower` | AI | W | 0 .. 10000 | Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone. | plant lighting loop | `EM-01.ElectricPower`, `ZONE-02.AirTemp` |  |
-| `ZONE-02.EquipmentPower` | AI | W | 0 .. 20000 | Plug and process load; becomes heat. | config equipment densities | `EM-01.ElectricPower`, `ZONE-02.AirTemp` |  |
-| `ZONE-02.SolarGain` | AV | W | 0 .. 20000 | Solar heat through glazing. | window area x g-value x irradiance | `ZONE-02.AirTemp` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `ZONE-02.AirTemp` | `+DEMO01=564.001-RT602` (measured) | AI | degC | -10 .. 40 | Room air temperature, meeting room. | zone RC node (Twin._step) | `ZONE-02.RadiatorValve`, `ZONE-02.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
+| `ZONE-02.Occupants` | `+DEMO01=564.001-RB602` (measured) | EX | persons | 0 .. 50 | People present, meeting room. | calendar x design_occupants | `ZONE-02.CO2`, `ZONE-02.Airflow`, `ZONE-02.LightingPower`, `ZONE-02.EquipmentPower`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.LightingMode` | `+DEMO01=564.001-OU602` (setpoint) | SB | presence|schedule | 0 .. 1 | Lighting control, meeting room: lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-02.DaylightHarvesting` | `+DEMO01=564.001-OU602` (setpoint) | SB | bool | 0 .. 1 | Daylight dimming, meeting room: electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-02.EquipmentFactor` | (input) | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, meeting room (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-02.EquipmentPower` |  |
+| `ZONE-02.HeatingSetpoint` | `+DEMO01=564.001-OU602` (setpoint) | SP | degC | 8 .. 23 | Heating setpoint, meeting room: the radiator valve's target. | supervisory (governed) | `ZONE-02.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
+| `ZONE-02.CoolingSetpoint` | `+DEMO01=564.001-OU602` (setpoint) | SP | degC | 20 .. 28 | Cooling setpoint, meeting room: zone cooling starts above it. | supervisory (governed) | `ZONE-02.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
+| `ZONE-02.CO2Setpoint` | `+DEMO01=564.001-OU602` (setpoint) | SP | ppm | 600 .. 1000 | DCV target, meeting room: airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-02.Airflow` | `set_zone_co2_setpoint` (IL-07) |
+| `ZONE-02.LuxSetpoint` | `+DEMO01=564.001-OU602` (setpoint) | SP | lux | 0 .. 750 | Maintained illuminance while occupied, meeting room; daylight counts toward it. | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_setpoint` (IL-08) |
+| `ZONE-02.RadiatorValve` | `+DEMO01=564.001-KA102` (state) | AV | 0..1 | 0 .. 1 | Radiator valve opening (proportional over 1 K around the heating setpoint). | plant local loop | `ZONE-02.RadiatorPower` |  |
+| `ZONE-02.RadiatorPower` | `+DEMO01=320.002-LH002` (state) | AV | W | 0 .. 20000 | Heat from the radiators (EN 442, capped by supply water temperature). | plant.radiator_output_w | `HYD-01.HeatDemand`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.CoolingPower` | `+DEMO01=370.001-LC002` (state) | AV | W | 0 .. 10000 | Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint. | plant local loop | `CH-01.CoolingLoad`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.Airflow` | `+DEMO01=360.001-SQ402` (state) | AI | l/s | 0 .. 1000 | Supply airflow to the zone (material minimum + per person + DCV boost). | plant DCV | `AHU-01.Airflow`, `ZONE-02.CO2`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.CO2` | `+DEMO01=564.001-RY602` (measured) | AI | ppm | 400 .. 5000 | Room CO2 concentration. | well-mixed CO2 balance | `ZONE-02.Airflow` |  |
+| `ZONE-02.Daylight` | `+DEMO01=564.001-RJ602` (measured) | AV | lux | 0 .. 100000 | Daylight on the work plane (daylight factor x outdoor illuminance). | plant.outdoor_lux | `ZONE-02.LightingPower` |  |
+| `ZONE-02.Illuminance` | `+DEMO01=564.001-RJ602` (measured) | AI | lux | 0 .. 100000 | Work-plane illuminance, daylight plus electric. | plant lighting loop |  |  |
+| `ZONE-02.LightingPower` | `+DEMO01=442.001-SI002` (state) | AI | W | 0 .. 10000 | Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone. | plant lighting loop | `EM-01.ElectricPower`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.EquipmentPower` | `+DEMO01=433.001-UE102` (measured) | AI | W | 0 .. 20000 | Plug and process load; becomes heat. | config equipment densities | `EM-01.ElectricPower`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.SolarGain` | `+DEMO01=562.001-OF001` (calculated) | AV | W | 0 .. 20000 | Solar heat through glazing. | window area x g-value x irradiance | `ZONE-02.AirTemp` |  |
 
 ### ZONE-03
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `ZONE-03.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, laboratory (constant equipment load). | zone RC node (Twin._step) | `ZONE-03.RadiatorValve`, `ZONE-03.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
-| `ZONE-03.Occupants` | EX | persons | 0 .. 50 | People present, laboratory (constant equipment load). | calendar x design_occupants | `ZONE-03.CO2`, `ZONE-03.Airflow`, `ZONE-03.LightingPower`, `ZONE-03.EquipmentPower`, `ZONE-03.AirTemp` |  |
-| `ZONE-03.LightingMode` | SB | presence|schedule | 0 .. 1 | Lighting control, laboratory (constant equipment load): lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_mode` (IL-08) |
-| `ZONE-03.DaylightHarvesting` | SB | bool | 0 .. 1 | Daylight dimming, laboratory (constant equipment load): electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_mode` (IL-08) |
-| `ZONE-03.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, laboratory (constant equipment load) (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-03.EquipmentPower` |  |
-| `ZONE-03.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, laboratory (constant equipment load): the radiator valve's target. | supervisory (governed) | `ZONE-03.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
-| `ZONE-03.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, laboratory (constant equipment load): zone cooling starts above it. | supervisory (governed) | `ZONE-03.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
-| `ZONE-03.CO2Setpoint` | SP | ppm | 600 .. 1000 | DCV target, laboratory (constant equipment load): airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-03.Airflow` | `set_zone_co2_setpoint` (IL-07) |
-| `ZONE-03.LuxSetpoint` | SP | lux | 0 .. 750 | Maintained illuminance while occupied, laboratory (constant equipment load); daylight counts toward it. | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_setpoint` (IL-08) |
-| `ZONE-03.RadiatorValve` | AV | 0..1 | 0 .. 1 | Radiator valve opening (proportional over 1 K around the heating setpoint). | plant local loop | `ZONE-03.RadiatorPower` |  |
-| `ZONE-03.RadiatorPower` | AV | W | 0 .. 20000 | Heat from the radiators (EN 442, capped by supply water temperature). | plant.radiator_output_w | `HYD-01.HeatDemand`, `ZONE-03.AirTemp` |  |
-| `ZONE-03.CoolingPower` | AV | W | 0 .. 10000 | Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint. | plant local loop | `CH-01.CoolingLoad`, `ZONE-03.AirTemp` |  |
-| `ZONE-03.Airflow` | AI | l/s | 0 .. 1000 | Supply airflow to the zone (material minimum + per person + DCV boost). | plant DCV | `AHU-01.Airflow`, `ZONE-03.CO2`, `ZONE-03.AirTemp` |  |
-| `ZONE-03.CO2` | AI | ppm | 400 .. 5000 | Room CO2 concentration. | well-mixed CO2 balance | `ZONE-03.Airflow` |  |
-| `ZONE-03.Daylight` | AV | lux | 0 .. 100000 | Daylight on the work plane (daylight factor x outdoor illuminance). | plant.outdoor_lux | `ZONE-03.LightingPower` |  |
-| `ZONE-03.Illuminance` | AI | lux | 0 .. 100000 | Work-plane illuminance, daylight plus electric. | plant lighting loop |  |  |
-| `ZONE-03.LightingPower` | AI | W | 0 .. 10000 | Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone. | plant lighting loop | `EM-01.ElectricPower`, `ZONE-03.AirTemp` |  |
-| `ZONE-03.EquipmentPower` | AI | W | 0 .. 20000 | Plug and process load; becomes heat. | config equipment densities | `EM-01.ElectricPower`, `ZONE-03.AirTemp` |  |
-| `ZONE-03.SolarGain` | AV | W | 0 .. 20000 | Solar heat through glazing. | window area x g-value x irradiance | `ZONE-03.AirTemp` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `ZONE-03.AirTemp` | `+DEMO01=564.001-RT603` (measured) | AI | degC | -10 .. 40 | Room air temperature, laboratory (constant equipment load). | zone RC node (Twin._step) | `ZONE-03.RadiatorValve`, `ZONE-03.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
+| `ZONE-03.Occupants` | `+DEMO01=564.001-RB603` (measured) | EX | persons | 0 .. 50 | People present, laboratory (constant equipment load). | calendar x design_occupants | `ZONE-03.CO2`, `ZONE-03.Airflow`, `ZONE-03.LightingPower`, `ZONE-03.EquipmentPower`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.LightingMode` | `+DEMO01=564.001-OU603` (setpoint) | SB | presence|schedule | 0 .. 1 | Lighting control, laboratory (constant equipment load): lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-03.DaylightHarvesting` | `+DEMO01=564.001-OU603` (setpoint) | SB | bool | 0 .. 1 | Daylight dimming, laboratory (constant equipment load): electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-03.EquipmentFactor` | (input) | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, laboratory (constant equipment load) (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-03.EquipmentPower` |  |
+| `ZONE-03.HeatingSetpoint` | `+DEMO01=564.001-OU603` (setpoint) | SP | degC | 8 .. 23 | Heating setpoint, laboratory (constant equipment load): the radiator valve's target. | supervisory (governed) | `ZONE-03.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
+| `ZONE-03.CoolingSetpoint` | `+DEMO01=564.001-OU603` (setpoint) | SP | degC | 20 .. 28 | Cooling setpoint, laboratory (constant equipment load): zone cooling starts above it. | supervisory (governed) | `ZONE-03.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
+| `ZONE-03.CO2Setpoint` | `+DEMO01=564.001-OU603` (setpoint) | SP | ppm | 600 .. 1000 | DCV target, laboratory (constant equipment load): airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-03.Airflow` | `set_zone_co2_setpoint` (IL-07) |
+| `ZONE-03.LuxSetpoint` | `+DEMO01=564.001-OU603` (setpoint) | SP | lux | 0 .. 750 | Maintained illuminance while occupied, laboratory (constant equipment load); daylight counts toward it. | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_setpoint` (IL-08) |
+| `ZONE-03.RadiatorValve` | `+DEMO01=564.001-KA103` (state) | AV | 0..1 | 0 .. 1 | Radiator valve opening (proportional over 1 K around the heating setpoint). | plant local loop | `ZONE-03.RadiatorPower` |  |
+| `ZONE-03.RadiatorPower` | `+DEMO01=320.002-LH003` (state) | AV | W | 0 .. 20000 | Heat from the radiators (EN 442, capped by supply water temperature). | plant.radiator_output_w | `HYD-01.HeatDemand`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.CoolingPower` | `+DEMO01=370.001-LC003` (state) | AV | W | 0 .. 10000 | Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint. | plant local loop | `CH-01.CoolingLoad`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.Airflow` | `+DEMO01=360.001-SQ403` (state) | AI | l/s | 0 .. 1000 | Supply airflow to the zone (material minimum + per person + DCV boost). | plant DCV | `AHU-01.Airflow`, `ZONE-03.CO2`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.CO2` | `+DEMO01=564.001-RY603` (measured) | AI | ppm | 400 .. 5000 | Room CO2 concentration. | well-mixed CO2 balance | `ZONE-03.Airflow` |  |
+| `ZONE-03.Daylight` | `+DEMO01=564.001-RJ603` (measured) | AV | lux | 0 .. 100000 | Daylight on the work plane (daylight factor x outdoor illuminance). | plant.outdoor_lux | `ZONE-03.LightingPower` |  |
+| `ZONE-03.Illuminance` | `+DEMO01=564.001-RJ603` (measured) | AI | lux | 0 .. 100000 | Work-plane illuminance, daylight plus electric. | plant lighting loop |  |  |
+| `ZONE-03.LightingPower` | `+DEMO01=442.001-SI003` (state) | AI | W | 0 .. 10000 | Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone. | plant lighting loop | `EM-01.ElectricPower`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.EquipmentPower` | `+DEMO01=433.001-UE103` (measured) | AI | W | 0 .. 20000 | Plug and process load; becomes heat. | config equipment densities | `EM-01.ElectricPower`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.SolarGain` | `+DEMO01=562.001-OF001` (calculated) | AV | W | 0 .. 20000 | Solar heat through glazing. | window area x g-value x irradiance | `ZONE-03.AirTemp` |  |
 
 ### hydronic
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `HYD-01.SupplyTemp` | AI | degC | 20 .. 75 | Radiator supply temperature: weather-compensated curve (60 at -20, 30 at +15), never hotter than the tank. | plant.weather_compensated_supply_c | `ZONE-01.RadiatorPower`, `ZONE-02.RadiatorPower`, `ZONE-03.RadiatorPower` |  |
-| `HYD-01.HeatingSeason` | BV | bool | 0 .. 1 | Space heating enabled. Off (summer stop) when the 24 h mean outdoor temperature rises above plant.heating_limit.off_above_c, on again below on_below_c. Off means radiator circuit and AHU heating coil off and no tank charging for space heating; domestic hot water is not modelled. | Twin._heating_season | `ZONE-01.RadiatorValve`, `ZONE-02.RadiatorValve`, `ZONE-03.RadiatorValve`, `AHU-01.HeatingCoilPower`, `HP-01.Running`, `DH-01.HeatPower`, `EB-01.ElectricPower` |  |
-| `HYD-01.HeatDemand` | AV | W | 0 .. 60000 | Heat drawn from the tank by radiators and the AHU heating coil. | plant | `TANK-01.Temp` |  |
-| `TANK-01.Temp` | AI | degC | 10 .. 80 | Buffer tank temperature. | tank energy balance | `HYD-01.SupplyTemp`, `HP-01.Running`, `HP-01.BackupHeaterPower`, `HP-01.HighPressureCutout` |  |
-| `TANK-01.Setpoint` | SP | degC | 35 .. 60 | Target the heat source charges the tank to. Higher stores more heat and lowers heat-pump COP. | supervisory (governed) | `HP-01.Running`, `HP-01.COP`, `DH-01.HeatPower`, `EB-01.ElectricPower` | `set_tank_setpoint` (IL-04, IL-11) |
-| `TANK-01.Loss` | AV | W | 0 .. 1000 | Standing loss to the plant room. | plant |  |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `HYD-01.SupplyTemp` | `+DEMO01=320.002-RT401` (measured) | AI | degC | 20 .. 75 | Radiator supply temperature: weather-compensated curve (60 at -20, 30 at +15), never hotter than the tank. | plant.weather_compensated_supply_c | `ZONE-01.RadiatorPower`, `ZONE-02.RadiatorPower`, `ZONE-03.RadiatorPower` |  |
+| `HYD-01.HeatingSeason` | `+DEMO01=320.001-OU001` (state) | BV | bool | 0 .. 1 | Space heating enabled. Off (summer stop) when the 24 h mean outdoor temperature rises above plant.heating_limit.off_above_c, on again below on_below_c. Off means radiator circuit and AHU heating coil off and no tank charging for space heating; domestic hot water is not modelled. | Twin._heating_season | `ZONE-01.RadiatorValve`, `ZONE-02.RadiatorValve`, `ZONE-03.RadiatorValve`, `AHU-01.HeatingCoilPower`, `HP-01.Running`, `DH-01.HeatPower`, `EB-01.ElectricPower` |  |
+| `HYD-01.HeatDemand` | `+DEMO01=320.001-OU001` (state) | AV | W | 0 .. 60000 | Heat drawn from the tank by radiators and the AHU heating coil. | plant | `TANK-01.Temp` |  |
+| `TANK-01.Temp` | `+DEMO01=320.001-RT402` (measured) | AI | degC | 10 .. 80 | Buffer tank temperature. | tank energy balance | `HYD-01.SupplyTemp`, `HP-01.Running`, `HP-01.BackupHeaterPower`, `HP-01.HighPressureCutout` |  |
+| `TANK-01.Setpoint` | `+DEMO01=320.001-OU001` (setpoint) | SP | degC | 35 .. 60 | Target the heat source charges the tank to. Higher stores more heat and lowers heat-pump COP. | supervisory (governed) | `HP-01.Running`, `HP-01.COP`, `DH-01.HeatPower`, `EB-01.ElectricPower` | `set_tank_setpoint` (IL-04, IL-11) |
+| `TANK-01.Loss` | `+DEMO01=320.001-NT001` (state) | AV | W | 0 .. 1000 | Standing loss to the plant room. | plant |  |  |
 
 ### heat pump
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `HP-01.Running` | BI | bool | 0 .. 1 | Compressor running (hysteresis 3 K, min run 10 min, min stop 10 min). *(only: heat_pump)* | plant local loop | `HP-01.HeatOutput`, `HP-01.Starts`, `HP-01.ElectricPower` |  |
-| `HP-01.COP` | AV | - | 0 .. 6 | Coefficient of performance: 45 % of Carnot between outdoor air and tank, clamped 1..6; 0 when off. *(only: heat_pump)* | plant.heat_pump_cop | `HP-01.ElectricPower` |  |
-| `HP-01.HeatOutput` | AV | W | 0 .. 40000 | Heat delivered; falls 2.5 %/K below A7, times the demand-response cap, less defrost. *(only: heat_pump)* | plant.heat_pump_capacity_w | `TANK-01.Temp` |  |
-| `HP-01.ElectricPower` | AI | W | 0 .. 20000 | Compressor electric power. *(only: heat_pump)* | HeatOutput / COP | `EM-01.ElectricPower` |  |
-| `HP-01.Starts` | CV | count | 0 .. 1000000 | Compressor starts since t=0; frequent cycling wears the compressor. *(only: heat_pump)* | plant local loop |  |  |
-| `HP-01.Defrost` | BV | bool | 0 .. 1 | Frosting conditions (-7..+5 degC, RH >= 75 %): 10 % of capacity and COP lost. *(only: heat_pump)* | plant |  |  |
-| `HP-01.HighPressureCutout` | BI | bool | 0 .. 1 | Compressor locked out: tank above max supply + 5 K. *(only: heat_pump)* | plant local loop |  |  |
-| `HP-01.BackupHeaterPower` | AI | W | 0 .. 20000 | Electric immersion heater, on when the tank is 5 K below target (COP 1). *(only: heat_pump)* | plant local loop | `TANK-01.Temp`, `EM-01.ElectricPower` |  |
-| `HP-01.MaxFraction` | SP | 0..1 | 0 .. 1 | Demand-response cap on compressor output. *(only: heat_pump)* | supervisory (governed) | `HP-01.HeatOutput`, `TANK-01.Temp`, `HP-01.BackupHeaterPower` | `set_heat_pump_limit` (IL-09, IL-11) |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `HP-01.Running` | `+DEMO01=356.001-IK001` (state) | BI | bool | 0 .. 1 | Compressor running (hysteresis 3 K, min run 10 min, min stop 10 min). *(only: heat_pump)* | plant local loop | `HP-01.HeatOutput`, `HP-01.Starts`, `HP-01.ElectricPower` |  |
+| `HP-01.COP` | `+DEMO01=562.001-OF001` (calculated) | AV | - | 0 .. 6 | Coefficient of performance: 45 % of Carnot between outdoor air and tank, clamped 1..6; 0 when off. *(only: heat_pump)* | plant.heat_pump_cop | `HP-01.ElectricPower` |  |
+| `HP-01.HeatOutput` | `+DEMO01=356.001-IK001` (state) | AV | W | 0 .. 40000 | Heat delivered; falls 2.5 %/K below A7, times the demand-response cap, less defrost. *(only: heat_pump)* | plant.heat_pump_capacity_w | `TANK-01.Temp` |  |
+| `HP-01.ElectricPower` | `+DEMO01=356.001-RE001` (measured) | AI | W | 0 .. 20000 | Compressor electric power. *(only: heat_pump)* | HeatOutput / COP | `EM-01.ElectricPower` |  |
+| `HP-01.Starts` | `+DEMO01=356.001-IK001` (state) | CV | count | 0 .. 1000000 | Compressor starts since t=0; frequent cycling wears the compressor. *(only: heat_pump)* | plant local loop |  |  |
+| `HP-01.Defrost` | `+DEMO01=356.001-IK001` (state) | BV | bool | 0 .. 1 | Frosting conditions (-7..+5 degC, RH >= 75 %): 10 % of capacity and COP lost. *(only: heat_pump)* | plant |  |  |
+| `HP-01.HighPressureCutout` | `+DEMO01=356.001-QP001` (state) | BI | bool | 0 .. 1 | Compressor locked out: tank above max supply + 5 K. *(only: heat_pump)* | plant local loop |  |  |
+| `HP-01.BackupHeaterPower` | `+DEMO01=320.001-LI401` (state) | AI | W | 0 .. 20000 | Electric immersion heater, on when the tank is 5 K below target (COP 1). *(only: heat_pump)* | plant local loop | `TANK-01.Temp`, `EM-01.ElectricPower` |  |
+| `HP-01.MaxFraction` | `+DEMO01=356.001-IK001` (setpoint) | SP | 0..1 | 0 .. 1 | Demand-response cap on compressor output. *(only: heat_pump)* | supervisory (governed) | `HP-01.HeatOutput`, `TANK-01.Temp`, `HP-01.BackupHeaterPower` | `set_heat_pump_limit` (IL-09, IL-11) |
 
 ### district heating
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `DH-01.HeatPower` | AI | W | 0 .. 60000 | Heat drawn from the district-heating network by the substation. *(only: district_heating)* | plant | `TANK-01.Temp`, `EM-01.DistrictHeatPower` |  |
-| `DH-01.SupplyTemp` | AI | degC | 60 .. 120 | Primary supply temperature (declared: max(tank setpoint + 5, 70)). *(only: district_heating)* | plant |  |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `DH-01.HeatPower` | `+DEMO01=320.001-OE001` (measured) | AI | W | 0 .. 60000 | Heat drawn from the district-heating network by the substation. *(only: district_heating)* | plant | `TANK-01.Temp`, `EM-01.DistrictHeatPower` |  |
+| `DH-01.SupplyTemp` | `+DEMO01=320.001-RT403` (measured) | AI | degC | 60 .. 120 | Primary supply temperature (declared: max(tank setpoint + 5, 70)). *(only: district_heating)* | plant |  |  |
 
 ### electric boiler
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `EB-01.ElectricPower` | AI | W | 0 .. 40000 | Electric boiler power. *(only: electric_boiler)* | plant | `TANK-01.Temp`, `EM-01.ElectricPower` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `EB-01.ElectricPower` | `+DEMO01=320.001-IE001` (state) | AI | W | 0 .. 40000 | Electric boiler power. *(only: electric_boiler)* | plant | `TANK-01.Temp`, `EM-01.ElectricPower` |  |
 
 ### ventilation
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `AHU-01.Enabled` | SB | bool | 0 .. 1 | AHU running. | supervisory (governed) | `ZONE-01.Airflow`, `ZONE-02.Airflow`, `ZONE-03.Airflow` | `set_ahu_enabled` (IL-06) |
-| `AHU-01.SupplyAirSetpoint` | SP | degC | 15 .. 21 | Supply air temperature target (coils after heat recovery). | supervisory (governed) | `AHU-01.HeatingCoilPower`, `AHU-01.CoolingCoilPower`, `AHU-01.SupplyAirTemp` | `set_supply_air_setpoint` (IL-05, IL-11) |
-| `AHU-01.Airflow` | AI | l/s | 0 .. 3000 | Total supply airflow. | sum of zone airflows | `AHU-01.FanPower`, `AHU-01.HeatingCoilPower` |  |
-| `AHU-01.FanPower` | AI | W | 0 .. 10000 | Fan power = SFP x airflow (SFP 1.5). | plant | `EM-01.ElectricPower` |  |
-| `AHU-01.HRV_Efficiency` | AV | 0..1 | 0 .. 1 | Rotary heat recovery temperature efficiency (0.80; x0.75 below -15 degC frost limit). | plant |  |  |
-| `AHU-01.HRV_Bypass` | BV | bool | 0 .. 1 | Heat recovery bypassed for free cooling. | plant |  |  |
-| `AHU-01.HRV_AfterTemp` | AI | degC | -40 .. 40 | Air temperature after heat recovery. | plant | `AHU-01.HeatingCoilPower`, `AHU-01.CoolingCoilPower` |  |
-| `AHU-01.ExtractAirTemp` | AI | degC | -10 .. 40 | Airflow-weighted extract air. | plant | `AHU-01.HRV_AfterTemp` |  |
-| `AHU-01.SupplyAirTemp` | AI | degC | -40 .. 40 | Supply air temperature delivered. | plant | `ZONE-01.AirTemp`, `ZONE-02.AirTemp`, `ZONE-03.AirTemp` |  |
-| `AHU-01.HeatingCoilPower` | AV | W | 0 .. 20000 | Heating coil, drawn from the tank. | plant | `HYD-01.HeatDemand` |  |
-| `AHU-01.CoolingCoilPower` | AV | W | 0 .. 20000 | Cooling coil, from the chiller. | plant | `CH-01.CoolingLoad` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `AHU-01.Enabled` | `+DEMO01=360.001-OU001` (setpoint) | SB | bool | 0 .. 1 | AHU running. | supervisory (governed) | `ZONE-01.Airflow`, `ZONE-02.Airflow`, `ZONE-03.Airflow` | `set_ahu_enabled` (IL-06) |
+| `AHU-01.SupplyAirSetpoint` | `+DEMO01=360.001-OU001` (setpoint) | SP | degC | 15 .. 21 | Supply air temperature target (coils after heat recovery). | supervisory (governed) | `AHU-01.HeatingCoilPower`, `AHU-01.CoolingCoilPower`, `AHU-01.SupplyAirTemp` | `set_supply_air_setpoint` (IL-05, IL-11) |
+| `AHU-01.Airflow` | `+DEMO01=360.001-RF401` (measured) | AI | l/s | 0 .. 3000 | Total supply airflow. | sum of zone airflows | `AHU-01.FanPower`, `AHU-01.HeatingCoilPower` |  |
+| `AHU-01.FanPower` | `+DEMO01=360.001-JV401` (state) | AI | W | 0 .. 10000 | Fan power = SFP x airflow (SFP 1.5). | plant | `EM-01.ElectricPower` |  |
+| `AHU-01.HRV_Efficiency` | `+DEMO01=360.001-LX401` (state) | AV | 0..1 | 0 .. 1 | Rotary heat recovery temperature efficiency (0.80; x0.75 below -15 degC frost limit). | plant |  |  |
+| `AHU-01.HRV_Bypass` | `+DEMO01=360.001-SS401` (state) | BV | bool | 0 .. 1 | Heat recovery bypassed for free cooling. | plant |  |  |
+| `AHU-01.HRV_AfterTemp` | `+DEMO01=360.001-RT402` (measured) | AI | degC | -40 .. 40 | Air temperature after heat recovery. | plant | `AHU-01.HeatingCoilPower`, `AHU-01.CoolingCoilPower` |  |
+| `AHU-01.ExtractAirTemp` | `+DEMO01=360.001-RT501` (measured) | AI | degC | -10 .. 40 | Airflow-weighted extract air. | plant | `AHU-01.HRV_AfterTemp` |  |
+| `AHU-01.SupplyAirTemp` | `+DEMO01=360.001-RT401` (measured) | AI | degC | -40 .. 40 | Supply air temperature delivered. | plant | `ZONE-01.AirTemp`, `ZONE-02.AirTemp`, `ZONE-03.AirTemp` |  |
+| `AHU-01.HeatingCoilPower` | `+DEMO01=360.001-LV402` (state) | AV | W | 0 .. 20000 | Heating coil, drawn from the tank. | plant | `HYD-01.HeatDemand` |  |
+| `AHU-01.CoolingCoilPower` | `+DEMO01=360.001-LK401` (state) | AV | W | 0 .. 20000 | Cooling coil, from the chiller. | plant | `CH-01.CoolingLoad` |  |
 
 ### cooling
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `CH-01.CoolingLoad` | AV | W | 0 .. 40000 | Cooling demand on the chiller. | plant | `CH-01.ElectricPower` |  |
-| `CH-01.EER` | AV | - | 0 .. 7 | Chiller efficiency: 45 % of Carnot, condenser 10 K above max(outdoor, 15); 0 when idle. | plant.chiller_eer | `CH-01.ElectricPower` |  |
-| `CH-01.ElectricPower` | AI | W | 0 .. 20000 | Chiller electric power. | CoolingLoad / EER | `EM-01.ElectricPower` |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `CH-01.CoolingLoad` | `+DEMO01=370.001-IK001` (state) | AV | W | 0 .. 40000 | Cooling demand on the chiller. | plant | `CH-01.ElectricPower` |  |
+| `CH-01.EER` | `+DEMO01=562.001-OF001` (calculated) | AV | - | 0 .. 7 | Chiller efficiency: 45 % of Carnot, condenser 10 K above max(outdoor, 15); 0 when idle. | plant.chiller_eer | `CH-01.ElectricPower` |  |
+| `CH-01.ElectricPower` | `+DEMO01=370.001-RE001` (measured) | AI | W | 0 .. 20000 | Chiller electric power. | CoolingLoad / EER | `EM-01.ElectricPower` |  |
 
 ### heating cables
 
-| Id | Kind | Unit | Range | Description | Source | Affects | Written by |
-|---|---|---|---|---|---|---|---|
-| `CABLE-RAMP.Mode` | SB | auto|on|off | 0 .. 2 | Heating cable mode, ramp. | supervisory (governed) | `CABLE-RAMP.Power`, `CABLE-RAMP.IcingRiskUncovered` | `set_heating_cable_mode` (IL-10) |
-| `CABLE-RAMP.Power` | AI | W | 0 .. 10000 | Cable power (rated when on). | plant | `EM-01.ElectricPower` |  |
-| `CABLE-RAMP.IcingRiskUncovered` | BV | bool | 0 .. 1 | Conservative proxy: the 3 h icing-risk window with the circuit off. | plant |  |  |
-| `CABLE-RAMP.IcingHazardUncovered` | BV | bool | 0 .. 1 | HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off. | plant |  |  |
-| `CABLE-GUTTER.Mode` | SB | auto|on|off | 0 .. 2 | Heating cable mode, gutter. | supervisory (governed) | `CABLE-GUTTER.Power`, `CABLE-GUTTER.IcingRiskUncovered` | `set_heating_cable_mode` (IL-10) |
-| `CABLE-GUTTER.Power` | AI | W | 0 .. 10000 | Cable power (rated when on). | plant | `EM-01.ElectricPower` |  |
-| `CABLE-GUTTER.IcingRiskUncovered` | BV | bool | 0 .. 1 | Conservative proxy: the 3 h icing-risk window with the circuit off. | plant |  |  |
-| `CABLE-GUTTER.IcingHazardUncovered` | BV | bool | 0 .. 1 | HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off. | plant |  |  |
+| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
+|---|---|---|---|---|---|---|---|---|
+| `CABLE-RAMP.Mode` | `+DEMO01=745.001-OU001` (setpoint) | SB | auto|on|off | 0 .. 2 | Heating cable mode, ramp. | supervisory (governed) | `CABLE-RAMP.Power`, `CABLE-RAMP.IcingRiskUncovered` | `set_heating_cable_mode` (IL-10) |
+| `CABLE-RAMP.Power` | `+DEMO01=745.001-LZ001` (state) | AI | W | 0 .. 10000 | Cable power (rated when on). | plant | `EM-01.ElectricPower` |  |
+| `CABLE-RAMP.IcingRiskUncovered` | `+DEMO01=562.001-OF001` (calculated) | BV | bool | 0 .. 1 | Conservative proxy: the 3 h icing-risk window with the circuit off. | plant |  |  |
+| `CABLE-RAMP.IcingHazardUncovered` | `+DEMO01=562.001-OF001` (calculated) | BV | bool | 0 .. 1 | HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off. | plant |  |  |
+| `CABLE-GUTTER.Mode` | `+DEMO01=450.001-OU001` (setpoint) | SB | auto|on|off | 0 .. 2 | Heating cable mode, gutter. | supervisory (governed) | `CABLE-GUTTER.Power`, `CABLE-GUTTER.IcingRiskUncovered` | `set_heating_cable_mode` (IL-10) |
+| `CABLE-GUTTER.Power` | `+DEMO01=450.001-LZ001` (state) | AI | W | 0 .. 10000 | Cable power (rated when on). | plant | `EM-01.ElectricPower` |  |
+| `CABLE-GUTTER.IcingRiskUncovered` | `+DEMO01=562.001-OF001` (calculated) | BV | bool | 0 .. 1 | Conservative proxy: the 3 h icing-risk window with the circuit off. | plant |  |  |
+| `CABLE-GUTTER.IcingHazardUncovered` | `+DEMO01=562.001-OF001` (calculated) | BV | bool | 0 .. 1 | HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off. | plant |  |  |
 
 ## Interlocks
 
