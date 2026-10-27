@@ -145,6 +145,39 @@ and optimal start (P1/P2), and a smaller part from price shifting (P3),
 limited by the 22 degC ceiling and 1 K/h of reheat. If P3 shows more, that
 is a reason to look for a bug before it is a result.
 
+## Randomization and documented savings
+
+One week of one winter is an anecdote. Every comparison runs on a seeded
+**ensemble** of episodes, generated before any arm runs and committed with its
+seeds (ADR-004 D-11), so the same episodes reach every arm and preset.
+
+| Factor | How it varies | Source of truth |
+|---|---|---|
+| Weather and price period | several real weeks: cold, mild, volatile-price and low-price weeks across NO3 winters, each a verified ADR-005 snapshot | real data, never synthetic |
+| Forecast error | the archived day-ahead forecast for that week (real error), not added noise | Open-Meteo previous-runs |
+| Occupancy | calendar plus seeded perturbations: late arrival or early leave (±30 min), unplanned evening use, public holidays, a closed day | episode seed |
+| Internal gains | seeded multiplicative noise per zone and hour (±25%) | episode seed |
+| Sensors | seeded measurement noise (σ 0.1 K) and rare dropouts, which feed the AT-09 stale-observation path | episode seed |
+| Strategy's model error | capacity and UA perturbed ±20% (D-18) | strategy seed, independent of the plant |
+| Faults and attacks | ADR-004's injected classes, plus actuator faults: a dropped write, and a timeout after actuation (AT-12) | episode seed, fixed per-class counts |
+
+**Statistics.**
+- Arms and presets see identical episodes, so savings are **paired**
+  differences per episode.
+- The report gives the per-episode distribution, its mean and median, and a
+  95% bootstrap interval over episodes, together with the number of episodes
+  and seeds.
+- Comfort and hazard deltas are paired the same way.
+- A preset "saves money" only if the interval excludes zero **and** comfort
+  and hazard do not get worse. Otherwise the report says it is
+  inconclusive, with the numbers.
+- The ensemble size is fixed before the run (start: 8 weeks × 5 seeds), not
+  grown until a result appears.
+
+Every figure is reproducible from the repository: the episode files, seeds
+and snapshot SHA-256 values are in the evidence manifest, and
+`runner.ab_compare --episodes <dir>` recomputes it.
+
 ## How REMORA governs a strategy that acts every 15 minutes
 
 A human reviewing every step is not realistic. The intended model is plan
@@ -173,6 +206,7 @@ Settling that is a spike against REMORA's semantic bundle and intent source
 | D-16 | Plan approval as the autonomy model | Yes. A spike first: can REMORA ACCEPT plan-bound steps, and what must change upstream? |
 | D-17 | Forecast source for replay and live | Open-Meteo previous-runs for replay; MET Norway locationforecast for live, snapshotted per decision |
 | D-18 | Model-error setting for headline figures | ±20% capacity and UA, three seeds, reported as a range |
+| D-19 | Ensemble for the first scored comparison | 8 verified NO3 winter weeks × 5 seeds, frozen before the run; paired bootstrap intervals |
 
 ## Consequences
 
