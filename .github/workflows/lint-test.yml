@@ -7,8 +7,9 @@ permissions:
   contents: read
 jobs:
   commit-identity:
-    # Every commit is authored by the repository owner and carries no
-    # co-author trailer; contributors are people who joined by pull request.
+    # The owner's CLI identity and GitHub profile identity are both accepted.
+    # The profile spelling is bound to the owner's exact GitHub noreply email.
+    # No co-author trailer; contributors join by pull request.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -23,11 +24,12 @@ jobs:
           base="${{ github.event.pull_request.base.sha }}"
           head="${{ github.event.pull_request.head.sha }}"
           bad=0
-          while IFS=$'\t' read -r sha author; do
-            if [[ "$author" != "darklordVirtual" ]]; then
-              echo "::error::commit $sha is authored by '$author', not darklordVirtual"; bad=1
+          while IFS=$'\t' read -r sha author email; do
+            if [[ "$author" != "darklordVirtual" ]] &&
+               [[ "$author" != "Stian Skogbrott" || "$email" != "36493828+darklordVirtual@users.noreply.github.com" ]]; then
+              echo "::error::commit $sha does not use a recognized owner identity"; bad=1
             fi
-          done < <(git log --format='%H%x09%an' "$base".."$head")
+          done < <(git log --format='%H%x09%an%x09%ae' "$base".."$head")
           if git log --format='%B' "$base".."$head" | grep -iE '^(Co-authored-by|Claude-Session):'; then
             echo "::error::a commit carries a co-author or session trailer"; bad=1
           fi

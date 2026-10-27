@@ -12,9 +12,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _test_step() -> tuple[str, bool]:
+def _workflow_step(name: str) -> tuple[str, bool]:
     workflow = (ROOT / ".github/workflows/lint-test.yml").read_text("utf-8")
-    step = workflow.split("      - name: Tests (skips are failures)\n", 1)[1]
+    step = workflow.split(f"      - name: {name}\n", 1)[1]
     step = step.split("      - ", 1)[0]
     lines = step.split("        run: |\n", 1)[1].splitlines()
     body = []
@@ -34,7 +34,7 @@ def _test_step() -> tuple[str, bool]:
 ])
 def test_ci_step_preserves_pytest_failure_and_rejects_skips(tmp_path, source, succeeds):
     (tmp_path / "test_probe.py").write_text(source, "utf-8")
-    script, explicit_bash = _test_step()
+    script, explicit_bash = _workflow_step("Tests (skips are failures)")
     flags = ["--noprofile", "--norc", "-eo", "pipefail"] if explicit_bash else ["-e"]
     env = {**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
            "PATH": str(Path(sys.executable).parent) + os.pathsep + os.environ["PATH"]}
@@ -74,3 +74,28 @@ raise SystemExit(pytest.main(sys.argv[1:]))
         assert run.returncode == 0, run.stdout + run.stderr
         assert "test_attestor_binding_sdk.py::" not in run.stdout
 
+
+@pytest.mark.parametrize("author, email, accepted", [
+    ("darklordVirtual", "support@luftfiber.no", True),
+    ("Stian Skogbrott", "36493828+darklordVirtual@users.noreply.github.com", True),
+    ("Stian Skogbrott", "someone-else@example.invalid", False),
+    ("Someone Else", "36493828+darklordVirtual@users.noreply.github.com", False),
+])
+def test_owner_identity_gate_accepts_only_the_owner_identities(tmp_path, author, email, accepted):
+    def git(*args):
+        run = subprocess.run(["git", *args], cwd=tmp_path, capture_output=True, text=True, check=True)
+        return run.stdout.strip()
+
+    git("init", "-q")
+    git("-c", "user.name=darklordVirtual", "-c", "user.email=support@luftfiber.no",
+        "commit", "--allow-empty", "-qm", "base")
+    base = git("rev-parse", "HEAD")
+    git("-c", f"user.name={author}", "-c", f"user.email={email}",
+        "commit", "--allow-empty", "-qm", "probe")
+    head = git("rev-parse", "HEAD")
+    script, _ = _workflow_step("Authors and trailers")
+    script = script.replace("${{ github.event.pull_request.base.sha }}", base)
+    script = script.replace("${{ github.event.pull_request.head.sha }}", head)
+    run = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path,
+                         capture_output=True, text=True, timeout=30)
+    assert (run.returncode == 0) is accepted, run.stdout + run.stderr
