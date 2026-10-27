@@ -314,6 +314,10 @@ def build() -> Catalogue:
             "plant.chiller_eer", affects=("CH-01.ElectricPower",)))
     P(Point("CH-01.ElectricPower", "cooling", "AI", "W", (0, 20000), "Chiller electric power.",
             "CoolingLoad / EER", affects=("EM-01.ElectricPower",)))
+    P(Point("AUX-01.ElectricPower", "energy", "AI", "W", (0, 50000),
+            "Constant auxiliary electricity: circulation and energy-well pumps, electric hot water "
+            "(plant aux_electric_w; 0 unless a calibrated building sets it).",
+            "config aux_electric_w", affects=("EM-01.ElectricPower",)))
 
     # -- heating cables and meters ------------------------------------------------------
     for cc in CIRCUITS:

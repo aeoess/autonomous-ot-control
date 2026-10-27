@@ -105,6 +105,7 @@ These identifiers are valid PA 0802 codes for the testbed's fictitious building,
 | `AHU-01.extract_sensor` | `+DEMO01=360.001-RT501` | 360 Luftbehandling | RT Temperaturgiver | return or extract | extract air temperature | `AHU-01.ExtractAirTemp` (measured) |
 | `CH-01.unit` | `+DEMO01=370.001-IK001` | 370 Komfortkjøleanlegg | IK Kuldeaggregat | general | chiller | `CH-01.CoolingLoad` (state) |
 | `CH-01.meter` | `+DEMO01=370.001-RE001` | 370 Komfortkjøleanlegg | RE Elektriske variabler | general | chiller electric meter | `CH-01.ElectricPower` (measured) |
+| `AUX-01.meter` | `+DEMO01=320.001-RE002` | 320 Varmeanlegg | RE Elektriske variabler | general | auxiliary electric meter: pumps and electric hot water | `AUX-01.ElectricPower` (measured) |
 | `CABLE-RAMP.cable` | `+DEMO01=745.001-LZ001` | 745 Utendørs elvarme | LZ Varmekabel / Varmerør |  | snow-melt cable, ramp (outdoor electric heating) | `CABLE-RAMP.Power` (state) |
 | `CABLE-RAMP.controller` | `+DEMO01=745.001-OU001` | 745 Utendørs elvarme | OU Undersentral |  | snow-melt controller, ramp | `CABLE-RAMP.Mode` (setpoint) |
 | `CABLE-GUTTER.cable` | `+DEMO01=450.001-LZ001` | 450 Elvarme | LZ Varmekabel / Varmerør |  | gutter heating cable (on the building) | `CABLE-GUTTER.Power` (state) |

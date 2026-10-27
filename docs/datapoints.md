@@ -6,7 +6,7 @@ Every value the simulated building exposes or accepts. The twin is synthetic and
 
 Every point names the TFM object behind it (Statsbygg PA 0802; `docs/tfm.md`) and its role: `measured` by a sensor, `setpoint` written to a controller, `state` of equipment, `calculated` in central operations, or `input` with no building object. The TFM identifiers belong to the fictitious building `+DEMO01`.
 
-110 points, 11 interlocks, 10 tools, 5 procedures, 7 documented cascades.
+111 points, 11 interlocks, 10 tools, 5 procedures, 7 documented cascades.
 
 Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` computed binary; `CV` counter; `EX` exogenous input; `SP` writable setpoint; `SB` writable command.
 
@@ -35,6 +35,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 | Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |
 |---|---|---|---|---|---|---|---|---|
 | `EM-01.Cost` | `+DEMO01=562.001-OF001` (calculated) | AV | NOK | 0 .. 10000000 | Accumulated simulated energy cost: electricity at spot, district heat at the declared tariff. | Twin._step |  |  |
+| `AUX-01.ElectricPower` | `+DEMO01=320.001-RE002` (measured) | AI | W | 0 .. 50000 | Constant auxiliary electricity: circulation and energy-well pumps, electric hot water (plant aux_electric_w; 0 unless a calibrated building sets it). | config aux_electric_w | `EM-01.ElectricPower` |  |
 | `EM-01.ElectricPower` | `+DEMO01=432.001-RE001` (measured) | AI | W | 0 .. 200000 | Building electricity meter: fans, chiller, heat pump, backup, boiler, lights, equipment, cables. | plant | `EM-01.Cost` |  |
 | `EM-01.DistrictHeatPower` | `+DEMO01=320.001-OE001` (measured) | AI | W | 0 .. 100000 | District heat meter. | plant | `EM-01.Cost` |  |
 | `EM-01.MonthlyPeakKw` | `+DEMO01=562.001-OF001` (calculated) | AV | kW | 0 .. 500 | The month's highest hourly mean electric power: the basis of the grid tariff's power charge. | Twin._grid_tariff | `EM-01.GridCost` |  |

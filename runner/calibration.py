@@ -192,6 +192,10 @@ def build_fixture(params: dict[str, Any], *, building_id: str, template: Path = 
         pz["airflow_per_person_l_s"] = PERSON_L_S
         pz["max_airflow_l_s"] = round(max(params["operating_airflow_l_s_m2"] * area * 1.5, 60.0), 0)
     pl["heat_source"] = params["heat_source"]
+    # Seasonal plant efficiencies, when a measured site fitted them (otherwise the template's).
+    for key in ("hp_carnot_fraction", "free_cooling_eer", "aux_electric_w"):
+        if params.get(key) is not None:
+            pl[key] = params[key]
     if params["heat_source"] == "district_heating":
         # The certificate's annual system efficiency covers substation and distribution; the plant has
         # only the substation term, so it carries the whole of it.

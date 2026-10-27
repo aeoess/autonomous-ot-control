@@ -333,121 +333,579 @@
     ]
   },
   "fit": {
+    "version": "v2 (certificate-based, per meter)",
     "params": {
-      "bra_m2": 1545.0,
-      "ua_per_m2": 0.7555999999999999,
-      "capacity_j_per_m2k": 244080.0,
-      "heater_w_per_m2": 90.0,
-      "heating_efficiency": 0.9,
-      "lighting_w_per_m2": 2.25,
-      "equipment_w_per_m2": 3.1,
-      "cooling_w_per_m2": 30.0,
-      "operating_airflow_l_s_m2": 2.222,
-      "min_airflow_l_s_m2": 1.639,
-      "sfp_kw_per_m3_s": 2.5,
-      "hrv_efficiency": 0.7,
+      "bra_m2": 3562.0,
+      "ua_per_m2": 0.4787,
+      "capacity_j_per_m2k": 407160.0,
+      "heater_w_per_m2": 130.0,
+      "heating_efficiency": 1.0,
+      "lighting_w_per_m2": 2.605,
+      "equipment_w_per_m2": 3.582,
+      "cooling_w_per_m2": 40.0,
+      "operating_airflow_l_s_m2": 1.944,
+      "min_airflow_l_s_m2": 1.361,
+      "sfp_kw_per_m3_s": 0.7,
+      "hrv_efficiency": 0.85,
       "heating_c": 21.0,
       "cooling_c": 23.0,
-      "window_share_of_bra": 0.1438,
-      "heat_source": "district_heating",
-      "equipment_base_w_per_m2": 7.81
+      "window_share_of_bra": 0.12128017967434025,
+      "heat_source": "heat_pump",
+      "aux_electric_w": 3301.0,
+      "equipment_base_w_per_m2": 2.081,
+      "free_cooling_eer": 39.711,
+      "hp_carnot_fraction": 0.475
     },
-    "comparison": [
-      [
-        "heating slope W/K",
-        1548.9,
-        1624.3
-      ],
-      [
-        "night base kW",
-        12.53,
-        12.53
-      ],
-      [
-        "weekday daytime kW",
-        29.92,
-        29.9
-      ],
-      [
-        "night/day",
-        0.419,
-        0.419
-      ],
-      [
-        "weekend/weekday",
-        0.705,
-        0.673
-      ]
-    ],
-    "twin_dh_signature": {
+    "validation": {
+      "total": {
+        "hours": 5963,
+        "cv_rmse_pct": 59.2,
+        "nmbe_pct": -0.6,
+        "guideline14_hourly": false,
+        "measured_kwh": 114621.9,
+        "simulated_kwh": 115305.2,
+        "months": 9,
+        "monthly_cv_rmse_pct": 11.8,
+        "monthly_nmbe_pct": -0.7,
+        "guideline14_monthly": true,
+        "by_month_kwh": {
+          "2026-02": [
+            9500.0,
+            9059.0
+          ],
+          "2026-03": [
+            15886.0,
+            14734.0
+          ],
+          "2026-04": [
+            13949.0,
+            13625.0
+          ],
+          "2026-05": [
+            12230.0,
+            12671.0
+          ],
+          "2026-06": [
+            12189.0,
+            13177.0
+          ],
+          "2026-07": [
+            10548.0,
+            13633.0
+          ],
+          "2026-08": [
+            12046.0,
+            13074.0
+          ],
+          "2026-09": [
+            14806.0,
+            12920.0
+          ],
+          "2026-10": [
+            13467.0,
+            12413.0
+          ]
+        }
+      },
+      "E01_vs_tenant": {
+        "hours": 5963,
+        "cv_rmse_pct": 47.2,
+        "nmbe_pct": 0.2,
+        "guideline14_hourly": false,
+        "measured_kwh": 75946.9,
+        "simulated_kwh": 75810.6,
+        "months": 9,
+        "monthly_cv_rmse_pct": 12.1,
+        "monthly_nmbe_pct": 0.2,
+        "guideline14_monthly": true,
+        "by_month_kwh": {
+          "2026-02": [
+            4493.0,
+            3893.0
+          ],
+          "2026-03": [
+            8726.0,
+            8150.0
+          ],
+          "2026-04": [
+            8391.0,
+            9018.0
+          ],
+          "2026-05": [
+            8644.0,
+            9065.0
+          ],
+          "2026-06": [
+            9743.0,
+            9398.0
+          ],
+          "2026-07": [
+            7735.0,
+            9704.0
+          ],
+          "2026-08": [
+            8795.0,
+            9360.0
+          ],
+          "2026-09": [
+            10864.0,
+            9322.0
+          ],
+          "2026-10": [
+            8557.0,
+            7902.0
+          ]
+        }
+      },
+      "E02_vs_technical": {
+        "hours": 5963,
+        "cv_rmse_pct": 147.5,
+        "nmbe_pct": -2.1,
+        "guideline14_hourly": false,
+        "measured_kwh": 38675.0,
+        "simulated_kwh": 39494.5,
+        "months": 9,
+        "monthly_cv_rmse_pct": 18.0,
+        "monthly_nmbe_pct": -2.4,
+        "guideline14_monthly": false,
+        "by_month_kwh": {
+          "2026-02": [
+            5008.0,
+            5166.0
+          ],
+          "2026-03": [
+            7160.0,
+            6584.0
+          ],
+          "2026-04": [
+            5558.0,
+            4608.0
+          ],
+          "2026-05": [
+            3586.0,
+            3606.0
+          ],
+          "2026-06": [
+            2447.0,
+            3778.0
+          ],
+          "2026-07": [
+            2813.0,
+            3928.0
+          ],
+          "2026-08": [
+            3251.0,
+            3714.0
+          ],
+          "2026-09": [
+            3942.0,
+            3598.0
+          ],
+          "2026-10": [
+            4910.0,
+            4512.0
+          ]
+        }
+      }
+    },
+    "monthly_kwh": {
+      "2026-02": {
+        "E01": 4493,
+        "tenant": 3301,
+        "E02": 5008,
+        "technical": 5440
+      },
+      "2026-03": {
+        "E01": 8726,
+        "tenant": 6979,
+        "E02": 7160,
+        "technical": 6882
+      },
+      "2026-04": {
+        "E01": 8391,
+        "tenant": 7719,
+        "E02": 5558,
+        "technical": 4874
+      },
+      "2026-05": {
+        "E01": 8644,
+        "tenant": 7826,
+        "E02": 3586,
+        "technical": 3640
+      },
+      "2026-06": {
+        "E01": 9743,
+        "tenant": 7974,
+        "E02": 2447,
+        "technical": 3745
+      },
+      "2026-07": {
+        "E01": 7735,
+        "tenant": 8220,
+        "E02": 2813,
+        "technical": 3892
+      },
+      "2026-08": {
+        "E01": 8795,
+        "tenant": 8009,
+        "E02": 3251,
+        "technical": 3683
+      },
+      "2026-09": {
+        "E01": 10864,
+        "tenant": 7912,
+        "E02": 3942,
+        "technical": 3608
+      },
+      "2026-10": {
+        "E01": 8882,
+        "tenant": 6746,
+        "E02": 5073,
+        "technical": 4814
+      }
+    },
+    "heating_signature_twin_dh": {
       "days": 253,
-      "days_on_weather_side": 91,
-      "days_on_base_side": 162,
+      "days_on_weather_side": 100,
+      "days_on_base_side": 153,
       "balance_identified": true,
-      "balance_temp_c": 8.5,
-      "kwh_per_day_per_k": 38.98,
-      "w_per_k": 1624.3,
-      "base_kwh_per_day": 3.8,
-      "r2": 0.845,
+      "balance_temp_c": 10.0,
+      "kwh_per_day_per_k": 56.27,
+      "w_per_k": 2344.6,
+      "base_kwh_per_day": 4.3,
+      "r2": 0.807,
       "outdoor_range_c": [
         -11.1,
         25.7
       ]
     },
-    "validation": {
-      "hours": 5963,
-      "cv_rmse_pct": 39.7,
-      "nmbe_pct": 1.0,
-      "guideline14_hourly": false,
-      "measured_kwh": 114621.9,
-      "simulated_kwh": 113433.5,
-      "months": 9,
-      "monthly_cv_rmse_pct": 19.8,
-      "monthly_nmbe_pct": 1.2,
-      "guideline14_monthly": false,
-      "by_month_kwh": {
-        "2026-02": [
-          9500.0,
-          7820.0
+    "shapes": {
+      "site_E01": {
+        "meters": [
+          "E01"
         ],
-        "2026-03": [
-          15886.0,
-          12780.0
+        "hours_used": 5985,
+        "median_kw_by_hour": {
+          "weekday": [
+            6.88,
+            7.24,
+            7.32,
+            7.68,
+            8.1,
+            8.92,
+            11.18,
+            14.26,
+            19.92,
+            22.86,
+            23.84,
+            23.89,
+            23.17,
+            21.9,
+            20.12,
+            18.2,
+            14.96,
+            12.62,
+            10.07,
+            8.56,
+            8.23,
+            8.13,
+            7.75,
+            7.3
+          ],
+          "weekend": [
+            6.92,
+            7.11,
+            7.46,
+            7.53,
+            8.2,
+            9.03,
+            9.66,
+            9.76,
+            10.02,
+            9.86,
+            9.98,
+            10.18,
+            10.25,
+            10.2,
+            10.1,
+            9.36,
+            8.61,
+            8.44,
+            8.28,
+            8.27,
+            8.21,
+            8.33,
+            8.39,
+            7.28
+          ]
+        },
+        "night_base_kw": 7.48,
+        "weekday_day_kw": 21.58,
+        "night_to_day_ratio": 0.347,
+        "weekend_to_weekday_ratio": 0.654
+      },
+      "site_E02": {
+        "meters": [
+          "E02"
         ],
-        "2026-04": [
-          13949.0,
-          12892.0
+        "hours_used": 5985,
+        "median_kw_by_hour": {
+          "weekday": [
+            4.16,
+            4.15,
+            4.21,
+            4.22,
+            4.25,
+            4.2,
+            5.46,
+            5.61,
+            6.62,
+            6.78,
+            6.95,
+            7.3,
+            7.36,
+            7.31,
+            7.32,
+            7.04,
+            5.81,
+            5.71,
+            4.1,
+            3.37,
+            3.77,
+            3.83,
+            3.85,
+            3.81
+          ],
+          "weekend": [
+            4.06,
+            3.98,
+            3.99,
+            4.08,
+            4.03,
+            4.0,
+            4.38,
+            4.59,
+            4.32,
+            4.34,
+            4.45,
+            4.22,
+            4.45,
+            4.29,
+            4.51,
+            4.36,
+            4.14,
+            4.68,
+            3.96,
+            3.94,
+            4.59,
+            4.13,
+            4.18,
+            4.12
+          ]
+        },
+        "night_base_kw": 4.19,
+        "weekday_day_kw": 7.11,
+        "night_to_day_ratio": 0.589,
+        "weekend_to_weekday_ratio": 0.8
+      },
+      "twin_tenant": {
+        "meters": [
+          "TENANT"
         ],
-        "2026-05": [
-          12230.0,
-          13123.0
+        "hours_used": 6072,
+        "median_kw_by_hour": {
+          "weekday": [
+            7.59,
+            7.48,
+            7.53,
+            7.44,
+            7.37,
+            7.52,
+            7.54,
+            7.72,
+            29.32,
+            29.47,
+            29.9,
+            29.34,
+            29.25,
+            29.52,
+            29.73,
+            29.93,
+            7.43,
+            7.47,
+            7.5,
+            7.64,
+            7.58,
+            7.4,
+            7.46,
+            7.38
+          ],
+          "weekend": [
+            7.37,
+            7.4,
+            7.65,
+            7.66,
+            7.55,
+            7.6,
+            7.8,
+            7.41,
+            7.5,
+            7.32,
+            7.38,
+            7.49,
+            7.59,
+            7.36,
+            7.46,
+            7.72,
+            7.61,
+            7.28,
+            7.47,
+            7.45,
+            7.69,
+            7.7,
+            7.7,
+            7.53
+          ]
+        },
+        "night_base_kw": 7.48,
+        "weekday_day_kw": 29.57,
+        "night_to_day_ratio": 0.253,
+        "weekend_to_weekday_ratio": 0.507
+      },
+      "twin_technical": {
+        "meters": [
+          "TECHNICAL"
         ],
-        "2026-06": [
-          12189.0,
-          14057.0
-        ],
-        "2026-07": [
-          10548.0,
-          15032.0
-        ],
-        "2026-08": [
-          12046.0,
-          13830.0
-        ],
-        "2026-09": [
-          14806.0,
-          12723.0
-        ],
-        "2026-10": [
-          13467.0,
-          11175.0
-        ]
+        "hours_used": 6072,
+        "median_kw_by_hour": {
+          "weekday": [
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            6.69,
+            6.69,
+            7.8,
+            7.8,
+            7.81,
+            7.82,
+            7.82,
+            7.85,
+            7.9,
+            7.93,
+            6.69,
+            6.69,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3
+          ],
+          "weekend": [
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3,
+            3.3
+          ]
+        },
+        "night_base_kw": 3.3,
+        "weekday_day_kw": 7.83,
+        "night_to_day_ratio": 0.422,
+        "weekend_to_weekday_ratio": 0.614
       }
     },
     "fixtures": [
-      "twin/fixtures/calibrated/site-001-v1.json",
-      "twin/fixtures/calibrated/site-001-dh-v1.json"
+      "twin/fixtures/calibrated/site-001-v2.json",
+      "twin/fixtures/calibrated/site-001-dh-v2.json"
     ],
-    "scenario": "scenarios/no1-2026-metered-period-hvac-v1.json"
-  }
+    "scenario": "scenarios/no1-2026-metered-period-hvac-v1.json",
+    "superseded": "v1 (medium-office cohort profile, 1545 m2, fitted on the total) was replaced once the building's own certificate was available"
+  },
+  "certificate": {
+    "BRA_m2": 3562.0,
+    "byggeaar": 1980,
+    "u_wall": 0.31,
+    "u_roof": 0.32,
+    "u_floor": 0.16,
+    "u_window": 1.33,
+    "area_wall": 1184.0,
+    "area_roof": 993.0,
+    "area_floor": 1004.0,
+    "area_window": 432.0,
+    "thermal_bridge": 0.08,
+    "thermal_cap": 113.1,
+    "leakage": 2.0,
+    "heat_recovery_eff": 85.0,
+    "sfp_operating": 0.7,
+    "vent_air": 7.0,
+    "heating_eff": 259.0,
+    "heater_w_per_m2": 130.0,
+    "heat_setpoint": 21.0,
+    "cool_setpoint": 22.0,
+    "cooling_factor": 300.0,
+    "cooling_w_per_m2": 40.0,
+    "vent_hours": 12,
+    "heat_hours": 12,
+    "cool_hours": 24,
+    "lighting_w_per_m2": 8.0,
+    "equipment_w_per_m2": 11.0,
+    "dhw_w_per_m2": 1.6,
+    "heating_shares": {
+      "heat_pump": 0.87,
+      "direct_electric": 0.13
+    },
+    "dhw_share_electric": 1.0,
+    "hp_seasonal_cop": 4.28,
+    "heat_source_note": "ground-source heat pump with energy wells",
+    "measured_electricity_kwh_per_year": 295000.0,
+    "measured_year_note": "temperature-corrected, certificate of 2021",
+    "calculated_delivered_kwh_m2": 91.55,
+    "net_budget_kwh_m2": {
+      "room_heating": 26.4,
+      "vent_heating": 9.2,
+      "dhw": 5.0,
+      "fans": 6.5,
+      "pumps": 2.8,
+      "lighting": 25.1,
+      "equipment": 34.4,
+      "room_cooling": 9.2,
+      "vent_cooling": 6.4
+    },
+    "ua_transmission_per_bra_w_m2k": 0.3987
+  },
+  "meters_named_by_owner": {
+    "E01": "tenants' main meter",
+    "E02": "technical",
+    "H01": "heat pump heat",
+    "H02": "heat meter (Kamstrup)",
+    "C01": "heat pump cooling",
+    "C02": "cooling meter (Kamstrup)"
+  },
+  "open_questions": [
+    "The certificate states 295 MWh measured electricity a year (2021); E01+E02 annualise to about 170 MWh in 2026: other main meters, or a real reduction?",
+    "Heating signature: certificate envelope gives 2345 W/K, the heat meters 1549 W/K (sparse in summer; 13 % of heat is direct electric)."
+  ]
 }

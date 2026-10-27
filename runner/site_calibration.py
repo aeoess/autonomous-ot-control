@@ -51,6 +51,10 @@ HEATING_METERS = ("H01", "H02")
 COOLING_METERS = ("C01", "C02")
 CABLE_METERS = ("E16", "E17")
 ICING_BAND_C = (-10.0, 1.0)
+#: The twin's consumers, grouped like the site's two top-level meters (names from the site owner:
+#: E01 'tenants main', E02 'technical'). Pumps and electric hot water are the plant's constant aux term.
+GROUPS = {"TENANT": ("lighting", "equipment"),
+          "TECHNICAL": ("heat_pump", "backup_heater", "fans", "cooling", "heating_cables", "pumps_dhw")}
 
 
 def _utc(ts: str) -> datetime:
@@ -251,6 +255,7 @@ def twin_targets(fixture: Path, area: str = "NO1", days: int = 365, strategy: st
     efficiency = heat delivered); for another heat source it is reported as not comparable. The
     electricity shape is the twin's whole electricity (equipment, lighting, fans, cooling, and the
     heat source when it is electric), so compare its ratios, not its level, unless the sources match."""
+    from runner.areas import METERS as METERS_
     from runner.areas import scenario_path
     from runner.demo import STEP_S
     from runner.strategies import Controller
@@ -268,21 +273,31 @@ def twin_targets(fixture: Path, area: str = "NO1", days: int = 365, strategy: st
     start = datetime.fromisoformat(sc.start_utc.replace("Z", "+00:00"))
     eff = float(cfg["plant"].get("dh_substation_efficiency", 1.0))
     dh_ok = cfg["plant"].get("heat_source") == "district_heating"
-    elec: dict[str, dict[datetime, float]] = {"TWIN": {}}
+    elec: dict[str, dict[datetime, float]] = {"TWIN": {}, "TENANT": {}, "TECHNICAL": {}}
     heat: dict[str, dict[datetime, float]] = {"TWIN_HEAT": {}}
     weather: dict[datetime, float] = {}
     e0, d0 = tw.electric_kwh, tw.district_heat_kwh
+    acc = {"TENANT": 0.0, "TECHNICAL": 0.0}
     for t in range(0, days * 86400, STEP_S):
         ctl.step(t)
-        tw.advance(STEP_S)
+        for _ in range(STEP_S // tw.step_s):
+            tw._step()
+            p = tw.points
+            for group, keys in GROUPS.items():
+                acc[group] += sum(sum(p.get(i, 0.0) for i in METERS_[k]) for k in keys) * tw.step_s / 3.6e6
         if (t + STEP_S) % 3600 == 0:
             hour = start + timedelta(seconds=t + STEP_S - 3600)
             elec["TWIN"][hour] = tw.electric_kwh - e0
+            for group in acc:
+                elec[group][hour] = acc[group]
+                acc[group] = 0.0
             heat["TWIN_HEAT"][hour] = (tw.district_heat_kwh - d0) * eff
             weather[hour] = sc.outdoor_c(t + STEP_S - 1800)
             e0, d0 = tw.electric_kwh, tw.district_heat_kwh
     out = {"fixture": fixture.name, "area": area, "scenario": sp.name, "strategy": strategy, "days": days,
            "hourly_electricity_kwh": {h.isoformat(): round(v, 4) for h, v in elec["TWIN"].items()},
+           "hourly_group_kwh": {g: {h.isoformat(): round(v, 4) for h, v in elec[g].items()} for g in GROUPS},
+           "group_load_shape": {g: load_shape(elec, (g,)) for g in GROUPS},
            "bra_m2": sum(z["area_m2"] for z in cfg["zones"]),
            "electricity_load_shape": load_shape(elec, ("TWIN",)),
            "heating_signature": fit_signature(daily(heat, ("TWIN_HEAT",), weather), heating=True) if dh_ok else None,
