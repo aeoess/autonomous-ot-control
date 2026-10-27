@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "federation-fixtures-v1",
+  "title": "A sealed federation fixture set (federation/fixtures/<set>/manifest.json)",
+  "type": "object",
+  "required": [
+    "schema",
+    "fixture_set",
+    "testbed_commit",
+    "scope",
+    "claims",
+    "cases",
+    "files",
+    "package_digest",
+    "package_digest_rule",
+    "digest_rules"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-federation-fixtures/v1"
+    },
+    "fixture_set": {
+      "type": "string"
+    },
+    "testbed_commit": {
+      "type": "string",
+      "description": "The autonomous-ot-control revision the trails were recorded on. Source provenance, not package identity."
+    },
+    "testbed_commit_note": {
+      "type": "string"
+    },
+    "source_run": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "claim_id",
+          "statement"
+        ],
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "statement": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "case_id",
+          "kind",
+          "fault",
+          "claim_id",
+          "expected_verdict"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "positive",
+              "negative"
+            ]
+          },
+          "fault": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "claim_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For a negative case, the claim its seeded fault contradicts; null for a positive case."
+          },
+          "expected_verdict": {
+            "enum": [
+              "ESTABLISHED",
+              "CONTRADICTED",
+              "NOT_ESTABLISHED"
+            ]
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Every case file with its SHA-256. The package identity is these bytes, not a Git revision.",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^cases/[^/]+\\.json$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "package_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "package_digest_rule": {
+      "type": "string"
+    },
+    "digest_rules": {
+      "type": "object",
+      "required": [
+        "evidence_sha256",
+        "fixtures_sha256"
+      ]
+    }
+  }
+}

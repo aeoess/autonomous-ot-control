@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "federation-index-v1",
+  "title": "The testbed's participation manifest and stable entry point (federation/index.json)",
+  "type": "object",
+  "required": [
+    "schema",
+    "project",
+    "repository",
+    "participation",
+    "entry_points",
+    "produces",
+    "consumes",
+    "boundaries",
+    "result_vocabulary",
+    "independence_levels",
+    "level_rule",
+    "claim_ceiling",
+    "invariants",
+    "licence"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-federation-index/v1"
+    },
+    "project": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "participation": {
+      "type": "object",
+      "required": [
+        "type",
+        "coordinator",
+        "membership_confers"
+      ],
+      "properties": {
+        "type": {
+          "const": "technical"
+        },
+        "coordinator": {
+          "const": false
+        },
+        "membership_confers": {
+          "const": "nothing"
+        }
+      }
+    },
+    "entry_points": {
+      "type": "object",
+      "description": "Repository-relative paths; a test checks each one exists.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "produces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "consumes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "mode",
+          "status",
+          "scoring"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "offline",
+              "inline"
+            ]
+          },
+          "status": {
+            "enum": [
+              "OPEN",
+              "SPECIFIED",
+              "BLOCKED"
+            ]
+          },
+          "scoring": {
+            "enum": [
+              "auto",
+              "review",
+              "none"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "result_vocabulary": {
+      "const": [
+        "ESTABLISHED",
+        "CONTRADICTED",
+        "NOT_ESTABLISHED"
+      ]
+    },
+    "independence_levels": {
+      "type": "object",
+      "required": [
+        "L0_SELF_TEST",
+        "L1_REPRODUCTION",
+        "L2_SECOND_IMPLEMENTATION",
+        "L3_INDEPENDENT_RECOMPUTATION",
+        "L4_INDEPENDENT_HOST_RUN"
+      ]
+    },
+    "level_rule": {
+      "type": "string"
+    },
+    "claim_ceiling": {
+      "type": "object",
+      "required": [
+        "real_building",
+        "physical_ot_safety",
+        "vantage",
+        "note"
+      ],
+      "properties": {
+        "real_building": {
+          "const": "NOT_ESTABLISHED"
+        },
+        "physical_ot_safety": {
+          "const": "NOT_ESTABLISHED"
+        }
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "statement",
+          "enforced_by"
+        ],
+        "properties": {
+          "enforced_by": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "licence": {
+      "type": "object",
+      "required": [
+        "code",
+        "fixtures_and_contracts",
+        "decision"
+      ]
+    },
+    "discussion": {
+      "type": "string"
+    }
+  }
+}

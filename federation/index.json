@@ -1,0 +1,161 @@
+{
+  "schema": "ot-federation-index/v1",
+  "project": "autonomous-ot-control",
+  "repository": "https://github.com/darklordVirtual/autonomous-ot-control",
+  "participation": {
+    "type": "technical",
+    "coordinator": false,
+    "membership_confers": "nothing",
+    "note": "The testbed is a producer of recorded decision trails and a consumer of edge verdicts. Joining is a pull request; being named in a discussion is not joining. No edge receives a credential, reaches the plant, or can add a permission (ADR-004)."
+  },
+  "entry_points": {
+    "guide": "docs/federation/README.md",
+    "results": "docs/federation/RESULTS.md",
+    "registry": "docs/federation/edge-registry.yaml",
+    "fixtures_v1": "federation/fixtures/v1/manifest.json",
+    "template_edge": "federation/edges/_template/edge.json",
+    "reference_verifier": "federation/edges/_template/adapter.py",
+    "records": "federation/records",
+    "scorer": "runner/edge_check.py",
+    "runner": "deploy/scripts/run-edge.sh",
+    "fixture_builder": "runner/federation_fixtures.py",
+    "case_schema": "contracts/federation-case-v1.schema.json",
+    "fixtures_schema": "contracts/federation-fixtures-v1.schema.json",
+    "edge_manifest_schema": "contracts/edge-manifest-v1.schema.json",
+    "edge_result_schema": "contracts/edge-result-v1.schema.json",
+    "run_record_schema": "contracts/edge-run-record-v1.schema.json",
+    "ci": ".github/workflows/federation-edge.yml",
+    "design": "docs/adr/ADR-004-abc-arms-and-federation-edges.md"
+  },
+  "produces": [
+    "decision_trail (proposal, REMORA decision, envelope, evidence bundle)",
+    "twin_operation_record (the plant's own single-use operation log, keyed by proposal id)",
+    "effect_observation (read-only observer, own credential, same_test_deployment vantage)",
+    "sealed_fixture_set (positive trails and seeded-fault negatives, per-file digests, package digest)"
+  ],
+  "consumes": [
+    "edge_verdicts (ot-edge-result/v1, one verdict per case)",
+    "edge_run_records (ot-edge-run-record/v1, written by runner.edge_check)"
+  ],
+  "boundaries": [
+    {
+      "id": "effect_evidence",
+      "mode": "offline",
+      "status": "OPEN",
+      "scoring": "auto",
+      "note": "Six claims in federation/fixtures/v1/manifest.json; every seeded fault must be caught."
+    },
+    {
+      "id": "corpus_adequacy",
+      "mode": "offline",
+      "status": "OPEN",
+      "scoring": "review",
+      "note": "Mutate the reference verifier over the sealed set and report survivors. Reviewed, not auto-scored."
+    },
+    {
+      "id": "runner_validity",
+      "mode": "offline",
+      "status": "OPEN",
+      "scoring": "review",
+      "note": "Break a verifier on purpose and report what runner.edge_check did; the nine runner_contract properties are the checklist."
+    },
+    {
+      "id": "admission_runtime",
+      "mode": "inline",
+      "status": "SPECIFIED",
+      "scoring": "none",
+      "note": "ADR-004: a pre-dispatch permit/refuse that can only add refusals. No harness yet."
+    },
+    {
+      "id": "tool_definition",
+      "mode": "inline",
+      "status": "BLOCKED",
+      "scoring": "none",
+      "note": "Needs the MCP gateway (OT-006 design, SPECIFIED)."
+    },
+    {
+      "id": "authority_fixture",
+      "mode": "inline",
+      "status": "SPECIFIED",
+      "scoring": "none",
+      "note": "A synthetic signed work order; no harness yet."
+    }
+  ],
+  "result_vocabulary": [
+    "ESTABLISHED",
+    "CONTRADICTED",
+    "NOT_ESTABLISHED"
+  ],
+  "independence_levels": {
+    "L0_SELF_TEST": "the testbed's reference verifier, run by the testbed's maintainers or CI",
+    "L1_REPRODUCTION": "the testbed's reference verifier, run by an external operator",
+    "L2_SECOND_IMPLEMENTATION": "a separately written verifier that still fails one independence condition (imports testbed code, or was run by the testbed's CI)",
+    "L3_INDEPENDENT_RECOMPUTATION": "a second implementation maintained and run outside the testbed, importing no testbed code, on a testbed-controlled host",
+    "L4_INDEPENDENT_HOST_RUN": "L3 on a host the testbed does not control, with the environment recorded"
+  },
+  "level_rule": "Derived by runner.edge_check.derive_level from the edge's declared evaluator (kind, imports), the operator and the host. A record that declares another level is refused by --check-records. A CI run on this repository is operator PRODUCER on a PRODUCER_CONTROLLED host, so an external edge reaches at most L2 there; L3 and L4 need the maintainer's own run, submitted as a record.",
+  "claim_ceiling": {
+    "real_building": "NOT_ESTABLISHED",
+    "physical_ot_safety": "NOT_ESTABLISHED",
+    "vantage": "same_test_deployment",
+    "note": "Every fixture is one synthetic deployment seen from inside it. A green run shows that the edge's checks hold on recorded trails and catch the seeded faults; nothing about a real plant, REMORA's policy for a real site, or production safety."
+  },
+  "invariants": [
+    {
+      "id": "INV-12",
+      "statement": "No physical OT write path exists; simulation results never unlock a live connector.",
+      "enforced_by": [
+        "tests/boundary/test_custody_and_fencing.py::test_write_credential_custody",
+        "tests/boundary/test_custody_and_fencing.py::test_plant_private_network_is_fenced",
+        "tests/boundary/test_custody_and_fencing.py::test_governed_source_holds_no_actuator_capability"
+      ]
+    },
+    {
+      "id": "FED-OT-001",
+      "statement": "An edge can only add refusals, never permissions, and never receives a credential or a route to the plant.",
+      "enforced_by": [
+        "tests/unit/test_federation_runner_contract.py::test_the_scorer_has_no_permit_path",
+        "tests/boundary/test_custody_and_fencing.py::test_the_harness_is_credential_scoped"
+      ]
+    },
+    {
+      "id": "FED-OT-002",
+      "statement": "Registry membership confers nothing: edge-registry.yaml lists only projects that joined by pull request, and no runtime code reads it.",
+      "enforced_by": [
+        "tests/unit/test_deploy_ot_artifacts.py::test_edge_registry_lists_only_projects_that_joined",
+        "tests/unit/test_federation_runner_contract.py::test_no_runtime_code_reads_the_registry"
+      ]
+    },
+    {
+      "id": "FED-OT-003",
+      "statement": "Every run record binds the edge pin, the fixture manifest SHA-256, the package digest and the testbed commit, and its independence level is derived, not declared.",
+      "enforced_by": [
+        "contracts/edge-run-record-v1.schema.json",
+        "tests/unit/test_federation_runner_contract.py::test_record_level_is_derived_not_declared",
+        "tests/unit/test_federation_runner_contract.py::test_tampered_fixture_set_is_refused"
+      ]
+    },
+    {
+      "id": "FED-OT-004",
+      "statement": "A PASS implies no endorsement, production safety, broader validity or authority; the ceiling booleans are schema constants fixed at false.",
+      "enforced_by": [
+        "contracts/edge-run-record-v1.schema.json",
+        "tests/unit/test_federation_runner_contract.py::test_record_ceiling_booleans_are_false"
+      ]
+    },
+    {
+      "id": "FED-OT-005",
+      "statement": "RESULTS.md is generated from the records; CI refuses a table that differs from them.",
+      "enforced_by": [
+        "tests/unit/test_federation_runner_contract.py::test_results_table_matches_the_records",
+        ".github/workflows/federation-edge.yml"
+      ]
+    }
+  ],
+  "licence": {
+    "code": "NOT_DECIDED (SDD D-01)",
+    "fixtures_and_contracts": "NOT_DECIDED (SDD D-01)",
+    "decision": "Until D-01 is decided, an external project may run the fixtures and publish its own attributed result; redistribution of the fixtures themselves waits for the licence."
+  },
+  "discussion": "https://github.com/aeoess/agent-governance-vocabulary/issues/177"
+}

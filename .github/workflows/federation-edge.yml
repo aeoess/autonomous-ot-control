@@ -1,17 +1,27 @@
 name: federation-edge
-# Runs every changed federation edge against the frozen fixtures, sandboxed
+# Runs every changed federation edge against the sealed fixtures, sandboxed
 # (deploy/scripts/run-edge.sh), plus the template as a self-test that the
-# fixtures still discriminate. No secrets, read-only token, forks included.
+# fixtures still discriminate. Validates submitted run records and refuses a
+# RESULTS.md that differs from them. No secrets, read-only token, forks included.
+#
+# A run here is operator PRODUCER on a PRODUCER_CONTROLLED host: an external
+# edge reaches at most L2_SECOND_IMPLEMENTATION in CI. L3/L4 come from the
+# maintainer's own run, submitted as a record (docs/federation/README.md).
 on:
   pull_request:
     paths:
       - "federation/**"
       - "runner/edge_check.py"
+      - "runner/federation_fixtures.py"
       - "deploy/scripts/run-edge.sh"
       - "contracts/edge-*.json"
-      - "contracts/federation-case-v1.schema.json"
+      - "contracts/federation-*.json"
+      - "docs/federation/RESULTS.md"
 permissions:
   contents: read
+env:
+  OPERATOR: PRODUCER
+  HOST: PRODUCER_CONTROLLED
 jobs:
   edges:
     runs-on: ubuntu-latest
@@ -21,6 +31,15 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Fixture sets verify against their manifests
+        run: |
+          for m in federation/fixtures/*/manifest.json; do
+            python3 -m runner.edge_check --check-fixtures "$(dirname "$m")"
+          done
+      - name: Run records validate and RESULTS.md matches them
+        run: |
+          python3 -m runner.edge_check --check-records
+          python3 -m runner.edge_check --check-results
       - name: Which edges changed
         id: changed
         run: |

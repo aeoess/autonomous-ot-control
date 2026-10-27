@@ -14,6 +14,8 @@
     "pin",
     "licence",
     "claim_ceiling",
+    "claims",
+    "evaluator",
     "entrypoint"
   ],
   "properties": {
@@ -74,7 +76,53 @@
     },
     "claim_ceiling": {
       "type": "string",
-      "description": "What a green result shows, and what it does not."
+      "description": "What a green result shows, and what it does not, in the edge's own words."
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The claims this edge checks, one ceiling each. Claim ids from the fixture manifest let the scorer report per claim.",
+      "items": {
+        "type": "object",
+        "required": [
+          "claim_id",
+          "claim_ceiling"
+        ],
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "claim_ceiling": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evaluator": {
+      "type": "object",
+      "description": "What the adapter is. The independence level of a run is derived from this, the operator and the host; it is never declared.",
+      "required": [
+        "kind",
+        "imports_reference_verifier",
+        "imports_testbed_code"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "reference",
+            "second_implementation"
+          ]
+        },
+        "imports_reference_verifier": {
+          "type": "boolean"
+        },
+        "imports_testbed_code": {
+          "type": "boolean"
+        },
+        "language": {
+          "type": "string"
+        }
+      }
     },
     "entrypoint": {
       "type": "object",

@@ -60,18 +60,25 @@ refusals, never permissions.
 
 What you get, pinned and offline:
 
-- **Fixtures** `federation/fixtures/v1/`: 12 positive decision trails and 6
-  negative controls, one seeded fault each, from a real governed run. The
-  manifest carries the testbed commit and its own SHA-256
-  ([case schema](contracts/federation-case-v1.schema.json)).
+- **A sealed fixture set** `federation/fixtures/v1/`: 12 positive decision
+  trails and 6 negative controls, one seeded fault each, from a real governed
+  run. The manifest names six claims, maps every fault to the claim it
+  contradicts, lists every case file with its SHA-256 and a package digest
+  ([fixtures schema](contracts/federation-fixtures-v1.schema.json)).
 - **Contracts**: one verdict per case, `ESTABLISHED` / `CONTRADICTED` /
   `NOT_ESTABLISHED` ([result schema](contracts/edge-result-v1.schema.json));
-  an edge manifest with your pin, licence and **claim ceiling** in your own
-  words ([manifest schema](contracts/edge-manifest-v1.schema.json)); the
-  digest rules written out, so no one has to import our code.
+  an edge manifest with your pin, licence, claims and **claim ceilings** in
+  your own words ([manifest schema](contracts/edge-manifest-v1.schema.json));
+  the digest rules written out, so no one has to import our code.
 - **A reference verifier** (`federation/edges/_template/`, standard library
-  only) to replace or wrap, and a scorer that fails any run that answers
-  nothing or lets a negative control through.
+  only) to replace or wrap, and a scorer that verifies the sealed bytes, fails
+  any run that answers nothing or lets a negative control through, and writes
+  a **run record** with a derived independence level, `L0_SELF_TEST` to
+  `L4_INDEPENDENT_HOST_RUN` ([record schema](contracts/edge-run-record-v1.schema.json)).
+  The results table is generated from the records; CI refuses a hand-edited one.
+- **A machine-readable entry point**, [`federation/index.json`](federation/index.json):
+  what the testbed produces and consumes, its boundaries, its claim ceiling,
+  and five invariants each bound to the test that enforces it.
 
 ```bash
 python -m runner.edge_check --init <your-edge-id> --project "<name>" --maintainer <github-handle>
