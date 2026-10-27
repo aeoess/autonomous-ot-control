@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edge-manifest-v1",
+  "title": "A federation edge's manifest (federation/edges/<id>/edge.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "edge_id",
+    "project",
+    "maintainer",
+    "boundary",
+    "mode",
+    "pin",
+    "licence",
+    "claim_ceiling",
+    "entrypoint"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-edge-manifest/v1"
+    },
+    "edge_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,40}$"
+    },
+    "project": {
+      "type": "string"
+    },
+    "maintainer": {
+      "type": "string",
+      "description": "GitHub handle of the person who opened the joining pull request."
+    },
+    "repository": {
+      "type": "string"
+    },
+    "boundary": {
+      "enum": [
+        "effect_evidence",
+        "corpus_adequacy",
+        "runner_validity",
+        "admission_runtime",
+        "tool_definition",
+        "authority_fixture"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "offline",
+        "inline"
+      ]
+    },
+    "pin": {
+      "type": "object",
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "git_commit",
+            "image_digest",
+            "package"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "licence": {
+      "type": "string"
+    },
+    "claim_ceiling": {
+      "type": "string",
+      "description": "What a green result shows, and what it does not."
+    },
+    "entrypoint": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "image": {
+          "type": "string"
+        },
+        "http": {
+          "type": "string",
+          "description": "inline only: the /decide URL inside the edge container"
+        }
+      }
+    }
+  }
+}

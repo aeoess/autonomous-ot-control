@@ -1,0 +1,118 @@
+{
+  "cases": [
+    {
+      "case_id": "pos-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-05e55692-c8d8-4558-aec1-5890ad028480",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-2b913957-c61e-4a11-964a-c36f3d8cc878",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-346ee3c4-2238-4fa9-838b-e54ba02f7c83",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-371e1786-5bdd-4c98-a663-14d6cab6bc64",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-38f39dcc-0d3c-4625-9a3c-a9879910358a",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-3e234cda-8d8a-4519-906f-fc0ea9b5ebd4",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-3f2191da-5a16-4110-aefe-0175fbee13a7",
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "neg-effect_value_not_reached-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "effect_value_not_reached",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-proposal_swapped-05e55692-c8d8-4558-aec1-5890ad028480",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "proposal_swapped",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-evidence_digest_mismatch-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "evidence_digest_mismatch",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-observed_before_dispatch-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "observed_before_dispatch",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-executed_without_approval-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "executed_without_approval",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-replayed_execution-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "replayed_execution",
+      "kind": "negative"
+    }
+  ],
+  "fixture_set": "v1",
+  "schema": "ot-federation-fixtures/v1",
+  "scope": "Decision trails from a governed demo of the simulated building (same-test-deployment vantage); the twin's operation log is the independent witness. Not a real plant.",
+  "source_run": "demo-week1-work",
+  "testbed_commit": "942ba37f33b766a1b127852894b79de20668efc8",
+  "testbed_commit_note": "The demo ran on a working tree byte-identical to this commit (committed right after the run, git diff empty)."
+}

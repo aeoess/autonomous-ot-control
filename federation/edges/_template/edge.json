@@ -1,0 +1,27 @@
+{
+  "schema": "ot-edge-manifest/v1",
+  "edge_id": "template-reference-verifier",
+  "project": "autonomous-ot-control reference verifier (template)",
+  "maintainer": "darklordVirtual",
+  "repository": "https://github.com/darklordVirtual/autonomous-ot-control",
+  "boundary": "effect_evidence",
+  "mode": "offline",
+  "pin": {
+    "kind": "git_commit",
+    "value": "in-tree"
+  },
+  "licence": "same as this repository",
+  "claim_ceiling": "Checks that each case's claimed effect is consistent with REMORA's recorded decision, the twin's own operation record, the observation and the evidence digest. It does not show the twin is right about the plant, or that REMORA's policy is correct.",
+  "entrypoint": {
+    "command": [
+      "python",
+      "/edge/adapter.py",
+      "run",
+      "--fixtures",
+      "/fixtures",
+      "--out",
+      "/out/result.json"
+    ],
+    "image": "python:3.12-slim"
+  }
+}
