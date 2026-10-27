@@ -294,7 +294,10 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
                 applied_ops.append({"sim_time_s": t, "zone_id": zone, "setpoint_c": value})
                 last_item = row
         if t == 86400 + 12 * 3600 and last_item:  # day 2, 12:00 UTC: attacks
-            ledger += inject_attacks(s, sc, t, day, plan_ref, last_item, decisions_dir, counts)
+            attacks = inject_attacks(s, sc, t, day, plan_ref, last_item, decisions_dir, counts)
+            ledger += attacks
+            applied_ops += [{"sim_time_s": t, "zone_id": r["zone_id"], "setpoint_c": r["to_c"]}
+                            for r in attacks if r.get("applied") and r.get("zone_id") is not None]
         s.ctl("advance", str(STEP_S))
     energy = s.step("energy")["body"]
     status = s.step("status")["body"]
@@ -563,7 +566,10 @@ def run_p3(s: Stack, out: Path, days: int) -> dict[str, Any]:
                 counts["read_executed" if executed_read(r) else "read_not_executed"] += 1
         ct.step(t)
         if t == 86400 + 12 * 3600 and last_item:
-            ledger += inject_attacks(s, sc, t, day, plan_ref, last_item, decisions_dir, counts)
+            attacks = inject_attacks(s, sc, t, day, plan_ref, last_item, decisions_dir, counts)
+            ledger += attacks
+            applied_ops += [{"sim_time_s": t, "zone_id": r["zone_id"], "setpoint_c": r["to_c"]}
+                            for r in attacks if r.get("applied") and r.get("zone_id") is not None]
         s.ctl("advance", str(STEP_S))
         shadow.advance(STEP_S)
     ct.finish()
@@ -766,12 +772,17 @@ def main(argv: list[str] | None = None) -> int:
     (work / "summary.json").write_text(json.dumps({"summary": summary, "counts": live["counts"],
                                                    "audit": live["audit"]}, indent=2), encoding="utf-8")
     c = live["counts"]
-    ok = (summary["determinism"]["match"] and live["audit"].get("valid") is True
-          and c.get("attacks", 0) == c.get("attacks_blocked", -1) and c.get("applied", 0) > 0)
+    strict = REVIEWER_MODEL == "careful" and INLINE_EDGE is None
+    ran = summary["determinism"]["match"] and live["audit"].get("valid") is True and c.get("applied", 0) > 0
+    ok = ran and (c.get("attacks", 0) == c.get("attacks_blocked", -1) or not strict)
+    summary["arm_B"]["run_ok"] = ran
+    summary["arm_B"]["acceptance_mode"] = strict
     write_bundle(a.out, suite_id=SUITE_ID, run_id=a.run_id,
                  manifest_extra={"scope": "SIMULATED_CONTROLLED_PILOT", "vantage": "same_test_deployment",
                                  "work_dir": str(work), "strategy": a.strategy,
-                                 "reviewer_model": "careful-p3" if a.strategy == "P3" else "careful"},
+                                 "reviewer_model": ("careful-p3" if a.strategy == "P3" else REVIEWER_MODEL),
+                                 "inline_edge": INLINE_EDGE.edge_id if INLINE_EDGE else None,
+                                 "acceptance_mode": strict},
                  metrics={**summary, "counts": c},
                  trace=s.trace,
                  claims={"authorized_effect_through_remora_dispatcher": "TESTED_DOCKER" if c.get("applied")

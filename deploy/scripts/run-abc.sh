@@ -27,12 +27,25 @@ EDGE_PORT="${EDGE_PORT:-8765}"
 "$PY" -m runner.episode check "$EPISODE"
 mkdir -p "$OUT"
 
-echo "== arm A (offline)"
-"$PY" -m runner.arm_a --episode "$EPISODE" --out "${OUT}/arm-a"
+# Resumable: an arm whose directory already exists under OUT is kept, so a run
+# interrupted by a failing arm can be continued with the same RUN_ID.
+if [[ -d "${OUT}/arm-a" ]]; then
+  echo "== arm A (offline): already present, kept"
+else
+  echo "== arm A (offline)"
+  "$PY" -m runner.arm_a --episode "$EPISODE" --out "${OUT}/arm-a"
+fi
 
 run_governed() {  # label, extra demo args...
   local label="$1"; shift
+  if [[ -d "${OUT}/${label}" ]]; then
+    echo "== arm ${label}: already present, kept"
+    return 0
+  fi
   echo "== arm ${label}"
+  rm -rf "artifacts/${RUN_ID}-${label}-work"
+  # A governed arm that is not the careful acceptance may let a forbidden proposal through;
+  # that is the measurement, so the demo exits 0 for such arms. Any other failure stops here.
   RUN_ID="${RUN_ID}-${label}" STRATEGY=P1 DAYS="$DAYS" DEMO_ARGS="$*" ./deploy/scripts/run-demo-governed.sh
   mv "artifacts/${RUN_ID}-${label}-work" "${OUT}/${label}"
 }
