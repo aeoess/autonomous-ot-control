@@ -16,7 +16,7 @@ import json
 import os
 import tempfile
 import threading
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +33,9 @@ MODEL_ID = "three-zone-rc-v1"
 #: The same zones and envelope with building services (twin/plant.py).
 HVAC_MODEL_ID = "three-zone-hvac-v1"
 MODEL_IDS = (MODEL_ID, HVAC_MODEL_ID)
-SNAPSHOT_SCHEMA = "ot-twin-snapshot/v1"
+SNAPSHOT_SCHEMA = "ot-twin-snapshot/v2"
+#: v1 carried zones, operations and counters only; see Twin._restore for how it is handled.
+LEGACY_SNAPSHOT_SCHEMA = "ot-twin-snapshot/v1"
 
 
 class TwinError(RuntimeError):
@@ -110,6 +112,7 @@ class Twin:
         self.trace: list[dict[str, Any]] = []
         self._lock = threading.RLock()
         self._snapshot_path = Path(snapshot_path) if snapshot_path else None
+        self.snapshot_migrated_from: str | None = None
         self.config_digest = canonical_digest(config)
         self.model_id = config["model"]
         self.plant: plant_mod.PlantConfig | None = None
@@ -567,21 +570,61 @@ class Twin:
             "comfort_violation_dh": r6(self.comfort_violation_dh), "state_revision": self.revision,
         })
 
+    #: Optional per-step attributes that hold physics, tariff or season state
+    #: between steps. Absent until first used, so they are persisted by name
+    #: only when present and restored only when the snapshot carries them.
+    _OPTIONAL_STATE = ("_wet_since", "_melt_s", "_dry_s", "_season_on", "_season_hour", "outdoor_mean_24h",
+                       "grid_energy_cost", "monthly_peak_kw", "_hour_kwh", "_hour_key")
+
     def snapshot(self) -> dict[str, Any]:
+        """Everything a restart needs to continue as if it never happened (schema v2).
+
+        v2 adds, to the v1 zones/operations/counters: the HVAC setpoints and
+        plant state, the point history behind the min-interval interlock, the
+        last plant points, the heat and electricity meters, and the optional
+        tariff, season and surface state.
+        """
         with self._lock:
-            return {"schema": SNAPSHOT_SCHEMA, "config_digest": self.config_digest,
-                    "scenario_digest": self.scenario.digest, "now_s": self.clock.now_s,
-                    "revision": self.revision, "energy_kwh": self.energy_kwh, "cost": self.cost,
-                    "comfort_violation_dh": self.comfort_violation_dh, "power_w": self.power_w,
-                    "stop_switch": self.stop_switch,
-                    "zones": {k: v.to_dict() for k, v in self.zones.items()},
-                    "operations": {k: v.to_dict() for k, v in self.operations.items()},
-                    "events": list(self.events)}
+            snap: dict[str, Any] = {
+                "schema": SNAPSHOT_SCHEMA, "config_digest": self.config_digest,
+                "scenario_digest": self.scenario.digest, "model_id": self.model_id, "now_s": self.clock.now_s,
+                "revision": self.revision, "energy_kwh": self.energy_kwh, "cost": self.cost,
+                "comfort_violation_dh": self.comfort_violation_dh, "power_w": self.power_w,
+                "stop_switch": self.stop_switch,
+                "zones": {k: v.to_dict() for k, v in self.zones.items()},
+                "operations": {k: v.to_dict() for k, v in self.operations.items()},
+                "events": list(self.events),
+                "point_history_s": {k: list(v) for k, v in self.point_history_s.items()},
+                "district_heat_kwh": self.district_heat_kwh, "electric_kwh": self.electric_kwh,
+                "points": dict(self.points),
+                "optional_state": {k: getattr(self, k) for k in self._OPTIONAL_STATE if hasattr(self, k)},
+            }
+            if self.plant is not None:
+                sp = self.setpoints
+                snap["hvac"] = {
+                    "setpoints": {"zones": {z: asdict(v) for z, v in sp.zones.items()},
+                                  "supply_air_c": sp.supply_air_c, "tank_c": sp.tank_c,
+                                  "hp_max_fraction": sp.hp_max_fraction, "ahu_enabled": sp.ahu_enabled,
+                                  "cable_modes": dict(sp.cable_modes)},
+                    "plant_state": asdict(self.plant_state),
+                }
+            return snap
 
     def _restore(self, snap: dict[str, Any]) -> None:
-        if snap.get("schema") != SNAPSHOT_SCHEMA or snap.get("config_digest") != self.config_digest \
+        schema = snap.get("schema")
+        if schema not in (SNAPSHOT_SCHEMA, LEGACY_SNAPSHOT_SCHEMA) \
+                or snap.get("config_digest") != self.config_digest \
                 or snap.get("scenario_digest") != self.scenario.digest:
             raise TwinError("snapshot does not match this config/scenario; refusing to resume")
+        if schema == LEGACY_SNAPSHOT_SCHEMA and self.plant is not None:
+            # A v1 snapshot has no HVAC setpoints, plant state or point history.
+            # Resuming the hvac model from it would keep the revision and the
+            # operation log while silently resetting what those operations did
+            # and the interval guard behind them. Refuse; a reset plant is a new
+            # run, not a continuation.
+            raise TwinError(f"snapshot {LEGACY_SNAPSHOT_SCHEMA} lacks the HVAC setpoints, plant state and "
+                            "point history; refusing to resume the hvac model from it. Start a new run, "
+                            f"or resume from a {SNAPSHOT_SCHEMA} snapshot")
         self.clock.now_s = int(snap["now_s"])
         self.revision = int(snap["revision"])
         self.energy_kwh = float(snap["energy_kwh"])
@@ -592,6 +635,38 @@ class Twin:
         self.zones = {k: ZoneState(**v) for k, v in snap["zones"].items()}
         self.operations = {k: OperationRecord(**v) for k, v in snap["operations"].items()}
         self.events = list(snap["events"])
+        if schema == LEGACY_SNAPSHOT_SCHEMA:
+            # Explicit migration for the simple model, which has no plant tools:
+            # the only state v1 lacks is the (empty) plant point history. Say so
+            # in the event log rather than resuming silently.
+            self.point_history_s = {}
+            self.snapshot_migrated_from = LEGACY_SNAPSHOT_SCHEMA
+            self.events.append({"event": "snapshot_migrated", "from": LEGACY_SNAPSHOT_SCHEMA,
+                                "to": SNAPSHOT_SCHEMA, **self.clock.stamp()})
+            return
+        self.point_history_s = {k: [int(x) for x in v] for k, v in snap.get("point_history_s", {}).items()}
+        self.district_heat_kwh = float(snap.get("district_heat_kwh", 0.0))
+        self.electric_kwh = float(snap.get("electric_kwh", 0.0))
+        self.points = {k: float(v) for k, v in snap.get("points", {}).items()}
+        for k, v in snap.get("optional_state", {}).items():
+            if k in self._OPTIONAL_STATE:
+                setattr(self, k, v)
+        if self.plant is not None:
+            hv = snap.get("hvac")
+            if not hv:
+                raise TwinError(f"{SNAPSHOT_SCHEMA} snapshot of the hvac model carries no hvac section; "
+                                "refusing to resume")
+            sp = hv["setpoints"]
+            self.setpoints = plant_mod.Setpoints(
+                zones={z: plant_mod.ZoneSetpoints(**v) for z, v in sp["zones"].items()},
+                supply_air_c=float(sp["supply_air_c"]), tank_c=float(sp["tank_c"]),
+                hp_max_fraction=float(sp["hp_max_fraction"]), ahu_enabled=bool(sp["ahu_enabled"]),
+                cable_modes=dict(sp["cable_modes"]))
+            ps = hv["plant_state"]
+            self.plant_state = plant_mod.PlantState(
+                tank_c=float(ps["tank_c"]), co2_ppm={z: float(v) for z, v in ps["co2_ppm"].items()},
+                hp_on=bool(ps.get("hp_on", False)), hp_state_since_s=float(ps.get("hp_state_since_s", 1e9)),
+                hp_starts=int(ps.get("hp_starts", 0)))
 
     def _persist(self) -> None:
         if not self._snapshot_path:

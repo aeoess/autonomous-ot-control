@@ -29,6 +29,7 @@ Statsbygg PA 0802 TFM mapping, and the opt-in federation onboarding kit.
 | Deterministic 3-zone RC + HVAC building-services twin (`twin/plant.py`), seeded scenarios | `TESTED_LOCALLY` |
 | All 10 supervisory write tools + interlocks `IL-01..IL-11` (zones, AHU, lighting, cables, tank, heat pump) | `TESTED_LOCALLY` |
 | Single-use operation IDs incl. replay after restart (twin side) | `TESTED_LOCALLY` |
+| Restart continues from the complete state: snapshot v2 carries the HVAC setpoints, plant state, point history (min-interval interlock), last plant points, heat and electricity meters and the tariff/season/surface state; a v1 snapshot is refused for the hvac model and migrated explicitly (event `snapshot_migrated`) for the simple one (finding of 2026-10-27 after PR #20; `tests/unit/test_twin_restart_state.py`) | `TESTED_LOCALLY` — before the fix a twin resumed from its snapshot kept revision 1 and an APPLIED record for cooling 24.0 while the cooling setpoint was back at 23.5, `point_history_s` was empty, and a change the interlock had just refused was accepted at the same simulated instant |
 | Separate read / actuator / control listeners and credentials | `TESTED_LOCALLY` |
 | Runner and harness cannot reach the actuator over Docker networks (AT-05) | `TESTED_DOCKER` |
 | Read-only effect observer (`same_test_deployment` vantage) + ToolSpec v5 signed postconditions | `TESTED_LOCALLY` |
