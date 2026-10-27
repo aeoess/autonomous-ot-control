@@ -19,6 +19,12 @@ Fork workflows use a read-only token and no application credentials.
 
 ## Independent projects
 
+The owner has explicitly accepted the upstream maintainer's pinned reader in
+the isolated `agent-evidence-vectors-axes` edge (PR #22). Its upstream source,
+Apache-2.0 licence and local integration changes are documented in that
+edge's `run.md`. This exception does not import it into REMORA or the protected
+runtime and does not grant blanket approval for other third-party code.
+
 Keep third-party verifier source, libraries, tests and implementation-specific
 assets in their owner's repository. Do not vendor them here or add dependency
 updates that import them into this project. An independently written protocol
