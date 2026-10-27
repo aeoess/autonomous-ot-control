@@ -224,6 +224,127 @@ def abc_html(res: dict[str, Any]) -> str:
             "other safety numbers and the caretaker's own record per arm.</p></div>")
 
 
+#: Floor area of the synthetic building, for intensity checks (kWh per m²).
+BUILDING_CONFIG = Path(__file__).resolve().parents[1] / "twin" / "fixtures" / "three-zone-hvac-seasonal-v2.json"
+
+
+def floor_area_m2() -> float | None:
+    try:
+        cfg = json.loads(BUILDING_CONFIG.read_text("utf-8"))
+        return float(sum(z["area_m2"] for z in cfg["plant"]["zones"]))
+    except (OSError, KeyError, ValueError, TypeError):
+        return None
+
+
+def cable_rating_kw() -> float | None:
+    try:
+        cfg = json.loads(BUILDING_CONFIG.read_text("utf-8"))
+        return sum(float(c["rated_w"]) for c in cfg["plant"]["cables"]) / 1000
+    except (OSError, KeyError, ValueError, TypeError):
+        return None
+
+
+def drivers(res: dict[str, Any]) -> list[dict[str, Any]]:
+    """Per area: how much of the best strategy's saving is the heating-cable lever, and what is left
+    without it. The cost without the cable lever is an estimate (cable kWh × the area's P0-weighted spot
+    price), because the grid power part depends on the month's peaks and is not attributable per consumer."""
+    rs, ss = rows(res), strategies(res)
+    best = ss[-1]
+    out = []
+    for r in rs:
+        b = r["by"][best]
+        cable_kwh = max(b["consumers"]["heating_cables"], 0.0)
+        other_kwh = b["kwh_saved"] - cable_kwh
+        nok = b["saving_nok"]["mean"]
+        cable_nok_est = cable_kwh * r["spot_price"]
+        out.append({"area": r["area"], "name": r["name"], "best": best,
+                    "saving_pct": b["saving_pct"], "kwh_pct": b["kwh_pct"],
+                    "cable_kwh": cable_kwh, "cable_share_of_saving": 100 * cable_kwh / b["kwh_saved"] if b["kwh_saved"] else 0.0,
+                    "other_kwh": other_kwh, "kwh_pct_ex_cables": b["kwh_pct_ex_cables"],
+                    "nok_ex_cables_est": nok - cable_nok_est,
+                    "pct_ex_cables_est": 100 * (nok - cable_nok_est) / r["p0_nok"],
+                    "p0_kwh": r["p0_kwh"], "p0_cables_kwh": None})
+    return out
+
+
+def intensities(res: dict[str, Any]) -> list[tuple[str, float, float, float, float]]:
+    """(area, P0 kWh/m² total, cables, equipment, rest) for a reasonableness check against the building's size."""
+    a = floor_area_m2()
+    if not a:
+        return []
+    out = []
+    for area in res["areas"]:
+        y = year_row(res, area)["P0"]
+        cab, eq = y["heating_cables"] / a, y["equipment"] / a
+        out.append((area, y["kwh"] / a, cab, eq, y["kwh"] / a - cab - eq))
+    return out
+
+
+def drivers_md(res: dict[str, Any]) -> list[str]:
+    ds = drivers(res)
+    if not ds:
+        return []
+    best = ds[0]["best"]
+    a, kw = floor_area_m2(), cable_rating_kw()
+    L = ["## What drives the number", "",
+         f"The headline saving of {best} is dominated by one lever: the heating cables. As found (P0) they run on "
+         "an air thermostat and heat the ramp and gutter through most of the winter; with the ground moisture "
+         "sensor they run only while the surface is wet and freezing. That share rests on three stated assumptions "
+         f"of the twin, none of them measured: the cable rating ({kw:.0f} kW installed" if kw else
+         "The headline saving is dominated by one lever: the heating cables. That share rests on stated, unmeasured "
+         "assumptions (the cable rating"]
+    if kw:
+        L[-1] += f" for a {a:.0f} m² building" if a else ""
+    L[-1] += ("), the as-found control (air thermostat −8..+3 °C, the practice in older installations), and the "
+              "surface moisture model. **Treat the figure without the cable lever as the headline until a real site "
+              "has been measured.**")
+    L += ["", f"| Area | {best} saves (NOK %) | of which the cable lever (kWh, share of saved kWh) | HVAC and lighting levers alone (kWh %) | "
+          "cost saving without the cable lever (estimate, %) |", "|---|---:|---:|---:|---:|"]
+    for d in ds:
+        L.append(f"| {d['area']} {d['name']} | {d['saving_pct']:.1f} | {nok(d['cable_kwh'])} kWh ({d['cable_share_of_saving']:.0f} %) | "
+                 f"**{d['kwh_pct_ex_cables']:.1f}** | {d['pct_ex_cables_est']:.1f} |")
+    L += ["", "The cost estimate without the cable lever subtracts the cable kWh at the area's P0-weighted spot price; "
+          "the grid power part depends on monthly peaks and is not attributable per consumer, so this column is an "
+          "estimate, the kWh column is exact.", ""]
+    it = intensities(res)
+    if it:
+        L += [f"**Reasonableness check, P0 energy intensity ({a:.0f} m² floor area).** Whole-building figures for a "
+              "small Norwegian office typically fall in the low hundreds of kWh/m²·year; what matters here is the "
+              "composition, which is an assumption of the twin, not a measurement.", "",
+              "| Area | P0 kWh/m² total | heating cables | equipment (uncontrollable base load) | HVAC, lighting, rest |",
+              "|---|---:|---:|---:|---:|"]
+        L += [f"| {ar} | {tot:.0f} | {cab:.0f} | {eq:.0f} | {rest:.0f} |" for ar, tot, cab, eq, rest in it]
+        L += ["", "A cable share of roughly 40 % of a building's electricity is high; it follows from the installed "
+              "rating and the thermostat baseline, both assumptions. The equipment base load is constant in every "
+              "strategy and dilutes every percentage.", ""]
+    return L
+
+
+def drivers_html(res: dict[str, Any]) -> str:
+    md = drivers_md(res)
+    if not md:
+        return ""
+    # Reuse the Markdown rendering for the same content, simply.
+    out = []
+    for block in "\n".join(md).split("\n\n"):
+        lines = [ln for ln in block.splitlines() if ln.strip()]
+        if not lines:
+            continue
+        if lines[0].startswith("## "):
+            out.append(f"<h2>{E(lines[0][3:])}</h2>")
+        elif lines[0].startswith("|"):
+            rows_ = [ln for ln in lines if not set(ln.replace('|', '').strip()) <= set('-: ')]
+            tr = []
+            for i, ln in enumerate(rows_):
+                cells = [c.strip() for c in ln.strip('|').split('|')]
+                tag = "th" if i == 0 else "td"
+                tr.append("<tr>" + "".join(f"<{tag}>{E(c).replace('**', '')}</{tag}>" for c in cells) + "</tr>")
+            out.append(f"<div class=card><table>{''.join(tr)}</table></div>")
+        else:
+            out.append(f"<p>{E(' '.join(lines)).replace('**', '')}</p>")
+    return "".join(out)
+
+
 def safety_keys(res: dict[str, Any]) -> list[tuple[str, str]]:
     """The safety KPIs this result file carries (older files lack the CO2 and tank ones)."""
     y = next(iter(next(iter(res["table"].values()))["year"].values()))["P0"]
@@ -295,6 +416,7 @@ def render_md(res: dict[str, Any]) -> str:
     L = [f"# {title(res)}", "",
          f"Seeds {', '.join(map(str, res['seeds']))}. Strategies: {', '.join(ss)}. Scope: {res['scope']}", ""]
     L += how_to_read_md(res)
+    L += drivers_md(res)
     L += abc_md(res)
     L += ["## Year", "",
          "| Area | P0 NOK | P0 kWh | Spot NOK/kWh (P0) | "
@@ -492,6 +614,7 @@ svg .grid{{stroke:var(--line)}} svg .tick{{fill:var(--muted);font:11.5px var(--s
 {tile(f"Icing hazard with {best}", f"{sum(year_row(res, r['area'])[best]['hazard_h'] for r in rs):.0f} h", f"P0: {sum(year_row(res, r['area'])['P0']['hazard_h'] for r in rs):.0f} h over all areas")}
 </div>
 {how_to_read_html(res)}
+{drivers_html(res)}
 {abc_html(res)}
 <h2>1. Year cost by area</h2>
 <p>The same building and the same strategies at five coordinates, each with its own verified day-ahead prices and local ERA5 weather. Cost is spot plus a declared reference grid tariff (energy part and the monthly power charge on the highest hourly kW).</p>

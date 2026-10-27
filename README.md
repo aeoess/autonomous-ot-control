@@ -137,10 +137,13 @@ under `revisions`. Every row and every finding stays in
 [`docs/federation/RESULTS.md`](docs/federation/RESULTS.md).
 
 **On the synthetic building, 2025, five price areas:** the caretaker (P3) saves
-25–42 % of the as-found cost, 9–14 % of the kWh without the heating-cable
-lever, and the independent validator keeps the tank out of the unsafe band the
-unvalidated caretaker enters. Tables, definitions of P0–P3 and the arms, and the
-reports: [`docs/strategies.md`](docs/strategies.md).
+**9–14 % of the kWh** from the HVAC and lighting levers, and the independent
+validator keeps the tank out of the unsafe band the unvalidated caretaker
+enters. The reports also show a far larger total (25–42 % of cost) that is
+80–90 % one lever, the heating cables on an air thermostat as found; it rests
+on unmeasured assumptions of the twin and is not the figure to quote. Each
+report opens with what drives the number. Tables, definitions of P0–P3 and the
+arms, and the reports: [`docs/strategies.md`](docs/strategies.md).
 
 Everything in the governed path is `TESTED_DOCKER`: one host, one REMORA
 replica, synthetic plant, same-deployment vantage. Real-building savings and
