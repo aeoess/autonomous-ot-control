@@ -1,0 +1,30 @@
+{
+  "schema": "ot-scenario/v1",
+  "scenario_id": "trondheim-week-2026w03-v1",
+  "comment": "Fictitious demo-building-001 at its declared coordinate (twin/fixtures/site-demo-building-001.json): real NO3 day-ahead spot prices and ERA5 outdoor temperature for 2026-01-15..21, verified by runner.exogenous. Occupancy, gains and comfort are synthetic.",
+  "site_ref": "../twin/fixtures/site-demo-building-001.json",
+  "seed": 177,
+  "start_utc": "2026-01-15T00:00:00Z",
+  "duration_seconds": 604800,
+  "outdoor": {
+    "series_ref": "data/demo-building-001/outdoor-temperature-2026-01-15_2026-01-21.json",
+    "sha256": "96218c36af621aa4f486ced6d275e377df31ca9472d254fe192e3f8236b63c8c"
+  },
+  "occupancy": {
+    "weekday_hours_utc": [
+      7,
+      17
+    ],
+    "gain_w_per_m2": 8.0,
+    "unoccupied_gain_w_per_m2": 1.0
+  },
+  "price": {
+    "series_ref": "data/demo-building-001/price-NO3-2026-01-15_2026-01-21.json",
+    "sha256": "cde8dd904b7541f44ddf67f7787f2d5fb2caa627aaef6857b361ed0294e54cfb"
+  },
+  "comfort": {
+    "occupied_min_c": 20.0,
+    "occupied_max_c": 24.0
+  },
+  "disturbances": []
+}

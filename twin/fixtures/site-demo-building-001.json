@@ -1,0 +1,21 @@
+{
+  "schema": "ot-site/v1",
+  "building_id": "demo-building-001",
+  "fictitious": true,
+  "name": "Demo Building 001",
+  "comment": "A fictitious building. The coordinate is a point in Trondheim chosen only so that weather and day-ahead prices come from a real Norwegian area; no real building, owner or address is implied.",
+  "location": {
+    "lat": 63.4182,
+    "lon": 10.4051,
+    "datum": "WGS84",
+    "municipality": "Trondheim",
+    "county": "Trøndelag"
+  },
+  "timezone": "Europe/Oslo",
+  "price_area": {
+    "code": "NO3",
+    "name": "Midt-Norge",
+    "basis": "Declared. Trøndelag lies in bidding zone NO3. runner.exogenous checks the coordinate against the coarse box below so a mistyped coordinate or area fails; the box is a consistency check, not a bidding-zone boundary.",
+    "consistency_box": {"lat_min": 62.0, "lat_max": 65.5, "lon_min": 5.0, "lon_max": 14.5}
+  }
+}

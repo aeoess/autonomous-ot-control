@@ -99,3 +99,18 @@ def test_zone_03_budget_is_tighter_than_the_interlock():
     cfg = json.loads((ROOT / "twin" / "fixtures" / "three-zone-v1.json").read_text())
     z3 = next(lim for lim in pol["limits"] if lim["resource"] == "ZONE-03")
     assert z3["max"] / 10 < cfg["guard"]["max_delta_c"]
+
+
+def test_edge_registry_claims_no_consent_it_does_not_link():
+    """Listing is not consent (SDD §9): a status may move only with a consent_ref."""
+    text = (ROOT / "docs" / "federation" / "edge-registry.yaml").read_text("utf-8")
+    entries = text.split("\n  - id: ")[1:]
+    assert len(entries) >= 2
+    for entry in entries:
+        status = next(ln.split(":", 1)[1].strip() for ln in entry.splitlines()
+                      if ln.strip().startswith("status:"))
+        consent = next(ln.split(":", 1)[1].strip() for ln in entry.splitlines()
+                       if ln.strip().startswith("consent_ref:"))
+        if status != "CANDIDATE_NOT_INVITED":
+            assert consent.startswith("https://github.com/"), entry.splitlines()[0]
+        assert "mode: inline" in entry or "mode: offline" in entry
