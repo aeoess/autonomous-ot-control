@@ -1,0 +1,22 @@
+{
+  "schema": "ot-federation-reviewed-reports/v1",
+  "note": "Reports for boundaries the scorer does not auto-score (runner_validity, corpus_adequacy). Each row is a report another project published about this testbed at a pinned revision, reviewed by a maintainer and recorded as the author stated it. A row is not a run record, carries no derived independence level, and implies no endorsement either way. Rows are appended, never edited; a correction is a new row that names the old one.",
+  "reports": [
+    {
+      "report_id": "altrudev-runner-validity-2026-10-27",
+      "project": "Altru.dev / Frequency",
+      "maintainer": "altrudev",
+      "boundary": "runner_validity",
+      "testbed_commit": "4b9f6ec7882b81ca95ecf414e107ec202663bb13",
+      "date": "2026-10-27",
+      "report_url": "https://gist.github.com/altrudev/0980db0fb44ad4772ec8bc4efb6d0d17",
+      "announced_in": "https://github.com/aeoess/agent-governance-vocabulary/issues/177#issuecomment-6449955551",
+      "probe_sha256": "afef84b4617ea4828f5a8fc3983f49cb0cfb52b9c8b0fa9313ba9c27028763c7",
+      "result_as_stated": "Upstream runner contract 25/25 PASS on an independent VPS checkout; four author-written adverse adapters (misleading output then non-zero exit, empty result with zero exit, silent zero exit without a result, partial output then crash) each ended without an unearned PASS: no report on non-zero exit, FAIL report on empty or missing output. 29/29 bounded checks PASS.",
+      "does_not_establish_as_stated": "Exhaustive adversarial runner security, isolated process trust, independent evidence timing or custody, real actuator effects, production or physical OT safety. The upstream tests and fixture generator are producer-authored; the four probes are the author's. Not an independently implemented effect-evidence verifier; no run-record independence level claimed.",
+      "scope_as_stated": "One bounded, offline runner_validity evaluation. No adapter, source edits, credentials, governance enrollment, maintenance or further roles.",
+      "reviewed_by": "darklordVirtual",
+      "review_note": "Recorded as published. The revision is retained on archive/federation-runner-validity-2026-10-27-v1. The runner_contract properties the probes exercise are the nine the record schema names; the report's four probes map to verifier_failure_exit_nonzero, no_report_on_failure, malformed_result_fails_closed and no_pass_on_failure."
+    }
+  ]
+}

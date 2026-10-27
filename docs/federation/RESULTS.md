@@ -28,3 +28,14 @@ passing run. `disputed` counts records where a seeded fault for the claim went u
 | `evidence_digest_integrity` | 3 | `L4_INDEPENDENT_HOST_RUN` | 0 |
 | `observation_after_dispatch` | 3 | `L4_INDEPENDENT_HOST_RUN` | 0 |
 | `single_dispatch` | 3 | `L4_INDEPENDENT_HOST_RUN` | 0 |
+
+## Reviewed reports
+
+Boundaries the scorer does not auto-score (`runner_validity`, `corpus_adequacy`): reports
+another project published about this testbed at a pinned revision, recorded as the author
+stated them (`federation/reports.json`). Not run records: no derived level, no endorsement
+either way. Rows are appended, never edited.
+
+| Date | Project | Boundary | Testbed | Result as stated | Does not establish (as stated) | Report |
+|---|---|---|---|---|---|---|
+| 2026-10-27 | Altru.dev / Frequency (@altrudev) | `runner_validity` | `4b9f6ec` | Upstream runner contract 25/25 PASS on an independent VPS checkout; four author-written adverse adapters (misleading output then non-zero exit, empty result with zero exit, silent zero exit without a result, partial output then crash) each ended without an unearned PASS: no report on non-zero exit, FAIL report on empty or missing output. 29/29 bounded checks PASS. | Exhaustive adversarial runner security, isolated process trust, independent evidence timing or custody, real actuator effects, production or physical OT safety. The upstream tests and fixture generator are producer-authored; the four probes are the author's. Not an independently implemented effect-evidence verifier; no run-record independence level claimed. | [report](https://gist.github.com/altrudev/0980db0fb44ad4772ec8bc4efb6d0d17) |

@@ -588,8 +588,55 @@ def render_results(records: list[tuple[Path, dict[str, Any]]]) -> str:
         lines.append(f"| `{claim}` | {c['records']} | `{c['highest'] or '—'}` | {c['disputed']} |")
     if not claims:
         lines.append("| *none yet* | | | |")
+    lines += ["", "## Reviewed reports", "",
+              "Boundaries the scorer does not auto-score (`runner_validity`, `corpus_adequacy`): reports",
+              "another project published about this testbed at a pinned revision, recorded as the author",
+              "stated them (`federation/reports.json`). Not run records: no derived level, no endorsement",
+              "either way. Rows are appended, never edited.", "",
+              "| Date | Project | Boundary | Testbed | Result as stated | Does not establish (as stated) | Report |",
+              "|---|---|---|---|---|---|---|"]
+    reports = load_reports()
+    for r in reports:
+        lines.append(f"| {r['date']} | {r['project']} (@{r['maintainer']}) | `{r['boundary']}` | "
+                     f"`{r['testbed_commit'][:7]}` | {r['result_as_stated']} | {r['does_not_establish_as_stated']} | "
+                     f"[report]({r['report_url']}) |")
+    if not reports:
+        lines.append("| | *none yet* | | | | | |")
     lines.append("")
     return "\n".join(lines)
+
+
+REPORTS_JSON = ROOT / "federation" / "reports.json"
+REPORT_KEYS = ("report_id", "project", "maintainer", "boundary", "testbed_commit", "date", "report_url",
+               "result_as_stated", "does_not_establish_as_stated", "scope_as_stated", "reviewed_by")
+
+
+def load_reports() -> list[dict[str, Any]]:
+    if not REPORTS_JSON.is_file():
+        return []
+    data = json.loads(REPORTS_JSON.read_text("utf-8"))
+    return list(data.get("reports", []))
+
+
+def validate_reports() -> list[str]:
+    """Every reviewed report names a boundary the scorer reviews, a full commit and what it does not establish."""
+    p: list[str] = []
+    seen: set[str] = set()
+    for r in load_reports():
+        rid = str(r.get("report_id", "?"))
+        for k in REPORT_KEYS:
+            if not r.get(k):
+                p.append(f"{rid}: missing {k}")
+        if r.get("boundary") not in ("runner_validity", "corpus_adequacy"):
+            p.append(f"{rid}: boundary {r.get('boundary')!r} is auto-scored or unknown; reviewed reports are for runner_validity and corpus_adequacy")
+        if not re.fullmatch(r"[0-9a-f]{40}", str(r.get("testbed_commit", ""))):
+            p.append(f"{rid}: testbed_commit must be a full commit id")
+        elif _git("rev-parse", "HEAD") and _git("cat-file", "-e", f"{r['testbed_commit']}^{{commit}}") is None:
+            p.append(f"{rid}: testbed_commit {r['testbed_commit'][:12]} is not a commit in this repository")
+        if rid in seen:
+            p.append(f"duplicate report_id {rid}")
+        seen.add(rid)
+    return p
 
 
 # -- report --------------------------------------------------------------------
@@ -743,6 +790,9 @@ def main(argv: list[str] | None = None) -> int:
             for pr in validate_record(rec):
                 print(f"{path.relative_to(ROOT).as_posix()}: {pr}", file=sys.stderr)
                 bad += 1
+        for pr in validate_reports():
+            print(f"federation/reports.json: {pr}", file=sys.stderr)
+            bad += 1
         if bad:
             return 1
         text = render_results(recs)
