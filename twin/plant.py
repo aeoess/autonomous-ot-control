@@ -355,8 +355,8 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
     source_heat_w = backup_w = dh_w = boiler_w = 0.0
     hp_on, since, starts = state.hp_on, state.hp_state_since_s + dt, state.hp_starts
     cop = 0.0
-    pts["HP-01.Defrost"] = 0.0
     if cfg.heat_source == "heat_pump":
+        pts["HP-01.Defrost"] = 0.0
         want_on = state.tank_c < sp.tank_c - cfg.hp_hysteresis_k or (
             hp_on and state.tank_c < sp.tank_c + cfg.hp_hysteresis_k)
         # High-pressure cut-out: the compressor stops whatever the setpoint says

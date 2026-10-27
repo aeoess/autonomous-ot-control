@@ -1,0 +1,2389 @@
+{
+  "schema": "ot-datapoints/v1",
+  "model": "three-zone-hvac-v1",
+  "kinds": {
+    "AI": "measured analog",
+    "BI": "measured binary",
+    "AV": "computed analog",
+    "BV": "computed binary",
+    "CV": "counter",
+    "EX": "exogenous input",
+    "SP": "writable setpoint",
+    "SB": "writable command"
+  },
+  "points": [
+    {
+      "id": "OUT-01.Temp",
+      "system": "outdoor",
+      "kind": "EX",
+      "unit": "degC",
+      "range": [
+        -40,
+        35
+      ],
+      "description": "Outdoor air temperature (2 m).",
+      "source": "scenario outdoor series (ERA5 snapshot or declared curve)",
+      "affects": [
+        "AHU-01.HRV_AfterTemp",
+        "HP-01.COP",
+        "HP-01.HeatOutput",
+        "HYD-01.SupplyTemp",
+        "CH-01.EER",
+        "ZONE-01.AirTemp",
+        "ZONE-02.AirTemp",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "OUT-01.Solar",
+      "system": "outdoor",
+      "kind": "EX",
+      "unit": "W/m2",
+      "range": [
+        0,
+        1000
+      ],
+      "description": "Global horizontal irradiance.",
+      "source": "scenario solar series",
+      "affects": [
+        "ZONE-01.SolarGain",
+        "ZONE-01.Daylight",
+        "ZONE-02.SolarGain",
+        "ZONE-02.Daylight",
+        "ZONE-03.SolarGain",
+        "ZONE-03.Daylight"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "OUT-01.RH",
+      "system": "outdoor",
+      "kind": "EX",
+      "unit": "%",
+      "range": [
+        0,
+        100
+      ],
+      "description": "Outdoor relative humidity.",
+      "source": "scenario humidity series",
+      "affects": [
+        "HP-01.Defrost"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "OUT-01.Precipitation",
+      "system": "outdoor",
+      "kind": "EX",
+      "unit": "mm/h",
+      "range": [
+        0,
+        50
+      ],
+      "description": "Precipitation, preceding hour.",
+      "source": "scenario precipitation series",
+      "affects": [
+        "OUT-01.IcingRisk"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "OUT-01.IcingRisk",
+      "system": "outdoor",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Outdoor -6..+2 degC with precipitation within 3 h either side.",
+      "source": "Scenario.icing_risk",
+      "affects": [
+        "CABLE-RAMP.Power",
+        "CABLE-GUTTER.Power"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "GRID-01.SpotPrice",
+      "system": "market",
+      "kind": "EX",
+      "unit": "NOK/kWh",
+      "range": [
+        -1,
+        20
+      ],
+      "description": "Day-ahead spot price for the site's area (NO3), spot only.",
+      "source": "scenario price series (hvakosterstrommen.no snapshot)",
+      "affects": [
+        "EM-01.Cost"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "EM-01.Cost",
+      "system": "energy",
+      "kind": "AV",
+      "unit": "NOK",
+      "range": [
+        0,
+        10000000.0
+      ],
+      "description": "Accumulated simulated energy cost: electricity at spot, district heat at the declared tariff.",
+      "source": "Twin._step",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.AirTemp",
+      "system": "ZONE-01",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        -10,
+        40
+      ],
+      "description": "Room air temperature, open-plan office.",
+      "source": "zone RC node (Twin._step)",
+      "affects": [
+        "ZONE-01.RadiatorValve",
+        "ZONE-01.CoolingPower",
+        "AHU-01.ExtractAirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.Occupants",
+      "system": "ZONE-01",
+      "kind": "EX",
+      "unit": "persons",
+      "range": [
+        0,
+        50
+      ],
+      "description": "People present, open-plan office.",
+      "source": "calendar x design_occupants",
+      "affects": [
+        "ZONE-01.CO2",
+        "ZONE-01.Airflow",
+        "ZONE-01.LightingPower",
+        "ZONE-01.EquipmentPower",
+        "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.HeatingSetpoint",
+      "system": "ZONE-01",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        8,
+        23
+      ],
+      "description": "Heating setpoint, open-plan office: the radiator valve's target.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-01.RadiatorValve"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_setpoint",
+      "interlocks": [
+        "IL-01",
+        "IL-02",
+        "IL-03",
+        "IL-11"
+      ],
+      "resolution": 0.1
+    },
+    {
+      "id": "ZONE-01.CoolingSetpoint",
+      "system": "ZONE-01",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        20,
+        28
+      ],
+      "description": "Cooling setpoint, open-plan office: zone cooling starts above it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-01.CoolingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_cooling_setpoint",
+      "interlocks": [
+        "IL-01",
+        "IL-11"
+      ],
+      "resolution": 0.1
+    },
+    {
+      "id": "ZONE-01.CO2Setpoint",
+      "system": "ZONE-01",
+      "kind": "SP",
+      "unit": "ppm",
+      "range": [
+        600,
+        1000
+      ],
+      "description": "DCV target, open-plan office: airflow rises over 200 ppm above it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-01.Airflow"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_co2_setpoint",
+      "interlocks": [
+        "IL-07"
+      ],
+      "resolution": 10
+    },
+    {
+      "id": "ZONE-01.LuxSetpoint",
+      "system": "ZONE-01",
+      "kind": "SP",
+      "unit": "lux",
+      "range": [
+        0,
+        750
+      ],
+      "description": "Maintained illuminance while occupied, open-plan office; daylight counts toward it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-01.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_setpoint",
+      "interlocks": [
+        "IL-08"
+      ],
+      "resolution": 10
+    },
+    {
+      "id": "ZONE-01.RadiatorValve",
+      "system": "ZONE-01",
+      "kind": "AV",
+      "unit": "0..1",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Radiator valve opening (proportional over 1 K around the heating setpoint).",
+      "source": "plant local loop",
+      "affects": [
+        "ZONE-01.RadiatorPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.RadiatorPower",
+      "system": "ZONE-01",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Heat from the radiators (EN 442, capped by supply water temperature).",
+      "source": "plant.radiator_output_w",
+      "affects": [
+        "HYD-01.HeatDemand",
+        "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.CoolingPower",
+      "system": "ZONE-01",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint.",
+      "source": "plant local loop",
+      "affects": [
+        "CH-01.CoolingLoad",
+        "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.Airflow",
+      "system": "ZONE-01",
+      "kind": "AI",
+      "unit": "l/s",
+      "range": [
+        0,
+        1000
+      ],
+      "description": "Supply airflow to the zone (material minimum + per person + DCV boost).",
+      "source": "plant DCV",
+      "affects": [
+        "AHU-01.Airflow",
+        "ZONE-01.CO2",
+        "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.CO2",
+      "system": "ZONE-01",
+      "kind": "AI",
+      "unit": "ppm",
+      "range": [
+        400,
+        5000
+      ],
+      "description": "Room CO2 concentration.",
+      "source": "well-mixed CO2 balance",
+      "affects": [
+        "ZONE-01.Airflow"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.Daylight",
+      "system": "ZONE-01",
+      "kind": "AV",
+      "unit": "lux",
+      "range": [
+        0,
+        100000
+      ],
+      "description": "Daylight on the work plane (daylight factor x outdoor illuminance).",
+      "source": "plant.outdoor_lux",
+      "affects": [
+        "ZONE-01.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.Illuminance",
+      "system": "ZONE-01",
+      "kind": "AI",
+      "unit": "lux",
+      "range": [
+        0,
+        100000
+      ],
+      "description": "Work-plane illuminance, daylight plus electric.",
+      "source": "plant lighting loop",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.LightingPower",
+      "system": "ZONE-01",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone.",
+      "source": "plant lighting loop",
+      "affects": [
+        "EM-01.ElectricPower",
+        "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.EquipmentPower",
+      "system": "ZONE-01",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Plug and process load; becomes heat.",
+      "source": "config equipment densities",
+      "affects": [
+        "EM-01.ElectricPower",
+        "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.SolarGain",
+      "system": "ZONE-01",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Solar heat through glazing.",
+      "source": "window area x g-value x irradiance",
+      "affects": [
+        "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.AirTemp",
+      "system": "ZONE-02",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        -10,
+        40
+      ],
+      "description": "Room air temperature, meeting room.",
+      "source": "zone RC node (Twin._step)",
+      "affects": [
+        "ZONE-02.RadiatorValve",
+        "ZONE-02.CoolingPower",
+        "AHU-01.ExtractAirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.Occupants",
+      "system": "ZONE-02",
+      "kind": "EX",
+      "unit": "persons",
+      "range": [
+        0,
+        50
+      ],
+      "description": "People present, meeting room.",
+      "source": "calendar x design_occupants",
+      "affects": [
+        "ZONE-02.CO2",
+        "ZONE-02.Airflow",
+        "ZONE-02.LightingPower",
+        "ZONE-02.EquipmentPower",
+        "ZONE-02.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.HeatingSetpoint",
+      "system": "ZONE-02",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        8,
+        23
+      ],
+      "description": "Heating setpoint, meeting room: the radiator valve's target.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-02.RadiatorValve"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_setpoint",
+      "interlocks": [
+        "IL-01",
+        "IL-02",
+        "IL-03",
+        "IL-11"
+      ],
+      "resolution": 0.1
+    },
+    {
+      "id": "ZONE-02.CoolingSetpoint",
+      "system": "ZONE-02",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        20,
+        28
+      ],
+      "description": "Cooling setpoint, meeting room: zone cooling starts above it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-02.CoolingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_cooling_setpoint",
+      "interlocks": [
+        "IL-01",
+        "IL-11"
+      ],
+      "resolution": 0.1
+    },
+    {
+      "id": "ZONE-02.CO2Setpoint",
+      "system": "ZONE-02",
+      "kind": "SP",
+      "unit": "ppm",
+      "range": [
+        600,
+        1000
+      ],
+      "description": "DCV target, meeting room: airflow rises over 200 ppm above it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-02.Airflow"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_co2_setpoint",
+      "interlocks": [
+        "IL-07"
+      ],
+      "resolution": 10
+    },
+    {
+      "id": "ZONE-02.LuxSetpoint",
+      "system": "ZONE-02",
+      "kind": "SP",
+      "unit": "lux",
+      "range": [
+        0,
+        750
+      ],
+      "description": "Maintained illuminance while occupied, meeting room; daylight counts toward it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-02.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_setpoint",
+      "interlocks": [
+        "IL-08"
+      ],
+      "resolution": 10
+    },
+    {
+      "id": "ZONE-02.RadiatorValve",
+      "system": "ZONE-02",
+      "kind": "AV",
+      "unit": "0..1",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Radiator valve opening (proportional over 1 K around the heating setpoint).",
+      "source": "plant local loop",
+      "affects": [
+        "ZONE-02.RadiatorPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.RadiatorPower",
+      "system": "ZONE-02",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Heat from the radiators (EN 442, capped by supply water temperature).",
+      "source": "plant.radiator_output_w",
+      "affects": [
+        "HYD-01.HeatDemand",
+        "ZONE-02.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.CoolingPower",
+      "system": "ZONE-02",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint.",
+      "source": "plant local loop",
+      "affects": [
+        "CH-01.CoolingLoad",
+        "ZONE-02.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.Airflow",
+      "system": "ZONE-02",
+      "kind": "AI",
+      "unit": "l/s",
+      "range": [
+        0,
+        1000
+      ],
+      "description": "Supply airflow to the zone (material minimum + per person + DCV boost).",
+      "source": "plant DCV",
+      "affects": [
+        "AHU-01.Airflow",
+        "ZONE-02.CO2",
+        "ZONE-02.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.CO2",
+      "system": "ZONE-02",
+      "kind": "AI",
+      "unit": "ppm",
+      "range": [
+        400,
+        5000
+      ],
+      "description": "Room CO2 concentration.",
+      "source": "well-mixed CO2 balance",
+      "affects": [
+        "ZONE-02.Airflow"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.Daylight",
+      "system": "ZONE-02",
+      "kind": "AV",
+      "unit": "lux",
+      "range": [
+        0,
+        100000
+      ],
+      "description": "Daylight on the work plane (daylight factor x outdoor illuminance).",
+      "source": "plant.outdoor_lux",
+      "affects": [
+        "ZONE-02.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.Illuminance",
+      "system": "ZONE-02",
+      "kind": "AI",
+      "unit": "lux",
+      "range": [
+        0,
+        100000
+      ],
+      "description": "Work-plane illuminance, daylight plus electric.",
+      "source": "plant lighting loop",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.LightingPower",
+      "system": "ZONE-02",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone.",
+      "source": "plant lighting loop",
+      "affects": [
+        "EM-01.ElectricPower",
+        "ZONE-02.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.EquipmentPower",
+      "system": "ZONE-02",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Plug and process load; becomes heat.",
+      "source": "config equipment densities",
+      "affects": [
+        "EM-01.ElectricPower",
+        "ZONE-02.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.SolarGain",
+      "system": "ZONE-02",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Solar heat through glazing.",
+      "source": "window area x g-value x irradiance",
+      "affects": [
+        "ZONE-02.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.AirTemp",
+      "system": "ZONE-03",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        -10,
+        40
+      ],
+      "description": "Room air temperature, laboratory (constant equipment load).",
+      "source": "zone RC node (Twin._step)",
+      "affects": [
+        "ZONE-03.RadiatorValve",
+        "ZONE-03.CoolingPower",
+        "AHU-01.ExtractAirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.Occupants",
+      "system": "ZONE-03",
+      "kind": "EX",
+      "unit": "persons",
+      "range": [
+        0,
+        50
+      ],
+      "description": "People present, laboratory (constant equipment load).",
+      "source": "calendar x design_occupants",
+      "affects": [
+        "ZONE-03.CO2",
+        "ZONE-03.Airflow",
+        "ZONE-03.LightingPower",
+        "ZONE-03.EquipmentPower",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.HeatingSetpoint",
+      "system": "ZONE-03",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        8,
+        23
+      ],
+      "description": "Heating setpoint, laboratory (constant equipment load): the radiator valve's target.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-03.RadiatorValve"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_setpoint",
+      "interlocks": [
+        "IL-01",
+        "IL-02",
+        "IL-03",
+        "IL-11"
+      ],
+      "resolution": 0.1
+    },
+    {
+      "id": "ZONE-03.CoolingSetpoint",
+      "system": "ZONE-03",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        20,
+        28
+      ],
+      "description": "Cooling setpoint, laboratory (constant equipment load): zone cooling starts above it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-03.CoolingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_cooling_setpoint",
+      "interlocks": [
+        "IL-01",
+        "IL-11"
+      ],
+      "resolution": 0.1
+    },
+    {
+      "id": "ZONE-03.CO2Setpoint",
+      "system": "ZONE-03",
+      "kind": "SP",
+      "unit": "ppm",
+      "range": [
+        600,
+        1000
+      ],
+      "description": "DCV target, laboratory (constant equipment load): airflow rises over 200 ppm above it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-03.Airflow"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_co2_setpoint",
+      "interlocks": [
+        "IL-07"
+      ],
+      "resolution": 10
+    },
+    {
+      "id": "ZONE-03.LuxSetpoint",
+      "system": "ZONE-03",
+      "kind": "SP",
+      "unit": "lux",
+      "range": [
+        0,
+        750
+      ],
+      "description": "Maintained illuminance while occupied, laboratory (constant equipment load); daylight counts toward it.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-03.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_setpoint",
+      "interlocks": [
+        "IL-08"
+      ],
+      "resolution": 10
+    },
+    {
+      "id": "ZONE-03.RadiatorValve",
+      "system": "ZONE-03",
+      "kind": "AV",
+      "unit": "0..1",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Radiator valve opening (proportional over 1 K around the heating setpoint).",
+      "source": "plant local loop",
+      "affects": [
+        "ZONE-03.RadiatorPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.RadiatorPower",
+      "system": "ZONE-03",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Heat from the radiators (EN 442, capped by supply water temperature).",
+      "source": "plant.radiator_output_w",
+      "affects": [
+        "HYD-01.HeatDemand",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.CoolingPower",
+      "system": "ZONE-03",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Zone cooling (chilled beam), proportional over 1 K above the cooling setpoint.",
+      "source": "plant local loop",
+      "affects": [
+        "CH-01.CoolingLoad",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.Airflow",
+      "system": "ZONE-03",
+      "kind": "AI",
+      "unit": "l/s",
+      "range": [
+        0,
+        1000
+      ],
+      "description": "Supply airflow to the zone (material minimum + per person + DCV boost).",
+      "source": "plant DCV",
+      "affects": [
+        "AHU-01.Airflow",
+        "ZONE-03.CO2",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.CO2",
+      "system": "ZONE-03",
+      "kind": "AI",
+      "unit": "ppm",
+      "range": [
+        400,
+        5000
+      ],
+      "description": "Room CO2 concentration.",
+      "source": "well-mixed CO2 balance",
+      "affects": [
+        "ZONE-03.Airflow"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.Daylight",
+      "system": "ZONE-03",
+      "kind": "AV",
+      "unit": "lux",
+      "range": [
+        0,
+        100000
+      ],
+      "description": "Daylight on the work plane (daylight factor x outdoor illuminance).",
+      "source": "plant.outdoor_lux",
+      "affects": [
+        "ZONE-03.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.Illuminance",
+      "system": "ZONE-03",
+      "kind": "AI",
+      "unit": "lux",
+      "range": [
+        0,
+        100000
+      ],
+      "description": "Work-plane illuminance, daylight plus electric.",
+      "source": "plant lighting loop",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.LightingPower",
+      "system": "ZONE-03",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Electric lighting power (10 % at minimum dim); all of it becomes heat in the zone.",
+      "source": "plant lighting loop",
+      "affects": [
+        "EM-01.ElectricPower",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.EquipmentPower",
+      "system": "ZONE-03",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Plug and process load; becomes heat.",
+      "source": "config equipment densities",
+      "affects": [
+        "EM-01.ElectricPower",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.SolarGain",
+      "system": "ZONE-03",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Solar heat through glazing.",
+      "source": "window area x g-value x irradiance",
+      "affects": [
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HYD-01.SupplyTemp",
+      "system": "hydronic",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        20,
+        75
+      ],
+      "description": "Radiator supply temperature: weather-compensated curve (60 at -20, 30 at +15), never hotter than the tank.",
+      "source": "plant.weather_compensated_supply_c",
+      "affects": [
+        "ZONE-01.RadiatorPower",
+        "ZONE-02.RadiatorPower",
+        "ZONE-03.RadiatorPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HYD-01.HeatDemand",
+      "system": "hydronic",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        60000
+      ],
+      "description": "Heat drawn from the tank by radiators and the AHU heating coil.",
+      "source": "plant",
+      "affects": [
+        "TANK-01.Temp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "TANK-01.Temp",
+      "system": "hydronic",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        10,
+        80
+      ],
+      "description": "Buffer tank temperature.",
+      "source": "tank energy balance",
+      "affects": [
+        "HYD-01.SupplyTemp",
+        "HP-01.Running",
+        "HP-01.BackupHeaterPower",
+        "HP-01.HighPressureCutout"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "TANK-01.Setpoint",
+      "system": "hydronic",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        35,
+        60
+      ],
+      "description": "Target the heat source charges the tank to. Higher stores more heat and lowers heat-pump COP.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "HP-01.Running",
+        "HP-01.COP",
+        "DH-01.HeatPower",
+        "EB-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": "set_tank_setpoint",
+      "interlocks": [
+        "IL-04",
+        "IL-11"
+      ],
+      "resolution": 0.5
+    },
+    {
+      "id": "TANK-01.Loss",
+      "system": "hydronic",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        1000
+      ],
+      "description": "Standing loss to the plant room.",
+      "source": "plant",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.Running",
+      "system": "heat pump",
+      "kind": "BI",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Compressor running (hysteresis 3 K, min run 10 min, min stop 10 min).",
+      "source": "plant local loop",
+      "affects": [
+        "HP-01.HeatOutput",
+        "HP-01.Starts",
+        "HP-01.ElectricPower"
+      ],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.COP",
+      "system": "heat pump",
+      "kind": "AV",
+      "unit": "-",
+      "range": [
+        0,
+        6
+      ],
+      "description": "Coefficient of performance: 45 % of Carnot between outdoor air and tank, clamped 1..6; 0 when off.",
+      "source": "plant.heat_pump_cop",
+      "affects": [
+        "HP-01.ElectricPower"
+      ],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.HeatOutput",
+      "system": "heat pump",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        40000
+      ],
+      "description": "Heat delivered; falls 2.5 %/K below A7, times the demand-response cap, less defrost.",
+      "source": "plant.heat_pump_capacity_w",
+      "affects": [
+        "TANK-01.Temp"
+      ],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.ElectricPower",
+      "system": "heat pump",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Compressor electric power.",
+      "source": "HeatOutput / COP",
+      "affects": [
+        "EM-01.ElectricPower"
+      ],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.Starts",
+      "system": "heat pump",
+      "kind": "CV",
+      "unit": "count",
+      "range": [
+        0,
+        1000000.0
+      ],
+      "description": "Compressor starts since t=0; frequent cycling wears the compressor.",
+      "source": "plant local loop",
+      "affects": [],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.Defrost",
+      "system": "heat pump",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Frosting conditions (-7..+5 degC, RH >= 75 %): 10 % of capacity and COP lost.",
+      "source": "plant",
+      "affects": [],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.HighPressureCutout",
+      "system": "heat pump",
+      "kind": "BI",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Compressor locked out: tank above max supply + 5 K.",
+      "source": "plant local loop",
+      "affects": [],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.BackupHeaterPower",
+      "system": "heat pump",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Electric immersion heater, on when the tank is 5 K below target (COP 1).",
+      "source": "plant local loop",
+      "affects": [
+        "TANK-01.Temp",
+        "EM-01.ElectricPower"
+      ],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HP-01.MaxFraction",
+      "system": "heat pump",
+      "kind": "SP",
+      "unit": "0..1",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Demand-response cap on compressor output.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "HP-01.HeatOutput",
+        "TANK-01.Temp",
+        "HP-01.BackupHeaterPower"
+      ],
+      "variants": [
+        "heat_pump"
+      ],
+      "writable_via": "set_heat_pump_limit",
+      "interlocks": [
+        "IL-09",
+        "IL-11"
+      ],
+      "resolution": 0.05
+    },
+    {
+      "id": "DH-01.HeatPower",
+      "system": "district heating",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        60000
+      ],
+      "description": "Heat drawn from the district-heating network by the substation.",
+      "source": "plant",
+      "affects": [
+        "TANK-01.Temp",
+        "EM-01.DistrictHeatPower"
+      ],
+      "variants": [
+        "district_heating"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "DH-01.SupplyTemp",
+      "system": "district heating",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        60,
+        120
+      ],
+      "description": "Primary supply temperature (declared: max(tank setpoint + 5, 70)).",
+      "source": "plant",
+      "affects": [],
+      "variants": [
+        "district_heating"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "EB-01.ElectricPower",
+      "system": "electric boiler",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        40000
+      ],
+      "description": "Electric boiler power.",
+      "source": "plant",
+      "affects": [
+        "TANK-01.Temp",
+        "EM-01.ElectricPower"
+      ],
+      "variants": [
+        "electric_boiler"
+      ],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.Enabled",
+      "system": "ventilation",
+      "kind": "SB",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "AHU running.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-01.Airflow",
+        "ZONE-02.Airflow",
+        "ZONE-03.Airflow"
+      ],
+      "variants": [],
+      "writable_via": "set_ahu_enabled",
+      "interlocks": [
+        "IL-06"
+      ],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.SupplyAirSetpoint",
+      "system": "ventilation",
+      "kind": "SP",
+      "unit": "degC",
+      "range": [
+        15,
+        21
+      ],
+      "description": "Supply air temperature target (coils after heat recovery).",
+      "source": "supervisory (governed)",
+      "affects": [
+        "AHU-01.HeatingCoilPower",
+        "AHU-01.CoolingCoilPower",
+        "AHU-01.SupplyAirTemp"
+      ],
+      "variants": [],
+      "writable_via": "set_supply_air_setpoint",
+      "interlocks": [
+        "IL-05",
+        "IL-11"
+      ],
+      "resolution": 0.5
+    },
+    {
+      "id": "AHU-01.Airflow",
+      "system": "ventilation",
+      "kind": "AI",
+      "unit": "l/s",
+      "range": [
+        0,
+        3000
+      ],
+      "description": "Total supply airflow.",
+      "source": "sum of zone airflows",
+      "affects": [
+        "AHU-01.FanPower",
+        "AHU-01.HeatingCoilPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.FanPower",
+      "system": "ventilation",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Fan power = SFP x airflow (SFP 1.5).",
+      "source": "plant",
+      "affects": [
+        "EM-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.HRV_Efficiency",
+      "system": "ventilation",
+      "kind": "AV",
+      "unit": "0..1",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Rotary heat recovery temperature efficiency (0.80; x0.75 below -15 degC frost limit).",
+      "source": "plant",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.HRV_Bypass",
+      "system": "ventilation",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Heat recovery bypassed for free cooling.",
+      "source": "plant",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.HRV_AfterTemp",
+      "system": "ventilation",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        -40,
+        40
+      ],
+      "description": "Air temperature after heat recovery.",
+      "source": "plant",
+      "affects": [
+        "AHU-01.HeatingCoilPower",
+        "AHU-01.CoolingCoilPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.ExtractAirTemp",
+      "system": "ventilation",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        -10,
+        40
+      ],
+      "description": "Airflow-weighted extract air.",
+      "source": "plant",
+      "affects": [
+        "AHU-01.HRV_AfterTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.SupplyAirTemp",
+      "system": "ventilation",
+      "kind": "AI",
+      "unit": "degC",
+      "range": [
+        -40,
+        40
+      ],
+      "description": "Supply air temperature delivered.",
+      "source": "plant",
+      "affects": [
+        "ZONE-01.AirTemp",
+        "ZONE-02.AirTemp",
+        "ZONE-03.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.HeatingCoilPower",
+      "system": "ventilation",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Heating coil, drawn from the tank.",
+      "source": "plant",
+      "affects": [
+        "HYD-01.HeatDemand"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "AHU-01.CoolingCoilPower",
+      "system": "ventilation",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Cooling coil, from the chiller.",
+      "source": "plant",
+      "affects": [
+        "CH-01.CoolingLoad"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CH-01.CoolingLoad",
+      "system": "cooling",
+      "kind": "AV",
+      "unit": "W",
+      "range": [
+        0,
+        40000
+      ],
+      "description": "Cooling demand on the chiller.",
+      "source": "plant",
+      "affects": [
+        "CH-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CH-01.EER",
+      "system": "cooling",
+      "kind": "AV",
+      "unit": "-",
+      "range": [
+        0,
+        7
+      ],
+      "description": "Chiller efficiency: 45 % of Carnot, condenser 10 K above max(outdoor, 15); 0 when idle.",
+      "source": "plant.chiller_eer",
+      "affects": [
+        "CH-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CH-01.ElectricPower",
+      "system": "cooling",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        20000
+      ],
+      "description": "Chiller electric power.",
+      "source": "CoolingLoad / EER",
+      "affects": [
+        "EM-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-RAMP.Mode",
+      "system": "heating cables",
+      "kind": "SB",
+      "unit": "auto|on|off",
+      "range": [
+        0,
+        2
+      ],
+      "description": "Heating cable mode, ramp.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "CABLE-RAMP.Power",
+        "CABLE-RAMP.IcingRiskUncovered"
+      ],
+      "variants": [],
+      "writable_via": "set_heating_cable_mode",
+      "interlocks": [
+        "IL-10"
+      ],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-RAMP.Power",
+      "system": "heating cables",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Cable power (rated when on).",
+      "source": "plant",
+      "affects": [
+        "EM-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-RAMP.IcingRiskUncovered",
+      "system": "heating cables",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "HAZARD: icing risk while the circuit is off.",
+      "source": "plant",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-GUTTER.Mode",
+      "system": "heating cables",
+      "kind": "SB",
+      "unit": "auto|on|off",
+      "range": [
+        0,
+        2
+      ],
+      "description": "Heating cable mode, gutter.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "CABLE-GUTTER.Power",
+        "CABLE-GUTTER.IcingRiskUncovered"
+      ],
+      "variants": [],
+      "writable_via": "set_heating_cable_mode",
+      "interlocks": [
+        "IL-10"
+      ],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-GUTTER.Power",
+      "system": "heating cables",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        10000
+      ],
+      "description": "Cable power (rated when on).",
+      "source": "plant",
+      "affects": [
+        "EM-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-GUTTER.IcingRiskUncovered",
+      "system": "heating cables",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "HAZARD: icing risk while the circuit is off.",
+      "source": "plant",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "EM-01.ElectricPower",
+      "system": "energy",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        200000
+      ],
+      "description": "Building electricity meter: fans, chiller, heat pump, backup, boiler, lights, equipment, cables.",
+      "source": "plant",
+      "affects": [
+        "EM-01.Cost"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "EM-01.DistrictHeatPower",
+      "system": "energy",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        100000
+      ],
+      "description": "District heat meter.",
+      "source": "plant",
+      "affects": [
+        "EM-01.Cost"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    }
+  ],
+  "interlocks": [
+    {
+      "id": "IL-01",
+      "rule": "CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone",
+      "protects": "no simultaneous heating and cooling",
+      "points": [
+        "*.HeatingSetpoint",
+        "*.CoolingSetpoint"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock"
+    },
+    {
+      "id": "IL-02",
+      "rule": "HeatingSetpoint >= 20.0 while the zone is occupied or within its recovery lead",
+      "protects": "comfort during occupancy (D-15)",
+      "points": [
+        "*.HeatingSetpoint",
+        "*.Occupants"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock"
+    },
+    {
+      "id": "IL-03",
+      "rule": "HeatingSetpoint >= 8.0 degC always; today the interlock floor is 19.0 (D-15 pending)",
+      "protects": "frost protection of the building",
+      "points": [
+        "*.HeatingSetpoint"
+      ],
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + signed ToolSpec"
+    },
+    {
+      "id": "IL-04",
+      "rule": "TANK-01.Setpoint within 35..max supply (60); at most +3 K per 15 min",
+      "protects": "heat-pump high-pressure margin and radiator supply",
+      "points": [
+        "TANK-01.Setpoint"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock + signed ToolSpec"
+    },
+    {
+      "id": "IL-05",
+      "rule": "AHU-01.SupplyAirSetpoint within 15..21 degC",
+      "protects": "draught and coil freezing",
+      "points": [
+        "AHU-01.SupplyAirSetpoint"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock + signed ToolSpec"
+    },
+    {
+      "id": "IL-06",
+      "rule": "AHU-01.Enabled = false refused while any zone is occupied",
+      "protects": "statutory ventilation during occupancy",
+      "points": [
+        "AHU-01.Enabled",
+        "*.Occupants"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock"
+    },
+    {
+      "id": "IL-07",
+      "rule": "CO2Setpoint within 600..1000 ppm",
+      "protects": "indoor air quality (1000 ppm guideline)",
+      "points": [
+        "*.CO2Setpoint"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "signed ToolSpec"
+    },
+    {
+      "id": "IL-08",
+      "rule": "LuxSetpoint >= 300 while occupied; 0 only when unoccupied",
+      "protects": "workplace lighting (NS-EN 12464-1: 500 lux offices)",
+      "points": [
+        "*.LuxSetpoint",
+        "*.Occupants"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock"
+    },
+    {
+      "id": "IL-09",
+      "rule": "HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K",
+      "protects": "a cap that would start the backup heater (COP 1)",
+      "points": [
+        "HP-01.MaxFraction",
+        "TANK-01.Temp"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock"
+    },
+    {
+      "id": "IL-10",
+      "rule": "CABLE-*.Mode = off refused while OUT-01.IcingRisk",
+      "protects": "ice on ramps and gutters",
+      "points": [
+        "CABLE-*.Mode",
+        "OUT-01.IcingRisk"
+      ],
+      "status": "SPECIFIED",
+      "enforced_by": "twin interlock"
+    },
+    {
+      "id": "IL-11",
+      "rule": "rate: at most one change per point per 15 min; setpoints move <= 1.0 K per change",
+      "protects": "actuator wear and stability",
+      "points": [
+        "*"
+      ],
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock (zone heating today) + REMORA cumulative limits"
+    }
+  ],
+  "tools": [
+    {
+      "id": "set_zone_setpoint",
+      "writes": [
+        "*.HeatingSetpoint"
+      ],
+      "arguments": {
+        "zone_id": {
+          "type": "string",
+          "enum": [
+            "ZONE-01",
+            "ZONE-02",
+            "ZONE-03"
+          ]
+        },
+        "setpoint_c": {
+          "type": "number",
+          "minimum": 19.0,
+          "maximum": 23.0
+        }
+      },
+      "risk_tier": "high",
+      "rate": "<=1.0 K, >=15 min, <=2/h per zone",
+      "cascade": "valve -> radiator power -> tank draw -> heat-pump start (or backup heater)",
+      "status": "IMPLEMENTED",
+      "requires_procedure": null
+    },
+    {
+      "id": "set_zone_cooling_setpoint",
+      "writes": [
+        "*.CoolingSetpoint"
+      ],
+      "arguments": {
+        "zone_id": {
+          "type": "string",
+          "enum": [
+            "ZONE-01",
+            "ZONE-02",
+            "ZONE-03"
+          ]
+        },
+        "cooling_c": {
+          "type": "number",
+          "minimum": 20.0,
+          "maximum": 28.0
+        }
+      },
+      "risk_tier": "medium",
+      "rate": "<=1.0 K, >=15 min",
+      "cascade": "chilled beam -> chiller electric",
+      "status": "SPECIFIED",
+      "requires_procedure": null
+    },
+    {
+      "id": "set_zone_co2_setpoint",
+      "writes": [
+        "*.CO2Setpoint"
+      ],
+      "arguments": {
+        "zone_id": {
+          "type": "string",
+          "enum": [
+            "ZONE-01",
+            "ZONE-02",
+            "ZONE-03"
+          ]
+        },
+        "co2_ppm": {
+          "type": "integer",
+          "minimum": 600,
+          "maximum": 1000
+        }
+      },
+      "risk_tier": "medium",
+      "rate": "<=100 ppm per change",
+      "cascade": "airflow -> fan power and coil heat -> tank draw",
+      "status": "SPECIFIED",
+      "requires_procedure": null
+    },
+    {
+      "id": "set_zone_lighting_setpoint",
+      "writes": [
+        "*.LuxSetpoint"
+      ],
+      "arguments": {
+        "zone_id": {
+          "type": "string",
+          "enum": [
+            "ZONE-01",
+            "ZONE-02",
+            "ZONE-03"
+          ]
+        },
+        "lux": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 750
+        }
+      },
+      "risk_tier": "low",
+      "rate": ">=15 min",
+      "cascade": "lighting power -> zone heat gain -> less radiator heat",
+      "status": "SPECIFIED",
+      "requires_procedure": null
+    },
+    {
+      "id": "set_supply_air_setpoint",
+      "writes": [
+        "AHU-01.SupplyAirSetpoint"
+      ],
+      "arguments": {
+        "supply_air_c": {
+          "type": "number",
+          "minimum": 15.0,
+          "maximum": 21.0
+        }
+      },
+      "risk_tier": "high",
+      "rate": "<=1.0 K, >=15 min",
+      "cascade": "coil power -> tank draw; supply air -> every zone's radiator demand",
+      "status": "SPECIFIED",
+      "requires_procedure": null
+    },
+    {
+      "id": "set_tank_setpoint",
+      "writes": [
+        "TANK-01.Setpoint"
+      ],
+      "arguments": {
+        "tank_c": {
+          "type": "number",
+          "minimum": 35.0,
+          "maximum": 60.0
+        }
+      },
+      "risk_tier": "high",
+      "rate": "<=3 K, >=15 min",
+      "cascade": "heat-pump run time and COP; stored heat for load shifting",
+      "status": "SPECIFIED",
+      "requires_procedure": "PR-03"
+    },
+    {
+      "id": "set_heat_pump_limit",
+      "writes": [
+        "HP-01.MaxFraction"
+      ],
+      "arguments": {
+        "max_fraction": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "risk_tier": "high",
+      "rate": ">=15 min",
+      "cascade": "heat output -> tank -> possibly the backup heater (expensive)",
+      "status": "SPECIFIED",
+      "requires_procedure": "PR-04"
+    },
+    {
+      "id": "set_ahu_enabled",
+      "writes": [
+        "AHU-01.Enabled"
+      ],
+      "arguments": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "risk_tier": "high",
+      "rate": ">=30 min",
+      "cascade": "all airflow, CO2, fan power, coil heat",
+      "status": "SPECIFIED",
+      "requires_procedure": "PR-02"
+    },
+    {
+      "id": "set_heating_cable_mode",
+      "writes": [
+        "CABLE-*.Mode"
+      ],
+      "arguments": {
+        "circuit": {
+          "type": "string",
+          "enum": [
+            "CABLE-RAMP",
+            "CABLE-GUTTER"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "on",
+            "off"
+          ]
+        }
+      },
+      "risk_tier": "high",
+      "rate": ">=15 min",
+      "cascade": "cable power; off during icing risk is a hazard",
+      "status": "SPECIFIED",
+      "requires_procedure": null
+    }
+  ],
+  "procedures": [
+    {
+      "id": "PR-01",
+      "name": "Zone setback and recovery",
+      "why": "the interlock moves at most 1 K per change and twice per hour, and the deadband (IL-01) means the cooling setpoint must move first when heating rises toward it",
+      "steps": [
+        "raising: if HeatingSetpoint + delta > CoolingSetpoint - 2, raise CoolingSetpoint first",
+        "move HeatingSetpoint in <= 1.0 K steps, >= 15 min apart",
+        "lowering: move HeatingSetpoint down in steps; CoolingSetpoint may follow afterwards",
+        "verify AirTemp reaches the band before occupancy (optimal start computes the lead)"
+      ],
+      "status": "SPECIFIED"
+    },
+    {
+      "id": "PR-02",
+      "name": "AHU night shutdown and morning start",
+      "why": "stopping ventilation while people are present is not allowed (IL-06), and a cold start blows cold air if the supply setpoint is low",
+      "steps": [
+        "check every zone's Occupants = 0 and none expected within 30 min",
+        "set_ahu_enabled(false)",
+        "morning: set_supply_air_setpoint(>= 18) before set_ahu_enabled(true)",
+        "set_ahu_enabled(true) >= 30 min before occupancy; verify CO2 < 800 ppm at start"
+      ],
+      "status": "SPECIFIED"
+    },
+    {
+      "id": "PR-03",
+      "name": "Load shift by tank pre-charge",
+      "why": "stored heat moves consumption to cheap hours, but a hotter tank lowers COP and nears the high-pressure limit",
+      "steps": [
+        "raise TANK-01.Setpoint in <= 3 K steps toward <= 55 degC during cheap hours",
+        "never combine with an HP-01.MaxFraction cap below 1.0",
+        "lower TANK-01.Setpoint back to the curve requirement before the expensive block ends",
+        "verify HP-01.HighPressureCutout stayed 0 and HP-01.Starts rose by <= 3 per hour"
+      ],
+      "status": "SPECIFIED"
+    },
+    {
+      "id": "PR-04",
+      "name": "Demand-response cap",
+      "why": "capping the compressor while the tank is short starts the backup heater, which costs about COP times more than the heat it replaces",
+      "steps": [
+        "pre-charge the tank (PR-03)",
+        "set_heat_pump_limit(<1.0) only while TANK-01.Temp >= Setpoint - 2 (IL-09)",
+        "release (1.0) as soon as TANK-01.Temp < Setpoint - 3 or the cap window ends",
+        "verify HP-01.BackupHeaterPower stayed 0 during the cap"
+      ],
+      "status": "SPECIFIED"
+    },
+    {
+      "id": "PR-05",
+      "name": "Heating-cable price deferral",
+      "why": "a ramp without heat in icing conditions is a safety hazard; only a dry, short deferral is acceptable",
+      "steps": [
+        "only CABLE-RAMP, only when no precipitation is forecast during the deferral",
+        "defer at most 1 h into a cheaper hour; never during OUT-01.IcingRisk",
+        "the interlock turns the circuit on when the deferral expires (IL-10)"
+      ],
+      "status": "SPECIFIED"
+    }
+  ],
+  "cascades": [
+    {
+      "id": "CS-01",
+      "trigger": "raise a zone HeatingSetpoint",
+      "chain": [
+        "ZONE.RadiatorValve",
+        "ZONE.RadiatorPower",
+        "HYD-01.HeatDemand",
+        "TANK-01.Temp",
+        "HP-01.Running",
+        "HP-01.Starts",
+        "HP-01.ElectricPower",
+        "EM-01.ElectricPower"
+      ],
+      "consequence": "a zone change draws the shared tank down; several zones at once can push it 5 K below target and start the backup heater at COP 1"
+    },
+    {
+      "id": "CS-02",
+      "trigger": "cap HP-01.MaxFraction for a price peak",
+      "chain": [
+        "HP-01.HeatOutput",
+        "TANK-01.Temp",
+        "HP-01.BackupHeaterPower",
+        "EM-01.ElectricPower"
+      ],
+      "consequence": "the cap saves only if the tank holds; otherwise the backup heater costs more than the compressor would have (PR-04, IL-09)"
+    },
+    {
+      "id": "CS-03",
+      "trigger": "lower AHU-01.SupplyAirSetpoint",
+      "chain": [
+        "AHU-01.HeatingCoilPower",
+        "AHU-01.SupplyAirTemp",
+        "ZONE.AirTemp",
+        "ZONE.RadiatorPower",
+        "HYD-01.HeatDemand"
+      ],
+      "consequence": "coil heat moves to the radiators; the total heat barely changes, the comfort can"
+    },
+    {
+      "id": "CS-04",
+      "trigger": "raise a CO2Setpoint (less ventilation)",
+      "chain": [
+        "ZONE.Airflow",
+        "AHU-01.FanPower",
+        "AHU-01.HeatingCoilPower",
+        "ZONE.CO2"
+      ],
+      "consequence": "saves fan and coil energy, costs air quality; bounded by IL-07"
+    },
+    {
+      "id": "CS-05",
+      "trigger": "dim lighting (LuxSetpoint down)",
+      "chain": [
+        "ZONE.LightingPower",
+        "ZONE.AirTemp",
+        "ZONE.RadiatorPower"
+      ],
+      "consequence": "in winter part of the lighting saving returns as radiator heat (lights are heat)"
+    },
+    {
+      "id": "CS-06",
+      "trigger": "raise TANK-01.Setpoint for load shifting",
+      "chain": [
+        "HP-01.COP",
+        "HP-01.ElectricPower",
+        "TANK-01.Loss",
+        "HP-01.HighPressureCutout"
+      ],
+      "consequence": "stores heat at a worse COP and higher standing loss; worth it only across a large enough price spread"
+    },
+    {
+      "id": "CS-07",
+      "trigger": "CABLE mode off",
+      "chain": [
+        "CABLE.Power",
+        "CABLE.IcingRiskUncovered"
+      ],
+      "consequence": "a saving that is a hazard during icing risk; never netted against cost"
+    }
+  ]
+}
