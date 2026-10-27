@@ -1,0 +1,59 @@
+{
+  "schema": "ot-edge-manifest/v1",
+  "edge_id": "agent-evidence-vectors-axes",
+  "project": "agent-evidence-vectors (invocation axes)",
+  "maintainer": "astrogilda",
+  "repository": "https://github.com/probityai/agent-evidence-vectors",
+  "boundary": "effect_evidence",
+  "mode": "offline",
+  "pin": {
+    "kind": "package",
+    "value": "agent-evidence-vectors==0.28.0 (invocation_axes/reader.py, sha256 a86c2c4830af011f3707c8164ca1350c9b965d2a960967bff83c79532df54938)"
+  },
+  "licence": "MIT",
+  "claim_ceiling": "Reads each trail through the invocation-axes reader of agent-evidence-vectors 0.28.0: package digests, request and decision bound to one call, and an execution bundle bound to the same call with a matching observation. It does not show the decision was authentic, the capture complete, the observer independent of the deployment (the trails record same_deployment), or anything about a physical plant.",
+  "claims": [
+    {
+      "claim_id": "decision_correspondence",
+      "claim_ceiling": "ESTABLISHED means an allow, or an approved review, is bound to the call the trail claims; not that the approver was real or the capture complete."
+    },
+    {
+      "claim_id": "single_dispatch",
+      "claim_ceiling": "ESTABLISHED means the recorded execution count is 1; not that no unrecorded dispatch happened."
+    },
+    {
+      "claim_id": "call_binding",
+      "claim_ceiling": "ESTABLISHED means the twin's operation record binds to the same proposal, zone and value as the claim; not that the twin's log is complete."
+    },
+    {
+      "claim_id": "declared_effect_observed",
+      "claim_ceiling": "ESTABLISHED means the recorded observation equals the claimed setpoint under an execution bound to the call; the observation's vantage is same_deployment, so this is not an independent reading."
+    },
+    {
+      "claim_id": "observation_after_dispatch",
+      "claim_ceiling": "ESTABLISHED means the recorded observation time is at or after the recorded dispatch time, in simulated seconds."
+    },
+    {
+      "claim_id": "evidence_digest_integrity",
+      "claim_ceiling": "ESTABLISHED means the bytes of remora_evidence hash to evidence_sha256; not that the evidence is complete or authentic."
+    }
+  ],
+  "evaluator": {
+    "kind": "second_implementation",
+    "imports_reference_verifier": false,
+    "imports_testbed_code": false,
+    "language": "python"
+  },
+  "entrypoint": {
+    "command": [
+      "python",
+      "/edge/adapter.py",
+      "run",
+      "--fixtures",
+      "/fixtures",
+      "--out",
+      "/out/result.json"
+    ],
+    "image": "python:3.12-slim"
+  }
+}
