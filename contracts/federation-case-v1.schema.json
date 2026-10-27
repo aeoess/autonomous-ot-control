@@ -137,7 +137,7 @@
     "evidence_sha256": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$",
-      "description": "SHA-256 of the canonical JSON of remora_evidence."
+      "description": "SHA-256 (hex) over the UTF-8 bytes of the canonical JSON of remora_evidence: keys sorted, separators \",\" and \":\" with no whitespace, ensure_ascii false (Python json.dumps(v, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False))."
     }
   }
 }
