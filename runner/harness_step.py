@@ -24,7 +24,7 @@ from typing import Any, Callable
 import httpx
 
 ROLES = {"operator": "REMORA_OPERATOR_TOKEN", "approver": "REMORA_APPROVER_TOKEN",
-         "viewer": "REMORA_VIEWER_TOKEN"}
+         "viewer": "REMORA_VIEWER_TOKEN", "verifier": "REMORA_VERIFIER_TOKEN"}
 TIMEOUT_S = 30.0
 
 
@@ -109,7 +109,7 @@ def op_record_effect(a: dict[str, Any]) -> dict[str, Any]:
 
     observer = EffectObserver(os.environ["TWIN_READ_URL"], os.environ["TWIN_READ_TOKEN"],
                               tenant_id="ot-pilot", run_id=a.get("run_id", "demo"))
-    with sdk.RemoraClient(base_url=os.environ["REMORA_URL"], token=_token("operator")) as c:
+    with sdk.RemoraClient(base_url=os.environ["REMORA_URL"], token=_token("verifier")) as c:
         try:
             out = EffectAttestor(observer, sdk=sdk).attest(
                 proposal_id=a["proposal_id"], execution_id=a.get("execution_id") or a["proposal_id"],

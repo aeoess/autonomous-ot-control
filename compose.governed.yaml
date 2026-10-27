@@ -79,7 +79,8 @@ services:
         {"${REMORA_OPERATOR_TOKEN:?missing}":{"tenant":"ot-pilot","role":"operator","actor_id":"ot-agent"},
          "${REMORA_APPROVER_TOKEN:?missing}":{"tenant":"ot-pilot","role":"admin","actor_id":"ot-approver"},
          "${REMORA_SUPERVISOR_TOKEN:?missing}":{"tenant":"ot-pilot","role":"admin","actor_id":"ot-supervisor"},
-         "${REMORA_VIEWER_TOKEN:?missing}":{"tenant":"ot-pilot","role":"viewer","actor_id":"ot-viewer"}}
+         "${REMORA_VIEWER_TOKEN:?missing}":{"tenant":"ot-pilot","role":"viewer","actor_id":"ot-viewer"},
+         "${REMORA_VERIFIER_TOKEN:?missing}":{"tenant":"ot-pilot","role":"effect_verifier","actor_id":"ot-effect-observer"}}
       REMORA_API_BEARER_TOKEN: ${REMORA_OPERATOR_TOKEN:?missing}
       REMORA_PDP_SIGNING_KEY: ${REMORA_PDP_SIGNING_KEY:?missing}
       REMORA_LEASE_SIGNING_KEY: ${REMORA_LEASE_SIGNING_KEY:?missing}
@@ -94,6 +95,13 @@ services:
       # Risk tier, action type and schema/rollback flags per tool (ADR-008).
       REMORA_TOOL_METADATA_FILE: /app/ot_tool_metadata.json
       REMORA_EXECUTION_ARTIFACT_DIR: /var/lib/remora/artifacts
+      # Reads ACCEPT (ADR-008): only the strict path, for a low-tier read-only
+      # tool with every argument grounded in an authorizing work order and a
+      # non-production target. The looser low-consequence path stays off.
+      REMORA_GROUNDED_READ_ACCEPT: "1"
+      # Which principal may record effect receipts under which verifier
+      # identity. Production refuses receipts without this binding.
+      REMORA_EFFECT_VERIFIER_BINDINGS: ot-effect-observer=ot-effect-observer/v1
       # Signed ToolSpec bundle: enforced at assess, its callables measured at
       # registration, the bundle accepted only at this digest.
       REMORA_TOOLSPEC_BUNDLE: /etc/remora-ot/toolspec-bundle.json
@@ -114,7 +122,7 @@ services:
       REMORA_LIMITS_EVIDENCE_MODULE: ot_registry
       # OT adapter wiring: the dispatcher presents the actuator token on the
       # plant-private route and reads the twin to bind the revision.
-      OT_TWIN_ACTUATOR_URL: http://172.31.250.10:8200
+      OT_TWIN_ACTUATOR_URL: http://10.250.250.10:8200
       OT_TWIN_READ_URL: http://twin:8100
       OT_TOOLSPEC_PATH: /app/contracts/ot-toolspec-v1.json
       TWIN_ACTUATOR_TOKEN: ${TWIN_ACTUATOR_TOKEN:?missing}
@@ -128,7 +136,7 @@ services:
         aliases: [remora]
       observe: {}
       plant-private:
-        ipv4_address: 172.31.250.20
+        ipv4_address: 10.250.250.20
 
   # Proposing runner: one governed proposal from the CLI.
   governed:
@@ -177,8 +185,11 @@ services:
       REMORA_OPERATOR_TOKEN: ${REMORA_OPERATOR_TOKEN:?missing}
       REMORA_APPROVER_TOKEN: ${REMORA_APPROVER_TOKEN:?missing}
       REMORA_VIEWER_TOKEN: ${REMORA_VIEWER_TOKEN:?missing}
+      # Effect verification is its own principal: in production REMORA refuses
+      # an effect record from the operator that executed the call.
+      REMORA_VERIFIER_TOKEN: ${REMORA_VERIFIER_TOKEN:?missing}
       TWIN_READ_URL: http://twin:8100
       TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
-      TWIN_ACTUATOR_PROBE_URL: http://172.31.250.10:8200
+      TWIN_ACTUATOR_PROBE_URL: http://10.250.250.10:8200
       # Deliberately absent: TWIN_ACTUATOR_TOKEN, TWIN_CONTROL_TOKEN.
     networks: [observe, authority]

@@ -30,16 +30,20 @@
     ]
   },
   "MON-ROUND": {
-    "task_text": "Read the zone temperatures and building energy on the monitoring round.",
+    "task_text": "Read zone ZONE-01, zone ZONE-02 and zone ZONE-03 temperatures and the building energy on the monitoring round.",
     "operation": "read",
     "resource_type": "zone",
     "requested_effect": "read",
-    "target_entities": [],
+    "target_entities": [
+      "target_resource"
+    ],
     "source_spans": [
-      "zone temperatures"
+      "zone ZONE-01",
+      "zone ZONE-02",
+      "zone ZONE-03"
     ],
     "action_spans": [
-      "read the zone temperatures"
+      "read zone"
     ]
   },
   "WORK-ORDER-003": {

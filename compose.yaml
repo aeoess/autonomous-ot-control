@@ -37,9 +37,11 @@ networks:
     internal: true
   plant-private:
     internal: true
+    # Outside Docker's default address pools (172.17-31.0.0/16, 192.168.0.0/16),
+    # so an auto-assigned network can never overlap the fixed actuator address.
     ipam:
       config:
-        - subnet: 172.31.250.0/24
+        - subnet: 10.250.250.0/24
 
 volumes:
   twin-state:
@@ -55,7 +57,7 @@ services:
     environment:
       TWIN_READ_BIND: 0.0.0.0
       TWIN_READ_PORT: "8100"
-      TWIN_ACTUATOR_BIND: 172.31.250.10
+      TWIN_ACTUATOR_BIND: 10.250.250.10
       TWIN_ACTUATOR_PORT: "8200"
       TWIN_CONTROL_BIND: 127.0.0.1
       TWIN_CONTROL_PORT: "8300"
@@ -73,7 +75,7 @@ services:
       observe:
         aliases: [twin]
       plant-private:
-        ipv4_address: 172.31.250.10
+        ipv4_address: 10.250.250.10
 
   runner:
     <<: *hardening
@@ -88,7 +90,7 @@ services:
     environment:
       TWIN_READ_URL: http://twin:8100
       TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
-      TWIN_ACTUATOR_PROBE_URL: http://172.31.250.10:8200
+      TWIN_ACTUATOR_PROBE_URL: http://10.250.250.10:8200
       TWIN_CONTROL_PROBE_URL: http://twin:8300
       OT_GIT_SHA: ${OT_GIT_SHA:-UNKNOWN}
       # Deliberately absent: TWIN_ACTUATOR_TOKEN, TWIN_CONTROL_TOKEN.

@@ -50,7 +50,11 @@ def build_semantic_bundle() -> SemanticBundle:
     ])
     state = StateIndex.from_values(
         set(ZONES) | {"demo-building-001"},
-        (CoverageScope("ot_twin", frozenset({"zone_id"}), closed_world=True),),
+        # The coverage domain must be the tool metadata's domain
+        # (deploy/ot/ot_tool_metadata.json): REMORA looks a value up in the
+        # index under the tool's domain, and a mismatch reads as UNKNOWN, which
+        # never supports an ACCEPT.
+        (CoverageScope("building_automation", frozenset({"zone_id"}), closed_world=True),),
     )
     return SemanticBundle.build(registry=registry, contracts=contracts,
                                 validators=None, state=state)
