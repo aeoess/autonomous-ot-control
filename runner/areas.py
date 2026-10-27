@@ -42,6 +42,7 @@ METERS = {
     "heat_pump": ("HP-01.ElectricPower",), "backup_heater": ("HP-01.BackupHeaterPower",),
     "fans": ("AHU-01.FanPower",), "cooling": ("CH-01.ElectricPower",),
     "heating_cables": ("CABLE-RAMP.Power", "CABLE-GUTTER.Power"),
+    "pumps_dhw": ("AUX-01.ElectricPower",),
     "lighting": tuple(f"ZONE-0{i}.LightingPower" for i in (1, 2, 3)),
     "equipment": tuple(f"ZONE-0{i}.EquipmentPower" for i in (1, 2, 3)),
 }

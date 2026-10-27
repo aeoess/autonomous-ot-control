@@ -208,6 +208,8 @@ OBJECTS: dict[str, tuple[str, str]] = {
     # cooling
     "CH-01.unit": ("=370.001-IK001", "chiller"),
     "CH-01.meter": ("=370.001-RE001", "chiller electric meter"),
+    # auxiliary electricity (pumps, electric hot water)
+    "AUX-01.meter": ("=320.001-RE002", "auxiliary electric meter: pumps and electric hot water"),
     # heating cables
     "CABLE-RAMP.cable": ("=745.001-LZ001", "snow-melt cable, ramp (outdoor electric heating)"),
     "CABLE-RAMP.controller": ("=745.001-OU001", "snow-melt controller, ramp"),
@@ -267,6 +269,7 @@ _POINT_OBJECT: dict[str, tuple[str | None, str]] = {
     "CH-01.CoolingLoad": ("CH-01.unit", "state"),
     "CH-01.EER": ("BMS.calc", "calculated"),
     "CH-01.ElectricPower": ("CH-01.meter", "measured"),
+    "AUX-01.ElectricPower": ("AUX-01.meter", "measured"),
 }
 for _c, _p in (("CABLE-RAMP", "CABLE-RAMP"), ("CABLE-GUTTER", "CABLE-GUTTER")):
     _POINT_OBJECT.update({f"{_c}.Mode": (f"{_p}.controller", "setpoint"), f"{_c}.Power": (f"{_p}.cable", "state"),

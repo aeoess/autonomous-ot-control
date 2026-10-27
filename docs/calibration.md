@@ -129,53 +129,66 @@ days, not the meter hierarchy, not COP, and not a causal saving.
 ## SITE_001: one measured office, NO1, 2026
 
 Aggregates in [`scenarios/calibration/site-001.json`](../scenarios/calibration/site-001.json),
-published with the owner's consent; the hourly export is not in the
-repository and no address or identifier is. 21 meters, 2026-02-16 to
-2026-10-27. The fit runs on a scenario of exactly that period
-(`scenarios/no1-2026-metered-period-hvac-v1.json`: verified NO1 prices and
-ERA5 weather for those days, Norwegian holidays, occupancy from the measured
-profile).
+published with the owner's consent. The hourly export is not in the
+repository. The building's own energy certificate supplied the technical
+values; its address, cadastral, building and certificate numbers are not
+in the repository either. 21 meters, 2026-02-16 to 2026-10-27, fitted on a
+scenario of exactly that period (`scenarios/no1-2026-metered-period-hvac-v1.json`:
+verified NO1 prices and ERA5 weather for those days, Norwegian holidays,
+occupancy from the measured profile).
+
+**The building** `twin/fixtures/calibrated/site-001-v2.json`: a 1980 office of
+3562 m² with a ground-source heat pump on energy wells (87 % of space heat,
+13 % direct electric), electric hot water, 85 % heat recovery, SFP 0.70.
+Taken from its certificate, not fitted: floor area, envelope U-values and
+areas, thermal bridges, heat capacity, ventilation, installed heating and
+cooling, setpoints, and a constant auxiliary load for pumps and electric hot
+water (2.8 + 5.0/0.94 kWh/m²·a, 3.3 kW). Fitted against the meters the owner
+named (E01 *tenants' main*, E02 *technical*):
+
+| Parameter | Fitted on | Value |
+|---|---|---:|
+| Permanent tenant load | E01 weekday night | 2.08 W/m² |
+| Tenant lighting / equipment when occupied | E01 energy over the period | 2.61 / 3.58 W/m² (normative 8 / 11) |
+| Free cooling from the energy wells | E02, June–August | EER 39.7 (pumps only) |
+| Heat pump | E02, February, March, October | 47.5 % of Carnot |
+
+**Validation, 2026 metered period** (Guideline 14: monthly CV(RMSE) ≤ 15 %
+and |NMBE| ≤ 5 %; hourly ≤ 30 % and ≤ 10 %):
+
+| | Monthly CV(RMSE) | Monthly NMBE | Hourly CV(RMSE) | Guideline 14 |
+|---|---:|---:|---:|---|
+| Total, E01 + E02 | 11.8 % | −0.7 % | 59 % | monthly met |
+| E01 against tenant load | 12.1 % | 0.2 % | 47 % | monthly met |
+| E02 against technical load | 18.0 % | −2.4 % | 148 % | not met |
+
+In-sample: the same period was used to fit, so this is a consistency check,
+not a hold-out. The hourly figures fail because the twin's heat pump cycles
+in whole minimum run times and its occupancy is a block 08–16 where the real
+load ramps from 06 and tails off after 16.
 
 **What it changed in the simulator**
 
-- **Occupancy hours.** The measured weekday load is at least halfway from
-  night base to peak from 08 to 16 local time. All 2025 scenarios now use
-  `weekday_hours_local: [8, 16]` with summer time; before, they used 07–17
-  UTC, which is 09–19 in summer.
-- **Base load.** The building uses 42 % of its daytime load at night; the
-  demo building used 10 %. The calibrated building carries 7.8 W/m² of
-  permanent load.
-- **Lighting and equipment.** The daytime increment is about 30 % of the
-  certificate cohort's lighting and equipment density (2.3 and 3.1 W/m²).
+- **Occupancy hours.** All 2025 scenarios use `weekday_hours_local: [8, 16]`
+  with summer time, from the measured profile; before, 07–17 UTC.
+- **Real tenants use a quarter of the normative lighting and equipment
+  power.** The certificate's 8 and 11 W/m² are NS 3031 standard values.
+- **Two plant terms.** Optional free cooling with a fixed EER, and a constant
+  auxiliary electricity for pumps and electric hot water; both are off for
+  every earlier building.
 - **Heating cables.** The ramp cable used 78 kWh over four weeks in
-  March–April 2026; the demo building assumed about 19 600 kWh a year.
-  Calibrated buildings have none.
+  March–April 2026; calibrated buildings have none.
 
-**The fitted building** `twin/fixtures/calibrated/site-001-v1.json` (heat pump,
-as at the site) and its district-heated twin `site-001-dh-v1.json` (used only
-to read the heating signature cleanly): 1545 m², from the medium-office
-certificate profile, with three parameters fitted.
+**Open, and stated in the calibration file**
 
-| Target | Measured | Twin | |
-|---|---:|---:|---:|
-| Heating signature slope | 1549 W/K | 1624 W/K | +5 % |
-| Night base load | 12.5 kW | 12.5 kW | 0 % |
-| Weekday daytime | 29.9 kW | 29.9 kW | 0 % |
-| Weekend / weekday | 0.71 | 0.67 | −5 % |
-| Electricity over 5963 hours, NMBE | | | 1.0 % |
-| Hourly CV(RMSE) (Guideline 14: ≤ 30 %) | | | 39.7 % |
-| Monthly CV(RMSE) (Guideline 14: ≤ 15 %) | | | 19.8 % |
-
-**Not calibrated yet.** The total is right but the seasons are not: the
-twin uses 18–20 % too little electricity in February–March and
-September–October and 15–43 % too much in June–August. The likely causes are
-the heat pump's winter efficiency and the cooling plant's summer
-electricity, and they cannot be fitted honestly until the meter topology is
-known (whether the heat pump and the chiller are on the two top-level
-meters). The heating signature's balance temperature and base are not
-identified (2 of 51 complete heating days above 11 °C). Savings computed on
-this building are the size of the levers on a building like it, not a
-verified saving for it.
+- The certificate states 295 MWh measured electricity a year (2021); E01 + E02
+  annualise to about 170 MWh in 2026. Either other main meters exist or use
+  fell; the twin represents what E01 and E02 measure.
+- The certificate's envelope gives a heating signature of 2345 W/K, the heat
+  meters 1549 W/K; the meters are sparse in summer and do not see the 13 %
+  direct electric heat. The envelope is not scaled to close the gap.
+- A first fit (v1, the medium-office cohort profile at 1545 m², fitted on the
+  total) was replaced once the certificate was available.
 
 ## What it still does not establish
 

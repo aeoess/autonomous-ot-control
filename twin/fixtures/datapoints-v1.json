@@ -2213,6 +2213,27 @@
       "tfm_role": "measured"
     },
     {
+      "id": "AUX-01.ElectricPower",
+      "system": "energy",
+      "kind": "AI",
+      "unit": "W",
+      "range": [
+        0,
+        50000
+      ],
+      "description": "Constant auxiliary electricity: circulation and energy-well pumps, electric hot water (plant aux_electric_w; 0 unless a calibrated building sets it).",
+      "source": "config aux_electric_w",
+      "affects": [
+        "EM-01.ElectricPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-RE002",
+      "tfm_role": "measured"
+    },
+    {
       "id": "CABLE-RAMP.Mode",
       "system": "heating cables",
       "kind": "SB",

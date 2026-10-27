@@ -110,6 +110,12 @@ class PlantConfig:
     chiller_evaporator_c: float
     # heating cables (ramps, gutters)
     cables: tuple[tuple[str, float], ...] = field(default_factory=tuple)  # (circuit, rated W)
+    # Free cooling (borehole / ground loop, circulation pumps only): a fixed EER that replaces the
+    # air-cooled chiller when set. None = the chiller (the default for every earlier fixture).
+    free_cooling_eer: float | None = None
+    # Constant auxiliary electricity not modelled as a process: circulation and energy-well pumps,
+    # electric domestic hot water. 0 for every earlier fixture.
+    aux_electric_w: float = 0.0
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> "PlantConfig":
@@ -137,6 +143,8 @@ class PlantConfig:
                 chiller_condenser_offset_k=float(d["chiller_condenser_offset_k"]),
                 chiller_evaporator_c=float(d["chiller_evaporator_c"]),
                 cables=tuple((c["circuit"], float(c["rated_w"])) for c in d.get("cables", [])),
+                free_cooling_eer=(float(d["free_cooling_eer"]) if d.get("free_cooling_eer") is not None else None),
+                aux_electric_w=float(d.get("aux_electric_w", 0.0)),
             )
         except (KeyError, TypeError) as e:
             raise PlantError(f"plant config: {e}") from None
@@ -146,6 +154,8 @@ class PlantConfig:
                      "chiller_carnot_fraction", "hp_defrost_penalty"):
             if not 0.0 < getattr(cfg, name) <= 1.0:
                 raise PlantError(f"{name} must be in (0, 1]")
+        if cfg.free_cooling_eer is not None and not 1.0 <= cfg.free_cooling_eer <= 60.0:
+            raise PlantError("free_cooling_eer must be in [1, 60] (pumps only; an EER, not a fraction)")
         return cfg
 
 
@@ -362,9 +372,11 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
 
     # ---- cooling production (chiller, condenser to outdoor air) ----
     cond_c = max(exo.outdoor_c, 15.0) + cfg.chiller_condenser_offset_k
-    eer = chiller_eer(cfg.chiller_evaporator_c, cond_c, cfg.chiller_carnot_fraction)
+    eer = (cfg.free_cooling_eer if cfg.free_cooling_eer is not None
+           else chiller_eer(cfg.chiller_evaporator_c, cond_c, cfg.chiller_carnot_fraction))
     chiller_w = cooling_total_w / eer if cooling_total_w > 0 else 0.0
-    elec_w += chiller_w
+    elec_w += chiller_w + cfg.aux_electric_w
+    pts["AUX-01.ElectricPower"] = cfg.aux_electric_w
     pts.update({"CH-01.CoolingLoad": cooling_total_w, "CH-01.EER": eer if cooling_total_w else 0.0,
                 "CH-01.ElectricPower": chiller_w})
 
