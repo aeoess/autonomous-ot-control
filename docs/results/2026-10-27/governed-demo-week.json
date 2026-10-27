@@ -1,0 +1,58 @@
+{
+  "summary": {
+    "simulated_days": 7.0,
+    "governed_P1": {
+      "energy_kwh": 865.970775,
+      "energy_cost_simulated": 1155.484892,
+      "comfort_violation_degree_hours": 0.457963,
+      "setpoint_changes_count": 44
+    },
+    "reference_P0": {
+      "energy_kwh": 871.813085,
+      "energy_cost_simulated": 1164.683976,
+      "comfort_violation_degree_hours": 0.481704,
+      "setpoint_changes_count": 33
+    },
+    "ungoverned_P1": {
+      "energy_kwh": 865.970775,
+      "energy_cost_simulated": 1155.484892,
+      "comfort_violation_degree_hours": 0.457963,
+      "setpoint_changes_count": 44
+    },
+    "savings_nok": 9.2,
+    "savings_kwh": 5.842,
+    "savings_pct_cost": 0.79,
+    "comfort_delta_degree_hours": -0.024,
+    "determinism": {
+      "live_energy_kwh": 865.970775,
+      "replay_energy_kwh": 865.970775,
+      "match": true
+    },
+    "scope": "Synthetic, uncalibrated building-services twin (three-zone-hvac-v1) on verified NO3 spot prices and ERA5 weather for 2026-01-15..21; spot cost only; the strategy saw the actual outdoor series as its forecast. Not a real-building saving."
+  },
+  "counts": {
+    "plans_published": 7,
+    "read_accept": 168,
+    "read_not_executed": 13,
+    "write_verify": 46,
+    "approved": 44,
+    "effect_EFFECT_VERIFIED": 44,
+    "applied": 44,
+    "read_executed": 155,
+    "rejected": 2,
+    "not_applied": 2,
+    "write_refused_at_assess": 1,
+    "attacks": 4,
+    "attacks_blocked": 4
+  },
+  "audit": {
+    "empty": false,
+    "hash_chain_status": "INTACT",
+    "problems": [],
+    "records_checked": 715,
+    "signature_format": "v1",
+    "signature_status": "CHECKED",
+    "tenant": "ot-pilot",
+    "valid": true
+  }
+}

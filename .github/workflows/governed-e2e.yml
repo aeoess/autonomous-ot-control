@@ -11,11 +11,6 @@ jobs:
   acceptance:
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    env:
-      # Known findings recorded as FAIL in the evidence but not failing the job.
-      # SDK-01: remora.sdk AuditRef cannot parse a deferred audit ref; fixed
-      # upstream in REMORA-research#1099, remove once the pin includes it.
-      ALLOW_FAILING: "SDK-01"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,10 +24,9 @@ jobs:
           m = json.load(open(glob.glob("artifacts/ci-*/manifest.json")[0]))
           c = m["counts"]
           print(json.dumps(c, indent=2))
-          # Fresh, non-empty, and every non-PASS is either NOT_RUN or the one
-          # allowed known finding; the suite's own exit code already enforced it.
+          # Fresh, non-empty, and every non-PASS is NOT_RUN: zero FAIL.
           sys.exit(0 if c["cases"] > 0 and c["passed"] > 0 and c["skipped"] == 0
-                   and c["failed"] - c["not_run"] <= 1 else 1)
+                   and c["failed"] == c["not_run"] else 1)
           PY
       - uses: actions/upload-artifact@v4
         if: always()
