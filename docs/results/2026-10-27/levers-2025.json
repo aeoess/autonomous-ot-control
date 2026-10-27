@@ -1,0 +1,121 @@
+{
+  "seed": 177,
+  "days": 365,
+  "rows": [
+    {
+      "case": "P1 only",
+      "levers": [],
+      "kwh": 43917.27388674013,
+      "cost_nok": 13926.085963694539,
+      "heat_pump": 5496.678736484906,
+      "backup_heater": 14.550000000000024,
+      "fans": 1566.1800000138162,
+      "cooling": 2073.0822647743685,
+      "heating_cables": 7676.999999993068,
+      "lighting": 2365.7987532002353,
+      "equipment": 24723.984132278023,
+      "comfort_dh": 991.595106799807,
+      "hazard_h": 0.0,
+      "saved_vs_p1_nok": 0.0,
+      "saved_vs_p1_kwh": 0.0
+    },
+    {
+      "case": "ahu_night_stop",
+      "levers": [
+        "ahu_night_stop"
+      ],
+      "kwh": 42816.45610095562,
+      "cost_nok": 13666.49733381129,
+      "heat_pump": 5102.544108499013,
+      "backup_heater": 14.400000000000023,
+      "fans": 745.8150000006054,
+      "cooling": 2186.914106977257,
+      "heating_cables": 7676.999999993068,
+      "lighting": 2365.7987532002353,
+      "equipment": 24723.984132278023,
+      "comfort_dh": 992.3931529301663,
+      "hazard_h": 0.0,
+      "saved_vs_p1_nok": 259.58862988324836,
+      "saved_vs_p1_kwh": 1100.8177857845076
+    },
+    {
+      "case": "deep_setback",
+      "levers": [
+        "deep_setback"
+      ],
+      "kwh": 43439.32754113541,
+      "cost_nok": 13836.140554250413,
+      "heat_pump": 5043.793629145409,
+      "backup_heater": 15.300000000000026,
+      "fans": 1566.1800000138162,
+      "cooling": 2047.2710265090675,
+      "heating_cables": 7676.999999993068,
+      "lighting": 2365.7987532002353,
+      "equipment": 24723.984132278023,
+      "comfort_dh": 996.3611092234239,
+      "hazard_h": 0.0,
+      "saved_vs_p1_nok": 89.9454094441262,
+      "saved_vs_p1_kwh": 477.94634560471604
+    },
+    {
+      "case": "cable_moisture",
+      "levers": [
+        "cable_moisture"
+      ],
+      "kwh": 39885.27388673961,
+      "cost_nok": 12239.594233694861,
+      "heat_pump": 5496.678736484906,
+      "backup_heater": 14.550000000000024,
+      "fans": 1566.1800000138162,
+      "cooling": 2073.0822647743685,
+      "heating_cables": 3645.0000000014797,
+      "lighting": 2365.7987532002353,
+      "equipment": 24723.984132278023,
+      "comfort_dh": 991.595106799807,
+      "hazard_h": 447.9999999999212,
+      "saved_vs_p1_nok": 1686.4917299996778,
+      "saved_vs_p1_kwh": 4032.0000000005166
+    },
+    {
+      "case": "tank_price_shift",
+      "levers": [
+        "tank_price_shift"
+      ],
+      "kwh": 45050.12750472784,
+      "cost_nok": 13889.823585838525,
+      "heat_pump": 5784.665566550251,
+      "backup_heater": 859.4999999999154,
+      "fans": 1566.1800000138162,
+      "cooling": 2072.9990526985393,
+      "heating_cables": 7676.999999993068,
+      "lighting": 2365.7987532002353,
+      "equipment": 24723.984132278023,
+      "comfort_dh": 1001.0829929068689,
+      "hazard_h": 0.0,
+      "saved_vs_p1_nok": 36.2623778560137,
+      "saved_vs_p1_kwh": -1132.853617987712
+    },
+    {
+      "case": "all four",
+      "levers": [
+        "ahu_night_stop",
+        "deep_setback",
+        "cable_moisture",
+        "tank_price_shift"
+      ],
+      "kwh": 39293.120268656035,
+      "cost_nok": 11820.206548988499,
+      "heat_pump": 4932.6407452382755,
+      "backup_heater": 722.2499999999362,
+      "fans": 745.8150000006054,
+      "cooling": 2157.631637936971,
+      "heating_cables": 3645.0000000014797,
+      "lighting": 2365.7987532002353,
+      "equipment": 24723.984132278023,
+      "comfort_dh": 1005.2152805086807,
+      "hazard_h": 447.9999999999212,
+      "saved_vs_p1_nok": 2105.87941470604,
+      "saved_vs_p1_kwh": 4624.153618084092
+    }
+  ]
+}
