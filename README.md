@@ -60,8 +60,9 @@ refusals, never permissions.
 
 What you get, pinned and offline:
 
-- **A sealed fixture set** `federation/fixtures/v1/`: 12 positive decision
-  trails and 6 negative controls, one seeded fault each, from a real governed
+- **Sealed fixture sets**: `v2` (default) contains 12 positive decision
+  trails and 10 negative controls; frozen `v1` retains 12 and 6. Each negative
+  control contains one seeded fault. The trails come from a real governed
   run. The manifest names six claims, maps every fault to the claim it
   contradicts, lists every case file with its SHA-256 and a package digest
   ([fixtures schema](contracts/federation-fixtures-v1.schema.json)).
@@ -96,6 +97,12 @@ fixtures do not establish (a synthetic plant, one deployment).
 - Merged runs: [`docs/federation/RESULTS.md`](docs/federation/RESULTS.md)
 - The discussion that motivated this: aeoess/agent-governance-vocabulary#177
 
+External contributors keep their own authorship. A bounded report can be
+submitted without joining or providing an adapter. External verifier source
+stays in its own repository; repeatable edges may use a public container
+image pinned by digest. An edge can declare `fixture_sets` to keep an agreed
+v1 evaluation from being enrolled in v2. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Quick start
 
 ```bash
@@ -129,7 +136,7 @@ twin/        model, plant (HVAC/tank/HP/AHU/lighting/cables), tfm (PA 0802), dat
 adapter/     REMORA-free helpers: contracts (signed ToolSpec), actuation (effect primitives), verifier
 deploy/ot/   modules loaded inside REMORA: ot_registry, ot_bundle, site_policy, caretaker_fallback, limits, signer
 runner/      caretaker (P3), strategies (P0..P2), areas, demo, acceptance, edge_check, federation_fixtures
-federation/  edges/_template (reference verifier) and fixtures/v1 (12 positive + 6 seeded-fault trails)
+federation/  edges/_template, frozen fixtures/v1 (12 + 6) and fixtures/v2 (12 + 10), records/
 contracts/   ToolSpec, tool surface, caretaker profile catalog, federation edge/case/result, MCP OpenAPI
 scenarios/   verified 2025 price and ERA5 weather series for NO1..NO5, baseline day, refusal vectors
 docs/        SDD-OT-001, status, strategies, running, datapoints, tfm, federation/, results/, adr/

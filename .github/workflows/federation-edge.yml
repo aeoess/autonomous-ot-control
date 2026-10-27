@@ -17,6 +17,7 @@ on:
       - "contracts/edge-*.json"
       - "contracts/federation-*.json"
       - "docs/federation/RESULTS.md"
+      - ".github/workflows/federation-edge.yml"
 permissions:
   contents: read
 env:
@@ -62,13 +63,20 @@ jobs:
             ./deploy/scripts/run-edge.sh _template "$(basename "$(dirname "$m")")" || rc=1
           done
           exit $rc
-      - name: Run changed edges on every fixture set
+      - name: Run changed edges on their agreed fixture sets
         if: steps.changed.outputs.edges != ''
+        shell: bash
+        env:
+          CHANGED_EDGES: ${{ steps.changed.outputs.edges }}
         run: |
+          set -euo pipefail
           rc=0
-          for e in ${{ steps.changed.outputs.edges }}; do
-            for m in federation/fixtures/*/manifest.json; do
-              ./deploy/scripts/run-edge.sh "$e" "$(basename "$(dirname "$m")")" || rc=1
+          for e in $CHANGED_EDGES; do
+            # Assignment preserves a selector failure; a failed command inside
+            # `for ... in $(...)` would silently execute zero cases.
+            sets=$(python3 -m runner.edge_check --list-fixture-sets "federation/edges/$e")
+            for fixture_set in $sets; do
+              ./deploy/scripts/run-edge.sh "$e" "$fixture_set" || rc=1
             done
           done
           exit $rc

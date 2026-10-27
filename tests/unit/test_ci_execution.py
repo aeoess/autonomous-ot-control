@@ -80,8 +80,10 @@ raise SystemExit(pytest.main(sys.argv[1:]))
     ("Stian Skogbrott", "36493828+darklordVirtual@users.noreply.github.com", True),
     ("Stian Skogbrott", "someone-else@example.invalid", False),
     ("Someone Else", "36493828+darklordVirtual@users.noreply.github.com", False),
+    ("External Contributor", "contributor@example.invalid", True),
+    ("astrogilda", "23521054+astrogilda@users.noreply.github.com", True),
 ])
-def test_owner_identity_gate_accepts_only_the_owner_identities(tmp_path, author, email, accepted):
+def test_identity_gate_accepts_contributors_and_preserves_owner_binding(tmp_path, author, email, accepted):
     def git(*args):
         run = subprocess.run(["git", *args], cwd=tmp_path, capture_output=True, text=True, check=True)
         return run.stdout.strip()

@@ -359,6 +359,18 @@ def validate_edge_manifest(edge_dir: Path) -> list[str]:
     if not isinstance(pin, dict) or pin.get("kind") not in ("git_commit", "image_digest", "package") \
             or not str(pin.get("value", "")).strip():
         problems.append("pin must be {kind: git_commit|image_digest|package, value: <non-empty>}")
+    if "fixture_sets" in edge:
+        sets = edge["fixture_sets"]
+        if not isinstance(sets, list) or not sets or any(
+            not isinstance(s, str) or not re.fullmatch(r"v[0-9]+", s) for s in sets
+        ):
+            problems.append("fixture_sets must be a non-empty list of sealed version names, e.g. ['v1']")
+        elif len(set(sets)) != len(sets):
+            problems.append("fixture_sets must not contain duplicate versions")
+        else:
+            for s in sets:
+                if not (ROOT / "federation" / "fixtures" / s / "manifest.json").is_file():
+                    problems.append(f"fixture_sets names an unknown sealed set: {s}")
     claims = edge.get("claims")
     if not isinstance(claims, list) or not claims:
         problems.append("claims must be a non-empty list of {claim_id, claim_ceiling}")
@@ -376,7 +388,8 @@ def validate_edge_manifest(edge_dir: Path) -> list[str]:
     ep = edge.get("entrypoint")
     if not isinstance(ep, dict):
         problems.append("entrypoint must be an object")
-    elif edge.get("mode") == "offline" and (not isinstance(ep.get("command"), list) or not ep.get("command")):
+    elif edge.get("mode") == "offline" and edge.get("boundary") == "effect_evidence" \
+            and (not isinstance(ep.get("command"), list) or not ep.get("command")):
         problems.append("offline edge entrypoint requires a non-empty command list")
     return problems
 
@@ -653,6 +666,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--boundary", default="effect_evidence", choices=list(BOUNDARIES))
     p.add_argument("--mode", default="offline", choices=list(MODES))
     p.add_argument("--validate", metavar="EDGE_DIR", help="validate an edge manifest and exit")
+    p.add_argument("--list-fixture-sets", metavar="EDGE_DIR",
+                   help="list an effect-evidence edge's agreed sealed sets for CI; report-reviewed boundaries run no adapter")
     p.add_argument("--check-fixtures", metavar="DIR", help="verify a sealed fixture set and exit")
     p.add_argument("--check-provenance", metavar="DIR",
                    help="fetch the verifier a set declares it was sealed against from git, run it, require the expected verdicts")
@@ -681,6 +696,26 @@ def main(argv: list[str] | None = None) -> int:
         if not probs:
             print(f"{a.validate}: valid ot-edge-manifest/v1")
         return 1 if probs else 0
+    if a.list_fixture_sets:
+        edge_dir = Path(a.list_fixture_sets)
+        probs = validate_edge_manifest(edge_dir)
+        if probs:
+            for pr in probs:
+                print(f"error: {pr}", file=sys.stderr)
+            return 1
+        edge = json.loads((edge_dir / "edge.json").read_text("utf-8"))
+        if edge["mode"] != "offline" or edge["boundary"] != "effect_evidence":
+            print(f"{edge['edge_id']}: {edge['boundary']} is report-reviewed or has no runtime harness; no adapter run",
+                  file=sys.stderr)
+            return 0
+        sets = edge.get("fixture_sets")
+        if sets is None:
+            sets = sorted(m.parent.name for m in (ROOT / "federation/fixtures").glob("*/manifest.json"))
+        if not sets:
+            print("error: no sealed fixture sets found", file=sys.stderr)
+            return 1
+        print("\n".join(sets))
+        return 0
     if a.check_fixtures:
         probs = check_fixture_set(Path(a.check_fixtures))
         for pr in probs:

@@ -74,6 +74,13 @@
     "licence": {
       "type": "string"
     },
+    "fixture_sets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^v[0-9]+$"},
+      "description": "Sealed sets this maintainer agreed to evaluate, for example [v1]. If omitted, CI retains the legacy behavior of running every sealed set. Adding a set is a separate opt-in change."
+    },
     "claim_ceiling": {
       "type": "string",
       "description": "What a green result shows, and what it does not, in the edge's own words."
