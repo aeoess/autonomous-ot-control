@@ -13,6 +13,14 @@ repository.
 > here, and simulation results never unlock a live connector (INV-12).
 > Specification: [`docs/SDD-OT-001.md`](docs/SDD-OT-001.md).
 
+| I want to… | Go to |
+|---|---|
+| **See results** of outside runs against the testbed | [`docs/federation/RESULTS.md`](docs/federation/RESULTS.md) (generated from run records; reviewed reports below the table) |
+| **Join** with my own check, no credentials, five minutes | [Join as a federation edge](#join-as-a-federation-edge) and the [guide](docs/federation/README.md) |
+| **Read the reports** | Strategy A/B/C with seeded faults: [abc-2025.html](docs/results/2026-10-27/abc-2025.html) · five price areas 2025: [areas-2025.html](docs/results/2026-10-27/areas-2025.html) · governed week: [report.html](docs/results/2026-10-27/report.html) · federation A/B/C: `artifacts/abc-<run>/abc-report.html` after [`run-abc.sh`](#the-abc-report) |
+| **Check what is established**, and at what evidence level | [`docs/status.md`](docs/status.md) |
+| **Find the entry point for machines** | [`federation/index.json`](federation/index.json) |
+
 ## How it works
 
 ```
@@ -24,6 +32,9 @@ repository.
         │                                                                                   │
         └──────────────── evidence: decision, envelope, twin operation record, observation ─┘
 ```
+
+<details>
+<summary>The four properties the suite proves, and where</summary>
 
 - **Ten supervisory write tools**, all governed, each with declared bounds,
   target and postconditions ([`contracts/ot-toolspec-v1.json`](contracts/ot-toolspec-v1.json),
@@ -41,13 +52,30 @@ repository.
 
 Design records: [`docs/adr/`](docs/adr/) (ADR-003..010).
 
-## Interoperate with the testbed
+</details>
 
-The testbed is built to be **checked from outside**. Other governance,
-verification or safety projects join as an opt-in **federation edge**: your
-own check, in your own code, run against what the testbed records. An edge
-never receives a credential, never reaches the plant, and can only add
-refusals, never permissions.
+## Join as a federation edge
+
+Your own check, in your own code, run against what the testbed records. An
+edge never receives a credential, never reaches the plant, and can only add
+refusals, never permissions. Verification is not endorsement, in either
+direction.
+
+```bash
+python -m runner.edge_check --init <your-edge-id> --project "<name>" --maintainer <github-handle>
+./deploy/scripts/run-edge.sh <your-edge-id> --local   # stdlib only, no Docker
+./deploy/scripts/run-edge.sh <your-edge-id>           # sandboxed container, exactly as CI
+```
+
+Then open a pull request adding `federation/edges/<your-edge-id>/`, your run
+record, and your entry in [`docs/federation/edge-registry.yaml`](docs/federation/edge-registry.yaml).
+That pull request is your consent record. A bounded report without an
+adapter is also welcome; see the [guide](docs/federation/README.md) and
+[CONTRIBUTING.md](CONTRIBUTING.md). Questions: an issue here, or
+aeoess/agent-governance-vocabulary#177, the discussion that motivated this.
+
+<details>
+<summary>Boundaries you can join at</summary>
 
 | Boundary | Mode | Question your edge answers | Today |
 |---|---|---|---|
@@ -58,7 +86,10 @@ refusals, never permissions.
 | `tool_definition` | inline | Does the served tool definition match the approved one? | needs the MCP gateway |
 | `authority_fixture` | inline | What does a synthetic signed work order authorize? | specified, no harness yet |
 
-What you get, pinned and offline:
+</details>
+
+<details>
+<summary>What you get, pinned and offline</summary>
 
 - **Sealed fixture sets**: `v2` (default) contains 12 positive decision
   trails and 10 negative controls; frozen `v1` retains 12 and 6. Each negative
@@ -79,52 +110,85 @@ What you get, pinned and offline:
   The results table is generated from the records; CI refuses a hand-edited one.
 - **A machine-readable entry point**, [`federation/index.json`](federation/index.json):
   what the testbed produces and consumes, its boundaries, its claim ceiling,
-  and five invariants each bound to the test that enforces it.
+  five invariants each bound to the test that enforces it, and the findings
+  fixed with the revision to test against.
+- External contributors keep their own authorship. External verifier source
+  stays in its own repository; repeatable edges may use a public container
+  image pinned by digest. An edge can declare `fixture_sets` to keep an agreed
+  `v1` evaluation from being enrolled in `v2`.
 
-```bash
-python -m runner.edge_check --init <your-edge-id> --project "<name>" --maintainer <github-handle>
-./deploy/scripts/run-edge.sh <your-edge-id> --local   # stdlib only, no Docker
-./deploy/scripts/run-edge.sh <your-edge-id>           # sandboxed container, exactly as CI
-```
+</details>
 
-Then open a pull request adding `federation/edges/<your-edge-id>/` and your
-entry in [`docs/federation/edge-registry.yaml`](docs/federation/edge-registry.yaml).
-That pull request is your consent record. Verification is not endorsement: a
-report states what was checked, against which pinned fixtures, and what the
-fixtures do not establish (a synthetic plant, one deployment).
+## Results so far
 
-- Guide: [`docs/federation/README.md`](docs/federation/README.md)
-- Merged runs and reviewed reports: [`docs/federation/RESULTS.md`](docs/federation/RESULTS.md)
-- Where this leads, and what is still missing: [`docs/federation/ABC-ROADMAP.md`](docs/federation/ABC-ROADMAP.md)
-- The discussion that motivated this: aeoess/agent-governance-vocabulary#177
+**Runs from outside**, all on 2026-10-27, the day the kit opened:
 
-**Where the edges end up: the A/B/C report.** The demo week is pinned as an
-episode (`scenarios/episodes/`), every proposal judged `permitted` or
+- Probity's `agent-evidence-vectors-axes` edge: a second implementation run on
+  its own host, 12/12 established and 6/6 faults caught on `v1`, derived
+  `L4_INDEPENDENT_HOST_RUN` (PR #22).
+- argentum-core's clean-room run of the reference verifier on `v1`,
+  `L1_REPRODUCTION` (PR #25).
+- Altru.dev's bounded `runner_validity` report, recorded as reviewed.
+
+Those runs and a further negative test found three defects in the testbed,
+fixed on `main` with regression tests that failed first, and listed with the
+revision to test against in [`federation/index.json`](federation/index.json)
+under `revisions`. Every row and every finding stays in
+[`docs/federation/RESULTS.md`](docs/federation/RESULTS.md).
+
+**On the synthetic building, 2025, five price areas:** the caretaker (P3) saves
+25–42 % of the as-found cost, 9–14 % of the kWh without the heating-cable
+lever, and the independent validator keeps the tank out of the unsafe band the
+unvalidated caretaker enters. Tables, definitions of P0–P3 and the arms, and the
+reports: [`docs/strategies.md`](docs/strategies.md).
+
+Everything in the governed path is `TESTED_DOCKER`: one host, one REMORA
+replica, synthetic plant, same-deployment vantage. Real-building savings and
+physical OT safety are `NOT_ESTABLISHED`. The full capability table with the
+evidence level per line is [`docs/status.md`](docs/status.md); statuses are
+promoted only by new evidence.
+
+<details>
+<summary>The three defects the outside runs found</summary>
+
+- The observer accepted one applied operation's id as proof of another tool's
+  or zone's effect when the desired state already existed (PR #20).
+- The attestor re-decided that refusal by comparing the plant's current value,
+  so the real SDK returned `EFFECT_VERIFIED` anyway (PR #21).
+- A restart lost the HVAC setpoints, plant state and point history while
+  keeping the revision and the operation log (PR #21).
+
+A fourth, from a negative test of our own: the reference verifier accepted
+missing and self-contradicting evidence as `ESTABLISHED`; fixture set `v2`
+seals the four cases that catch it (PR #21).
+
+</details>
+
+## The A/B/C report
+
+Where the edges end up. The demo week is pinned as an episode
+(`scenarios/episodes/`), every proposal judged `permitted` or
 `forbidden:<rule>` by an oracle written from the work orders and the plant's
 limits before any arm runs. Arm A applies the stream ungoverned (interlock
 only, known-negative), arm B runs it through REMORA with a declared reviewer
 model, arm C adds one inline edge that is consulted after REMORA and the
-reviewer approved and can only add refusals. `runner.ab_compare` accounts
-every arm against the oracle, runs every offline edge beside every arm, and
-reports what each edge added: refusals of forbidden proposals, false refusals,
-misses, findings on real trails, and its record on the sealed sets. That is
-how edges are compared. One command on a Docker host:
+reviewer approved and can only add refusals.
 
 ```bash
-DAYS=7 ./deploy/scripts/run-abc.sh     # A offline; B-careful, B-rubber_stamp, C with the reference inline edge; report
+DAYS=7 ./deploy/scripts/run-abc.sh     # Docker: A offline; B-careful, B-rubber_stamp, C with the reference inline edge; report
 ```
 
-Arm A, the harness, the reference inline edge and the comparison are tested
-locally; the Docker run of arms B and C has not been done yet
-([roadmap](docs/federation/ABC-ROADMAP.md)).
+`runner.ab_compare` accounts every arm against the oracle, runs every offline
+edge beside every arm, and reports what each edge added: refusals of
+forbidden proposals, false refusals, misses, findings on real trails, and its
+record on the sealed sets. That is how edges are compared. What exists, what
+was run, and what none of it establishes:
+[`docs/federation/ABC-ROADMAP.md`](docs/federation/ABC-ROADMAP.md).
 
-External contributors keep their own authorship. A bounded report can be
-submitted without joining or providing an adapter. External verifier source
-stays in its own repository; repeatable edges may use a public container
-image pinned by digest. An edge can declare `fixture_sets` to keep an agreed
-v1 evaluation from being enrolled in v2. See [CONTRIBUTING.md](CONTRIBUTING.md).
+<details>
+<summary>Quick start, layout, upstream pin, security and licence</summary>
 
-## Quick start
+### Quick start
 
 ```bash
 ./deploy/scripts/run-demo.sh        # Docker: build, smoke, baseline, evidence in artifacts/
@@ -133,38 +197,27 @@ python -m pytest -q                 # no Docker: unit and integration tests
 ```
 
 Requires Python 3.11+ and, for the Docker paths, Docker Compose v2. Governed
-demo, CLI proposals, trust boundary and the upstream pin:
+demo, CLI proposals, the A/B/C runs, trust boundary and the upstream pin:
 [`docs/running.md`](docs/running.md).
 
-## Status and results
-
-Everything in the governed path is `TESTED_DOCKER`: one host, one REMORA
-replica, synthetic plant, same-deployment vantage. Real-building savings and
-physical OT safety are `NOT_ESTABLISHED`. The full capability table, with the
-evidence level per line, is in [`docs/status.md`](docs/status.md). Statuses
-are promoted only by new evidence.
-
-Over 2025, in all five price areas, the caretaker (P3) saves 25–42 % of the
-as-found cost on the synthetic building, 9–14 % of the kWh without the
-heating-cable lever; the independent validator keeps the tank out of the
-unsafe band the unvalidated caretaker enters. Strategies, tables and reports:
-[`docs/strategies.md`](docs/strategies.md).
-
-## Layout
+### Layout
 
 ```
 twin/        model, plant (HVAC/tank/HP/AHU/lighting/cables), tfm (PA 0802), datapoints, guard, api, effect_observer
 adapter/     REMORA-free helpers: contracts (signed ToolSpec), actuation (effect primitives), verifier
 deploy/ot/   modules loaded inside REMORA: ot_registry, ot_bundle, site_policy, caretaker_fallback, limits, signer
-runner/      caretaker (P3), strategies (P0..P2), areas, demo, acceptance, edge_check, federation_fixtures
-federation/  edges/_template, frozen fixtures/v1 (12 + 6) and fixtures/v2 (12 + 10), records/
-contracts/   ToolSpec, tool surface, caretaker profile catalog, federation edge/case/result, MCP OpenAPI
-scenarios/   verified 2025 price and ERA5 weather series for NO1..NO5, baseline day, refusal vectors
+runner/      caretaker (P3), strategies (P0..P2), areas, demo, acceptance; federation: edge_check, federation_fixtures,
+             edge_pass, episode, oracle, ledger_metrics, arm_a, admission, ab_compare
+federation/  index.json (entry point), edges/_template and edges/_inline_template, external edges, sealed fixtures/v1
+             (12 + 6) and fixtures/v2 (12 + 10), records/ (run records), reports.json (reviewed reports)
+contracts/   ToolSpec, tool surface, caretaker profile catalog, federation edge/case/result/run-record/fixtures/index,
+             episode (ot-episode/v1), MCP OpenAPI
+scenarios/   verified 2025 price and ERA5 weather series for NO1..NO5, baseline day, refusal vectors, episodes/
 docs/        SDD-OT-001, status, strategies, running, datapoints, tfm, federation/, results/, adr/
 upstream/    pinned REMORA commit (123a5fd0)
 ```
 
-## Upstream, security, licence
+### Upstream, security, licence
 
 - REMORA is consumed at commit `123a5fd0` ([`upstream/remora.lock.json`](upstream/remora.lock.json));
   nothing upstream is patched locally. REMORA is BUSL-1.1 with its own Research
@@ -172,3 +225,5 @@ upstream/    pinned REMORA commit (123a5fd0)
 - Simulation only. Report a bypass of the actuator boundary privately as
   described in [`SECURITY.md`](SECURITY.md).
 - Licence for this repository: not yet decided (SDD decision `D-01`).
+
+</details>
