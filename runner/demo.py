@@ -118,17 +118,19 @@ class ReheatLearner:
         return max(0.2, base)
 
 
-def preheat_lead_s(zone_temp_c: float, outdoor_at_start_c: float, rate_k_per_h: float | None = None) -> int:
-    """Optimal-start lead: the deficit to 21.0 over the reheat rate, +1 h margin, 1..8 h."""
+def preheat_lead_s(zone_temp_c: float, outdoor_at_start_c: float, rate_k_per_h: float | None = None,
+                   max_lead_h: float = 8.0) -> int:
+    """Optimal-start lead: the deficit to 21.0 over the reheat rate, +1 h margin, 1..max_lead_h h."""
     rate = rate_k_per_h if rate_k_per_h is not None else max(
         0.3, REHEAT_K_PER_H_AT_0C + 0.02 * min(outdoor_at_start_c, 10.0))
     deficit = max(0.0, OCCUPIED_C - zone_temp_c)
-    hours = max(1.0, min(8.0, deficit / rate + 1.0))
+    hours = max(1.0, min(max_lead_h, deficit / rate + 1.0))
     return int(math.ceil(hours * 3600 / STEP_S) * STEP_S)
 
 
 def p1_target(sc: Scenario, t_s: int, zone: str = "ZONE-01",
-              zone_temp_c: float = SETBACK_C, learner: ReheatLearner | None = None) -> tuple[float, str]:
+              zone_temp_c: float = SETBACK_C, learner: ReheatLearner | None = None,
+              max_lead_h: float = 8.0) -> tuple[float, str]:
     """(target heating setpoint, reason) for a zone at time t_s, given its measured temperature."""
     if zone not in SETBACK_ZONES:
         return OCCUPIED_C, "constant (laboratory)"
@@ -143,7 +145,7 @@ def p1_target(sc: Scenario, t_s: int, zone: str = "ZONE-01",
             # shrinking deficit cannot flip the target back (no chattering).
             return OCCUPIED_C, "optimal start (latched until occupancy)"
         rate = (learner or ReheatLearner()).rate_for(zone, sc.outdoor_c(start))
-        lead = preheat_lead_s(zone_temp_c, sc.outdoor_c(start), rate)
+        lead = preheat_lead_s(zone_temp_c, sc.outdoor_c(start), rate, max_lead_h)
         if start - t_s <= lead:
             return OCCUPIED_C, (f"optimal start (lead {lead // 60} min: room {zone_temp_c:.1f} degC, "
                                 f"reheat {rate:.2f} K/h, {sc.outdoor_c(start):.1f} degC outdoors at start)")

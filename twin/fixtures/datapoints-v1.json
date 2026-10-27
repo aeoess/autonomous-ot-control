@@ -121,6 +121,28 @@
       "resolution": null
     },
     {
+      "id": "OUT-01.SurfaceWet",
+      "system": "outdoor",
+      "kind": "AI",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Ground moisture sensor at the ramp: the surface is wet, snowy or iced (twin surface model: wet after precipitation; above +2 degC dries in 2 h; at or below +2 degC stays until the snow-melt cable has run 1 h without new precipitation).",
+      "source": "Twin._surface_wet",
+      "affects": [
+        "CABLE-RAMP.Power",
+        "CABLE-GUTTER.Power",
+        "CABLE-RAMP.IcingHazardUncovered",
+        "CABLE-GUTTER.IcingHazardUncovered"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
       "id": "OUT-01.Temp24hMean",
       "system": "outdoor",
       "kind": "AV",
@@ -217,6 +239,48 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.LightingMode",
+      "system": "ZONE-01",
+      "kind": "SB",
+      "unit": "presence|schedule",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Lighting control, open-plan office: lit while people are present, or through the scheduled hours whoever is there (as found).",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-01.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_mode",
+      "interlocks": [
+        "IL-08"
+      ],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.DaylightHarvesting",
+      "system": "ZONE-01",
+      "kind": "SB",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Daylight dimming, open-plan office: electric light only tops up to the lux setpoint.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-01.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_mode",
+      "interlocks": [
+        "IL-08"
+      ],
       "resolution": null
     },
     {
@@ -565,6 +629,48 @@
       "resolution": null
     },
     {
+      "id": "ZONE-02.LightingMode",
+      "system": "ZONE-02",
+      "kind": "SB",
+      "unit": "presence|schedule",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Lighting control, meeting room: lit while people are present, or through the scheduled hours whoever is there (as found).",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-02.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_mode",
+      "interlocks": [
+        "IL-08"
+      ],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-02.DaylightHarvesting",
+      "system": "ZONE-02",
+      "kind": "SB",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Daylight dimming, meeting room: electric light only tops up to the lux setpoint.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-02.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_mode",
+      "interlocks": [
+        "IL-08"
+      ],
+      "resolution": null
+    },
+    {
       "id": "ZONE-02.EquipmentFactor",
       "system": "ZONE-02",
       "kind": "EX",
@@ -907,6 +1013,48 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.LightingMode",
+      "system": "ZONE-03",
+      "kind": "SB",
+      "unit": "presence|schedule",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Lighting control, laboratory (constant equipment load): lit while people are present, or through the scheduled hours whoever is there (as found).",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-03.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_mode",
+      "interlocks": [
+        "IL-08"
+      ],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-03.DaylightHarvesting",
+      "system": "ZONE-03",
+      "kind": "SB",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Daylight dimming, laboratory (constant equipment load): electric light only tops up to the lux setpoint.",
+      "source": "supervisory (governed)",
+      "affects": [
+        "ZONE-03.LightingPower"
+      ],
+      "variants": [],
+      "writable_via": "set_zone_lighting_mode",
+      "interlocks": [
+        "IL-08"
+      ],
       "resolution": null
     },
     {
@@ -1918,7 +2066,24 @@
         0,
         1
       ],
-      "description": "HAZARD: icing risk while the circuit is off.",
+      "description": "Conservative proxy: the 3 h icing-risk window with the circuit off.",
+      "source": "plant",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-RAMP.IcingHazardUncovered",
+      "system": "heating cables",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off.",
       "source": "plant",
       "affects": [],
       "variants": [],
@@ -1976,7 +2141,24 @@
         0,
         1
       ],
-      "description": "HAZARD: icing risk while the circuit is off.",
+      "description": "Conservative proxy: the 3 h icing-risk window with the circuit off.",
+      "source": "plant",
+      "affects": [],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "CABLE-GUTTER.IcingHazardUncovered",
+      "system": "heating cables",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off.",
       "source": "plant",
       "affects": [],
       "variants": [],
@@ -2017,6 +2199,42 @@
       "affects": [
         "EM-01.Cost"
       ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "EM-01.MonthlyPeakKw",
+      "system": "energy",
+      "kind": "AV",
+      "unit": "kW",
+      "range": [
+        0,
+        500
+      ],
+      "description": "The month's highest hourly mean electric power: the basis of the grid tariff's power charge.",
+      "source": "Twin._grid_tariff",
+      "affects": [
+        "EM-01.GridCost"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "EM-01.GridCost",
+      "system": "energy",
+      "kind": "AV",
+      "unit": "NOK",
+      "range": [
+        0,
+        10000000.0
+      ],
+      "description": "Declared reference grid tariff (ASSUMPTION): energy part per kWh plus the monthly power part.",
+      "source": "Twin.grid_power_cost",
+      "affects": [],
       "variants": [],
       "writable_via": null,
       "interlocks": [],
@@ -2121,11 +2339,11 @@
     },
     {
       "id": "IL-10",
-      "rule": "CABLE-*.Mode = off refused while OUT-01.IcingRisk",
+      "rule": "CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC (the ground sensor reports a freezing wet surface)",
       "protects": "ice on ramps and gutters",
       "points": [
         "CABLE-*.Mode",
-        "OUT-01.IcingRisk"
+        "OUT-01.SurfaceWet"
       ],
       "status": "SPECIFIED",
       "enforced_by": "twin interlock"
@@ -2247,6 +2465,38 @@
       "requires_procedure": null
     },
     {
+      "id": "set_zone_lighting_mode",
+      "writes": [
+        "*.LightingMode",
+        "*.DaylightHarvesting"
+      ],
+      "arguments": {
+        "zone_id": {
+          "type": "string",
+          "enum": [
+            "ZONE-01",
+            "ZONE-02",
+            "ZONE-03"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "presence",
+            "schedule"
+          ]
+        },
+        "daylight_harvesting": {
+          "type": "boolean"
+        }
+      },
+      "risk_tier": "low",
+      "rate": ">=15 min",
+      "cascade": "lighting power -> zone heat gain -> radiator heat",
+      "status": "SPECIFIED",
+      "requires_procedure": null
+    },
+    {
       "id": "set_supply_air_setpoint",
       "writes": [
         "AHU-01.SupplyAirSetpoint"
@@ -2333,6 +2583,8 @@
           "type": "string",
           "enum": [
             "auto",
+            "thermostat",
+            "sensor",
             "on",
             "off"
           ]

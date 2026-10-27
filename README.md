@@ -38,6 +38,7 @@ suite against that stack from a clean bootstrap; evidence lands in `artifacts/`.
 | Typed SDK `approve` on a deferred audit ref (SDK-01) | **FAIL** at the pin — fixed upstream in REMORA-research#1099 |
 | Stale observation, timeout after actuation (AT-09, AT-12) | `NOT_ESTABLISHED` — no fault hook in the running twin yet |
 | Governed-agent vs baseline comparison (AT-16) | `NOT_ESTABLISHED` |
+| Strategies P0/P1/P2 over 2025 in all five price areas, verified local prices and weather ([report](docs/results/2026-10-27/areas-report.html)) | `TESTED_LOCALLY` — offline, applied directly, not through REMORA |
 | Miniflare / Cloudflare / federation | `NOT_ESTABLISHED` (PR 4–6) |
 | Real-building savings, physical OT safety | `NOT_ESTABLISHED` — synthetic model only |
 

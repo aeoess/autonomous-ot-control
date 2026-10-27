@@ -1,0 +1,26 @@
+{
+  "schema": "ot-site/v1",
+  "building_id": "demo-building-no2",
+  "fictitious": true,
+  "name": "Demo Building NO2",
+  "comment": "A fictitious building. The coordinate is a point in Kristiansand chosen only so that weather and day-ahead prices come from a real Norwegian area; no real building, owner or address is implied.",
+  "location": {
+    "lat": 58.1467,
+    "lon": 7.9956,
+    "datum": "WGS84",
+    "municipality": "Kristiansand",
+    "county": "Agder"
+  },
+  "timezone": "Europe/Oslo",
+  "price_area": {
+    "code": "NO2",
+    "name": "Sør-Norge",
+    "basis": "Declared. Agder lies in bidding zone NO2. runner.exogenous checks the coordinate against the coarse box below so a mistyped coordinate or area fails; the box is a consistency check, not a bidding-zone boundary.",
+    "consistency_box": {
+      "lat_min": 57.9,
+      "lat_max": 60.0,
+      "lon_min": 5.5,
+      "lon_max": 9.5
+    }
+  }
+}

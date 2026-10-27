@@ -153,11 +153,41 @@ class Twin:
                        for zid in self.zones},
             icing_risk=sc.icing_risk(t),
             heating_season=self._heating_season(t),
-            equipment_factor={zid: sc.equipment_factor(zid, t) for zid in self.zones})
+            equipment_factor={zid: sc.equipment_factor(zid, t) for zid in self.zones},
+            surface_wet=self._surface_wet(t, dt),
+            scheduled_open=occupied or sc.scheduled_open(t))
         res = plant_mod.step(self.plant, self.plant_state, temps, self.setpoints, exo, dt)
         self.plant_state = res.state
         self.points = res.points
         return res.zone_heat_w, res.electric_w, res.district_heat_w
+
+    def _surface_wet(self, t: int, dt: float) -> bool:
+        """Ramp surface model behind the ground moisture sensor.
+
+        Precipitation wets the surface. A wet surface above +2 degC dries in
+        2 h; at or below +2 degC it stays wet, snowy or iced until the snow-melt
+        cable has run for 1 h without new precipitation, or the air rises
+        above +2 degC. Deliberately simple and stated: a sensor reading for the
+        controller, not a road-weather model.
+        """
+        sc = self.scenario
+        if not hasattr(self, "_wet_since"):
+            self._wet_since, self._melt_s, self._dry_s = None, 0.0, 0.0
+        precip = sc.precipitation_mm_h(t) > 0.1
+        cold = sc.outdoor_c(t) <= 2.0
+        cable_on = any(self.points.get(f"{c}.Power", 0.0) > 0 for c in ("CABLE-RAMP",))
+        if precip:
+            self._wet_since, self._melt_s, self._dry_s = t, 0.0, 0.0
+        elif self._wet_since is not None:
+            if cold:
+                self._melt_s = self._melt_s + dt if cable_on else self._melt_s
+                if self._melt_s >= 3600:
+                    self._wet_since = None
+            else:
+                self._dry_s += dt
+                if self._dry_s >= 7200:
+                    self._wet_since = None
+        return self._wet_since is not None
 
     def _heating_season(self, t: int) -> bool:
         """Summer stop with hysteresis on the 24 h mean outdoor temperature.
@@ -181,6 +211,40 @@ class Twin:
                 prev = True
             self._season_on, self._season_hour, self.outdoor_mean_24h = prev, hour, mean
         return bool(self._season_on)
+
+    def _grid_tariff(self, t: int, kwh: float) -> None:
+        """Declared reference grid tariff (config plant.grid_tariff, ASSUMPTION).
+
+        Energy part per kWh plus a monthly power part on the month's highest
+        hourly mean kW. Tracked separately from the spot cost; absent config
+        means no grid cost (the v1 behaviour).
+        """
+        tariff = self.config.get("plant", {}).get("grid_tariff")
+        if not tariff:
+            return
+        if not hasattr(self, "grid_energy_cost"):
+            self.grid_energy_cost, self.monthly_peak_kw, self._hour_kwh, self._hour_key = 0.0, {}, 0.0, None
+        self.grid_energy_cost += kwh * float(tariff["energy_nok_per_kwh"])
+        stamp = self.clock.utc_at(t)
+        hour_key = stamp.strftime("%Y-%m-%dT%H")
+        if self._hour_key not in (None, hour_key):
+            month = self._hour_key[:7]
+            self.monthly_peak_kw[month] = max(self.monthly_peak_kw.get(month, 0.0), self._hour_kwh)
+            self._hour_kwh = 0.0
+        self._hour_key = hour_key
+        self._hour_kwh += kwh  # kWh in one hour = mean kW over that hour
+
+    def grid_power_cost(self) -> float:
+        tariff = self.config.get("plant", {}).get("grid_tariff")
+        if not tariff or not hasattr(self, "monthly_peak_kw"):
+            return 0.0
+        peaks = dict(self.monthly_peak_kw)
+        if self._hour_key:
+            m = self._hour_key[:7]
+            peaks[m] = max(peaks.get(m, 0.0), self._hour_kwh)
+        winter = set(tariff["winter_months"])
+        return sum(kw * float(tariff["power_nok_per_kw_month"]["winter" if int(m[5:7]) in winter else "summer"])
+                   for m, kw in peaks.items())
 
     def district_heat_price(self, t: int) -> float:
         """Declared district-heating tariff: a spot-linked energy price (ASSUMPTION)."""
@@ -224,6 +288,7 @@ class Twin:
         self.electric_kwh += kwh
         self.energy_kwh += kwh
         self.cost += kwh * price
+        self._grid_tariff(t, kwh)
         if dh_w:
             dh_kwh = dh_w * dt / 3.6e6
             self.district_heat_kwh += dh_kwh
