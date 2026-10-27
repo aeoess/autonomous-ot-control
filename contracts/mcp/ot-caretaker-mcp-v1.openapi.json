@@ -1,0 +1,1135 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ot-caretaker MCP server",
+    "version": "1.0.0-draft",
+    "summary": "Remote MCP server for a customer to read, ask and propose; REMORA decides and executes.",
+    "description": "Transport: MCP Streamable HTTP (JSON-RPC 2.0 over POST /mcp). Authorization: OAuth 2.1 (MCP authorization), mandatory for every call. The tools are listed under x-mcp-tools with their input/output schemas, required scope, the single REMORA call each makes, and their plant effect, which is 'none' for every tool: no MCP tool dispatches. State-changing calls are limited to REMORA assess (propose), approve and reject; execution happens in the caretaker through REMORA's protected dispatcher. Design specification; see docs/architecture/autonomous-runtime-cloudflare.md section 13.",
+    "license": {
+      "name": "Not yet decided (SDD D-01)"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://mcp.{domain}",
+      "variables": {
+        "domain": {
+          "default": "example.invalid"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "oauth2": [
+        "building.read"
+      ]
+    }
+  ],
+  "paths": {
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "summary": "Protected resource metadata (RFC 9728): names the authorization server.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Resource metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resource": {
+                      "type": "string"
+                    },
+                    "authorization_servers": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "scopes_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "resource",
+                    "authorization_servers"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "summary": "MCP JSON-RPC endpoint (initialize, tools/list, tools/call).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonRpcRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC result or error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRpcResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No or invalid token; WWW-Authenticate names the resource metadata URL."
+          },
+          "403": {
+            "description": "insufficient_scope; the WWW-Authenticate header names the scopes needed (step-up for changes.approve)."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://auth.{domain}/authorize",
+            "tokenUrl": "https://auth.{domain}/token",
+            "scopes": {
+              "building.read": "Read building status, data points, prices and forecasts.",
+              "reports.read": "Read reports, recommendations, decisions and their evidence.",
+              "changes.propose": "Ask REMORA to assess a change. Never executes.",
+              "changes.approve": "Approve or reject a pending change as the customer's approver. Step-up only: never granted with other scopes, fresh sign-in each time."
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "AuditRef": {
+        "type": "object",
+        "properties": {
+          "sequence_no": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "entry_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deferred": {
+            "type": "boolean"
+          },
+          "idempotency_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "ExpectedEffect": {
+        "type": "object",
+        "properties": {
+          "cost_delta_nok": {
+            "type": "number"
+          },
+          "comfort_delta_dh": {
+            "type": "number"
+          },
+          "basis": {
+            "type": "string",
+            "description": "Model, inputs and snapshot SHA-256 the estimate used; always synthetic."
+          },
+          "estimate": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "estimate"
+        ],
+        "additionalProperties": false
+      },
+      "PointValue": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "number",
+              "boolean",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "sample_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "GOOD",
+              "STALE",
+              "UNOBSERVABLE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "value",
+          "unit",
+          "sample_at",
+          "quality"
+        ],
+        "additionalProperties": false
+      },
+      "BuildingStatus": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "zones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "zone_id": {
+                  "type": "string",
+                  "enum": [
+                    "ZONE-01",
+                    "ZONE-02",
+                    "ZONE-03"
+                  ]
+                },
+                "air_temp_c": {
+                  "type": "number"
+                },
+                "heating_setpoint_c": {
+                  "type": "number"
+                },
+                "co2_ppm": {
+                  "type": "number"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "active_plan": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fictitious": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "site_id",
+          "mode",
+          "zones"
+        ],
+        "additionalProperties": false
+      },
+      "Inputs": {
+        "type": "object",
+        "properties": {
+          "price_area": {
+            "type": "string"
+          },
+          "prices_nok_per_kwh": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "forecast_outdoor_c": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "energy_kwh": {
+            "type": "number"
+          },
+          "cost_nok": {
+            "type": "number"
+          },
+          "reference_cost_nok": {
+            "type": "number"
+          },
+          "savings_nok": {
+            "type": "number"
+          },
+          "comfort_degree_hours": {
+            "type": "number"
+          },
+          "hazard_hours": {
+            "type": "number"
+          },
+          "decisions": {
+            "type": "integer"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "estimate": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "period",
+          "estimate",
+          "scope"
+        ],
+        "additionalProperties": false
+      },
+      "DecisionTrail": {
+        "type": "object",
+        "properties": {
+          "proposal_id": {
+            "type": "string"
+          },
+          "ledger_row": {
+            "type": "object"
+          },
+          "lifecycle": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "evidence_manifest": {
+            "type": "object"
+          },
+          "effect": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "audit_chain_valid": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "ledger_row",
+          "lifecycle"
+        ],
+        "additionalProperties": false
+      },
+      "Recommendation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "procedure_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "proposed_calls": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "expected_effect": {
+            "$ref": "#/components/schemas/ExpectedEffect"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "expected_effect",
+          "confidence"
+        ],
+        "additionalProperties": false
+      },
+      "JsonRpcRequest": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "const": "2.0"
+          },
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "initialize",
+              "tools/list",
+              "tools/call",
+              "ping"
+            ]
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ],
+        "additionalProperties": false
+      },
+      "JsonRpcResponse": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "id": {},
+          "result": {
+            "type": "object"
+          },
+          "error": {
+            "type": "object"
+          }
+        }
+      },
+      "GetBuildingStatusInput": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "site_id"
+        ],
+        "additionalProperties": false
+      },
+      "GetBuildingStatusOutput": {
+        "$ref": "#/components/schemas/BuildingStatus"
+      },
+      "GetDatapointsInput": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "point_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100
+          },
+          "system": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "site_id"
+        ],
+        "additionalProperties": false
+      },
+      "GetDatapointsOutput": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PointValue"
+            }
+          }
+        },
+        "required": [
+          "points"
+        ],
+        "additionalProperties": false
+      },
+      "GetPricesAndForecastInput": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "site_id",
+          "date"
+        ],
+        "additionalProperties": false
+      },
+      "GetPricesAndForecastOutput": {
+        "$ref": "#/components/schemas/Inputs"
+      },
+      "GetReportInput": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month"
+            ]
+          },
+          "start": {
+            "type": "string",
+            "format": "date"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "energy",
+              "savings",
+              "comfort",
+              "decisions"
+            ]
+          }
+        },
+        "required": [
+          "site_id",
+          "period",
+          "start",
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "GetReportOutput": {
+        "$ref": "#/components/schemas/Report"
+      },
+      "GetDecisionInput": {
+        "type": "object",
+        "properties": {
+          "proposal_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id"
+        ],
+        "additionalProperties": false
+      },
+      "GetDecisionOutput": {
+        "$ref": "#/components/schemas/DecisionTrail"
+      },
+      "ListRecommendationsInput": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "horizon": {
+            "type": "string",
+            "enum": [
+              "today",
+              "week",
+              "season"
+            ]
+          }
+        },
+        "required": [
+          "site_id"
+        ],
+        "additionalProperties": false
+      },
+      "ListRecommendationsOutput": {
+        "type": "object",
+        "properties": {
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            }
+          }
+        },
+        "required": [
+          "recommendations"
+        ],
+        "additionalProperties": false
+      },
+      "ProposeChangeInput": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string",
+            "enum": [
+              "set_zone_setpoint",
+              "set_zone_cooling_setpoint",
+              "set_zone_co2_setpoint",
+              "set_zone_lighting_setpoint",
+              "set_supply_air_setpoint",
+              "set_tank_setpoint",
+              "set_heat_pump_limit",
+              "set_ahu_enabled",
+              "set_heating_cable_mode"
+            ]
+          },
+          "arguments": {
+            "type": "object",
+            "description": "Validated against the tool's schema in docs/datapoints.md and REMORA's signed ToolSpec."
+          },
+          "customer_request": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "The customer's own words, recorded verbatim in the work order."
+          },
+          "when": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Earliest execution time; the caretaker schedules the dispatch."
+          }
+        },
+        "required": [
+          "site_id",
+          "tool",
+          "arguments",
+          "customer_request"
+        ],
+        "additionalProperties": false
+      },
+      "ProposeChangeOutput": {
+        "type": "object",
+        "description": "What REMORA decided, verbatim from /v1/execution/assess, plus the caretaker's estimate.",
+        "properties": {
+          "proposal_id": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "verify",
+              "abstain",
+              "escalate"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "review_item_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "required_role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Role REMORA requires to approve (risk profile)."
+          },
+          "resolution_plan": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "refusal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A 409 reason code when REMORA refused before deciding (toolspec_*, limit_*)."
+          },
+          "expected_effect": {
+            "$ref": "#/components/schemas/ExpectedEffect"
+          },
+          "evidence_ref": {
+            "type": "string",
+            "description": "R2 key of the proposal's evidence."
+          }
+        },
+        "required": [
+          "decision",
+          "reasons"
+        ],
+        "additionalProperties": false
+      },
+      "ProposeProcedureInput": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "procedure_id": {
+            "type": "string",
+            "enum": [
+              "PR-01",
+              "PR-02",
+              "PR-03",
+              "PR-04",
+              "PR-05"
+            ]
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "customer_request": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "site_id",
+          "procedure_id",
+          "parameters",
+          "customer_request"
+        ],
+        "additionalProperties": false
+      },
+      "ProposeProcedureOutput": {
+        "type": "object",
+        "description": "What REMORA decided, verbatim from /v1/execution/assess, plus the caretaker's estimate.",
+        "properties": {
+          "proposal_id": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "verify",
+              "abstain",
+              "escalate"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "review_item_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "required_role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Role REMORA requires to approve (risk profile)."
+          },
+          "resolution_plan": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "refusal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A 409 reason code when REMORA refused before deciding (toolspec_*, limit_*)."
+          },
+          "expected_effect": {
+            "$ref": "#/components/schemas/ExpectedEffect"
+          },
+          "evidence_ref": {
+            "type": "string",
+            "description": "R2 key of the proposal's evidence."
+          }
+        },
+        "required": [
+          "decision",
+          "reasons"
+        ],
+        "additionalProperties": false
+      },
+      "ConfirmChangeInput": {
+        "type": "object",
+        "properties": {
+          "review_item_id": {
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 86400
+          }
+        },
+        "required": [
+          "review_item_id"
+        ],
+        "additionalProperties": false
+      },
+      "ConfirmChangeOutput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "proposal_id": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scheduled_for": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/AuditRef"
+          }
+        },
+        "required": [
+          "status",
+          "proposal_id",
+          "audit"
+        ],
+        "additionalProperties": false
+      },
+      "RejectChangeInput": {
+        "type": "object",
+        "properties": {
+          "review_item_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "required": [
+          "review_item_id",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "RejectChangeOutput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/AuditRef"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "GetChangeStatusInput": {
+        "type": "object",
+        "properties": {
+          "proposal_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id"
+        ],
+        "additionalProperties": false
+      },
+      "GetChangeStatusOutput": {
+        "type": "object",
+        "properties": {
+          "proposal_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ASSESSED",
+              "WAITING_APPROVAL",
+              "APPROVED",
+              "DISPATCHED",
+              "APPLIED",
+              "REFUSED",
+              "UNKNOWN",
+              "EFFECT_VERIFIED",
+              "EFFECT_MISMATCH",
+              "EFFECT_UNOBSERVABLE"
+            ]
+          },
+          "observed": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "evidence_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "proposal_id",
+          "state"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "x-mcp-tools": [
+    {
+      "name": "get_building_status",
+      "description": "Current mode, zone temperatures and setpoints, plant state, active plan, open alerts.",
+      "scope": "building.read",
+      "remora_call": "none",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/GetBuildingStatusInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/GetBuildingStatusOutput"
+      }
+    },
+    {
+      "name": "get_datapoints",
+      "description": "Latest values of catalogued data points (docs/datapoints.md), with sample time and quality.",
+      "scope": "building.read",
+      "remora_call": "none",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/GetDatapointsInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/GetDatapointsOutput"
+      }
+    },
+    {
+      "name": "get_prices_and_forecast",
+      "description": "Day-ahead spot prices and the weather forecast the caretaker planned on, with snapshot SHA-256.",
+      "scope": "building.read",
+      "remora_call": "none",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/GetPricesAndForecastInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/GetPricesAndForecastOutput"
+      }
+    },
+    {
+      "name": "get_report",
+      "description": "Energy, cost, comfort, hazards and savings against the reference schedule, for a period.",
+      "scope": "reports.read",
+      "remora_call": "none",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/GetReportInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/GetReportOutput"
+      }
+    },
+    {
+      "name": "get_decision",
+      "description": "The full audit trail of one decision: ledger row, REMORA lifecycle and evidence manifest, effect verification.",
+      "scope": "reports.read",
+      "remora_call": "GET /v1/execution/proposals/{id}/lifecycle and /evidence",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/GetDecisionInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/GetDecisionOutput"
+      }
+    },
+    {
+      "name": "list_recommendations",
+      "description": "Measures the caretaker suggests, each with expected NOK, comfort effect, confidence and evidence refs. A recommendation changes nothing until proposed and confirmed.",
+      "scope": "reports.read",
+      "remora_call": "none",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/ListRecommendationsInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/ListRecommendationsOutput"
+      }
+    },
+    {
+      "name": "propose_change",
+      "description": "Ask REMORA to assess one governed change. Never dispatches. The customer's words become the work order text, so REMORA can ground literal values.",
+      "scope": "changes.propose",
+      "remora_call": "POST /v1/execution/assess (principal customer-agent:<tenant>)",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/ProposeChangeInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/ProposeChangeOutput"
+      }
+    },
+    {
+      "name": "propose_procedure",
+      "description": "Propose a multi-step procedure (ADR-007 PR-01..05) as one plan; each step stays individually governed.",
+      "scope": "changes.propose",
+      "remora_call": "POST /v1/execution/assess of a plan work order",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/ProposeProcedureInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/ProposeProcedureOutput"
+      }
+    },
+    {
+      "name": "confirm_change",
+      "description": "Approve a pending review item as the customer's approving principal. Requires a step-up token. The caretaker executes later through REMORA.",
+      "scope": "changes.approve",
+      "remora_call": "POST /v1/execution/approve (principal customer-approver:<tenant>, after step-up)",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/ConfirmChangeInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/ConfirmChangeOutput"
+      }
+    },
+    {
+      "name": "reject_change",
+      "description": "Refuse a pending review item, with a mandatory reason.",
+      "scope": "changes.approve",
+      "remora_call": "POST /v1/execution/reject",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/RejectChangeInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/RejectChangeOutput"
+      }
+    },
+    {
+      "name": "get_change_status",
+      "description": "Where a change is: assessed, waiting, approved, dispatched, APPLIED/refused/UNKNOWN, effect verified.",
+      "scope": "reports.read",
+      "remora_call": "GET /v1/execution/proposals/{id} and /lifecycle",
+      "plant_effect": "none",
+      "inputSchema": {
+        "$ref": "#/components/schemas/GetChangeStatusInput"
+      },
+      "outputSchema": {
+        "$ref": "#/components/schemas/GetChangeStatusOutput"
+      }
+    }
+  ],
+  "x-forbidden-remora-routes": [
+    "/v1/execution/execute",
+    "/v1/execution/execute-accepted",
+    "/v1/execution/limits/resolve"
+  ]
+}
