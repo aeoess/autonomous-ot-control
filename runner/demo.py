@@ -327,9 +327,14 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
     if pid:
         env = s.step("envelope", proposal_id=pid)
         evd = s.step("evidence", proposal_id=pid)
+        # The twin's own operation record (keyed by REMORA's proposal id) is the
+        # independent witness every offline edge compares against; export it with
+        # the trail so an edge pass needs no live stack (runner.edge_pass).
+        op = s.step("operation", operation_id=pid) if applied else {}
         rec = {"proposal_id": pid, "ledger_row": row, "envelope": env.get("body"),
                "envelope_status": env.get("status"), "evidence": evd.get("body"),
-               "evidence_status": evd.get("status")}
+               "evidence_status": evd.get("status"),
+               "twin_operation": op.get("body") if op.get("ok") else None}
         (ddir / f"{pid}.json").write_text(json.dumps(rec, indent=2, sort_keys=True), encoding="utf-8")
         row["evidence_file"] = f"decisions/{pid}.json"
     return row
@@ -438,9 +443,11 @@ def governed_tool_write(s: Stack, sc: Scenario, t: int, day: str, tool_name: str
     if pid:
         env = s.step("envelope", proposal_id=pid)
         evd = s.step("evidence", proposal_id=pid)
+        op = s.step("operation", operation_id=pid) if applied else {}
         rec = {"proposal_id": pid, "ledger_row": row, "envelope": env.get("body"),
                "envelope_status": env.get("status"), "evidence": evd.get("body"),
-               "evidence_status": evd.get("status"), "caretaker_decision": decision_record}
+               "evidence_status": evd.get("status"), "caretaker_decision": decision_record,
+               "twin_operation": op.get("body") if op.get("ok") else None}
         (ddir / f"{pid}.json").write_text(json.dumps(rec, indent=2, sort_keys=True), encoding="utf-8")
         row["evidence_file"] = f"decisions/{pid}.json"
     return row

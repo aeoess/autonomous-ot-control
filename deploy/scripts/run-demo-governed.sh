@@ -26,3 +26,10 @@ trap '"${COMPOSE[@]}" logs --no-color remora twin > "artifacts/${RUN_ID}-stack.l
 "${COMPOSE[@]}" up --build -d --wait postgres remora twin harness
 
 "$PY" -m runner.demo --run-id "$RUN_ID" --out artifacts --project "$COMPOSE_PROJECT_NAME" --days "${DAYS:-7}" --strategy "${STRATEGY:-P1}"
+
+# Offline edges beside the run (ADR-004, runner.edge_pass): every registered
+# offline effect_evidence edge over this run's exported trails. Their verdicts
+# are reported in artifacts/${RUN_ID}-work/edges.md and never change the
+# run's outcome; an edge that cannot run here is reported, not counted.
+"$PY" -m runner.edge_pass --work "artifacts/${RUN_ID}-work" --run-id "$RUN_ID" \
+  || echo "edge pass: no offline edge could run on this host (see artifacts/${RUN_ID}-work/edges/edges.json)"
