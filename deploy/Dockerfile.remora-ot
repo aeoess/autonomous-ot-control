@@ -13,7 +13,7 @@
 # (servers/tool_registry_research.py, servers/execution_api.py). Do NOT bake
 # credentials or signing keys into the image; compose injects them at runtime.
 ARG REMORA_REPO=https://github.com/darklordVirtual/REMORA-research
-ARG REMORA_COMMIT=9b1763cabcc23f8bbdd2f629600ebee68ca0f08c
+ARG REMORA_COMMIT=123a5fd033bd1192fad05d366ec5263eb66c17b7
 
 FROM python:3.12-slim AS remora-src
 ARG REMORA_REPO
@@ -52,6 +52,10 @@ COPY deploy/ot/ot_registry.py /app/ot_registry.py
 COPY deploy/ot/ot_bundle.py /app/ot_bundle.py
 COPY deploy/ot/ot_intents.json /app/ot_intents.json
 COPY deploy/ot/ot_limits.policy.json /app/ot_limits.policy.json
+COPY deploy/ot/ot_limits.demo-accelerated.policy.json /app/ot_limits.demo-accelerated.policy.json
+# Deployment tool metadata (ADR-008 slice 1): reads low/read, the routine
+# setpoint write medium/write. Without it REMORA floors every tool to critical.
+COPY deploy/ot/ot_tool_metadata.json /app/ot_tool_metadata.json
 # The deploy-time signer (governed-bootstrap.sh runs it with --network none).
 # The runtime never executes it and never holds its seeds.
 COPY deploy/ot/sign_deployment.py /app/sign_deployment.py

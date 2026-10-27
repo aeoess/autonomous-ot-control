@@ -60,6 +60,10 @@ services:
       TWIN_CONTROL_BIND: 127.0.0.1
       TWIN_CONTROL_PORT: "8300"
       TWIN_AUTOPLAY_SPEEDUP: ${TWIN_AUTOPLAY_SPEEDUP:-}
+      # Model and scenario; the governed demo selects the HVAC plant and the
+      # verified Trondheim week (runner/demo.py).
+      TWIN_CONFIG: ${TWIN_CONFIG:-/app/twin/fixtures/three-zone-v1.json}
+      TWIN_SCENARIO: ${TWIN_SCENARIO:-/app/scenarios/baseline-day-v1.json}
       TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?run deploy/scripts/run-demo.sh to generate .env}
       TWIN_ACTUATOR_TOKEN: ${TWIN_ACTUATOR_TOKEN:?missing}
       TWIN_CONTROL_TOKEN: ${TWIN_CONTROL_TOKEN:?missing}

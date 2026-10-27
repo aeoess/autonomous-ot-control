@@ -1,0 +1,85 @@
+{
+  "schema": "ot-scenario/v1",
+  "scenario_id": "trondheim-2025-hvac-v1",
+  "comment": "Fictitious demo-building-001 at its declared Trondheim coordinate for the calendar year 2025 (UTC): real NO3 day-ahead spot prices (hvakosterstrommen.no) and ERA5 outdoor temperature, shortwave radiation, relative humidity and precipitation (Open-Meteo), all verified by runner.exogenous. Occupancy follows Norwegian public holidays 2025 and the July common holiday; presence and equipment load vary by seed within declared bounds. Comfort band and design occupancy are synthetic.",
+  "site_ref": "../twin/fixtures/site-demo-building-001.json",
+  "seed": 177,
+  "start_utc": "2025-01-01T00:00:00Z",
+  "duration_seconds": 31536000,
+  "outdoor": {
+    "series_ref": "data/demo-building-001/outdoor-temperature-2025-01-01_2025-12-31.json",
+    "sha256": "75cb9f5f3c03b5992314d71d4f378bab3c6ee2dcb1fca933c3a747c279a9d01a"
+  },
+  "price": {
+    "series_ref": "data/demo-building-001/price-NO3-2025-01-01_2025-12-31.json",
+    "sha256": "e1dc7ad59e66b736b3cbc3cbe52c37ac7cf7b4a46a1a8af4ca80e8bb080ff217"
+  },
+  "solar": {
+    "series_ref": "data/demo-building-001/solar-shortwave-2025-01-01_2025-12-31.json",
+    "sha256": "309eb650e4e8e088503f4c50175c0f2f038d79664b10e69e235564b0dfb119a6"
+  },
+  "humidity": {
+    "series_ref": "data/demo-building-001/humidity-rh-2025-01-01_2025-12-31.json",
+    "sha256": "f67f2c1b0d9be4fbca7d6189d782c07a6475a4996d38067bbac36ca961ff3854"
+  },
+  "precipitation": {
+    "series_ref": "data/demo-building-001/precipitation-precip-2025-01-01_2025-12-31.json",
+    "sha256": "7f53eef7b46cda7e2b49fac464979ea7dfd92424fe73d4d2d3ebc6b7b36ebef0"
+  },
+  "occupancy": {
+    "weekday_hours_utc": [
+      7,
+      17
+    ],
+    "gain_w_per_m2": 8.0,
+    "unoccupied_gain_w_per_m2": 1.0,
+    "holidays": [
+      "2025-01-01",
+      "2025-04-17",
+      "2025-04-18",
+      "2025-04-21",
+      "2025-05-01",
+      "2025-05-17",
+      "2025-05-29",
+      "2025-06-09",
+      "2025-12-24",
+      "2025-12-25",
+      "2025-12-26",
+      "2025-12-31"
+    ],
+    "holidays_note": "Norwegian public holidays 2025 plus Christmas Eve and New Year's Eve, which most offices close (17 May 2025 is a Saturday)."
+  },
+  "variation": {
+    "presence": {
+      "mean": 0.75,
+      "sd": 0.15,
+      "min": 0.2,
+      "max": 1.0
+    },
+    "reduced_presence": [
+      {
+        "from": "2025-07-07",
+        "to": "2025-07-27",
+        "factor": 0.3,
+        "note": "common summer holiday, weeks 28-30"
+      },
+      {
+        "from": "2025-12-22",
+        "to": "2025-12-30",
+        "factor": 0.4,
+        "note": "between Christmas and New Year"
+      }
+    ],
+    "equipment": {
+      "sigma": 0.2,
+      "min": 0.6,
+      "max": 1.5
+    },
+    "note": "Typical bounds: presence 60-90 % of design on an ordinary workday; plug load +/-20 % hour to hour."
+  },
+  "comfort": {
+    "occupied_min_c": 20.0,
+    "occupied_max_c": 24.0
+  },
+  "disturbances": []
+}

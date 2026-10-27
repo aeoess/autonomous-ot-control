@@ -179,6 +179,11 @@ class Exogenous:
     outdoor_rh_pct: float
     occupants: dict[str, int]             # persons per zone
     icing_risk: bool = False
+    #: Space heating enabled (summer stop off). When False the radiator circuit
+    #: and the AHU heating coil are off and the heat source does not charge the
+    #: tank for space heating; domestic hot water is not modelled.
+    heating_season: bool = True
+    equipment_factor: dict[str, float] = field(default_factory=dict)  # hourly load multiplier
 
 
 # -- plant state ----------------------------------------------------------------
@@ -285,7 +290,7 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
         pts["AHU-01.HRV_Bypass"] = 0.0
     m_air = RHO_AIR_KG_PER_M3 * total_m3_s
     coil_need_w = m_air * CP_AIR_J_PER_KG_K * (sp.supply_air_c - after_hrv_c)
-    coil_heat_w = min(max(coil_need_w, 0.0), cfg.ahu_coil_max_w)
+    coil_heat_w = min(max(coil_need_w, 0.0), cfg.ahu_coil_max_w) if exo.heating_season else 0.0
     coil_cool_w = min(max(-coil_need_w, 0.0), cfg.ahu_coil_max_w)
     supply_air_c = after_hrv_c + ((coil_heat_w - coil_cool_w) / (m_air * CP_AIR_J_PER_KG_K)
                                   if m_air else 0.0)
@@ -312,6 +317,8 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
         light_w = (0.1 + 0.9 * dim) * z.lighting_w_per_m2 * z.area_m2 if dim > 0 else 0.0
         # Radiator valve: proportional over 1 K below the heating setpoint.
         valve = max(0.0, min(1.0, (zs.heating_c - t) / 1.0 + 0.5)) if t < zs.heating_c + 0.5 else 0.0
+        if not exo.heating_season:
+            valve = 0.0  # summer stop: the radiator circuit pump is off
         rad_cap = radiator_output_w(z.radiator_nominal_w, supply_water_c,
                                     supply_water_c - cfg.radiator_dt_k, t)
         q_rad = valve * rad_cap
@@ -321,8 +328,8 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
         q_vent = RHO_AIR_KG_PER_M3 * flows[zid] / 1000.0 * CP_AIR_J_PER_KG_K * (supply_air_c - t)
         q_solar = z.window_area_m2 * z.g_value * max(0.0, exo.solar_w_m2) * 0.5  # vertical vs horizontal
         q_people = n * SENSIBLE_W_PER_PERSON
-        q_equip = (z.equipment_w_per_m2 if occupied else 0.0) * z.area_m2 + \
-            z.equipment_base_w_per_m2 * z.area_m2
+        q_equip = ((z.equipment_w_per_m2 if occupied else 0.0) * z.area_m2
+                   + z.equipment_base_w_per_m2 * z.area_m2) * exo.equipment_factor.get(zid, 1.0)
         equip_w = q_equip
         zone_heat[zid] = q_rad - q_cool + q_vent + q_solar + q_people + q_equip + light_w
         radiator_total_w += q_rad
@@ -357,8 +364,8 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
     cop = 0.0
     if cfg.heat_source == "heat_pump":
         pts["HP-01.Defrost"] = 0.0
-        want_on = state.tank_c < sp.tank_c - cfg.hp_hysteresis_k or (
-            hp_on and state.tank_c < sp.tank_c + cfg.hp_hysteresis_k)
+        want_on = exo.heating_season and (state.tank_c < sp.tank_c - cfg.hp_hysteresis_k or (
+            hp_on and state.tank_c < sp.tank_c + cfg.hp_hysteresis_k))
         # High-pressure cut-out: the compressor stops whatever the setpoint says
         # once the tank passes the maximum supply temperature plus 5 K.
         cutout = state.tank_c >= cfg.hp_max_supply_c + 5.0
@@ -382,7 +389,7 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
             source_heat_w = cap
             elec_w += cap / cop
         # Backup heater only when the tank falls 5 K below target (it cannot keep up).
-        if state.tank_c < sp.tank_c - 5.0:
+        if exo.heating_season and state.tank_c < sp.tank_c - 5.0:
             backup_w = cfg.backup_heater_w
             elec_w += backup_w
         pts.update({"HP-01.Running": 1.0 if hp_on else 0.0, "HP-01.COP": cop,
@@ -390,17 +397,22 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
                     "HP-01.ElectricPower": source_heat_w / cop if cop else 0.0,
                     "HP-01.Starts": float(starts), "HP-01.BackupHeaterPower": backup_w})
     elif cfg.heat_source == "district_heating":
-        need = demand_w + loss_w + tank_c_j * (sp.tank_c - state.tank_c) / dt
+        need = (demand_w + loss_w + tank_c_j * (sp.tank_c - state.tank_c) / dt
+                if exo.heating_season else 0.0)
         dh_w = min(max(need, 0.0), cfg.dh_max_w)
         source_heat_w = dh_w * cfg.dh_substation_efficiency
         pts.update({"DH-01.HeatPower": dh_w, "DH-01.SupplyTemp": max(sp.tank_c + 5.0, 70.0)})
     else:  # electric_boiler
-        need = demand_w + loss_w + tank_c_j * (sp.tank_c - state.tank_c) / dt
+        need = (demand_w + loss_w + tank_c_j * (sp.tank_c - state.tank_c) / dt
+                if exo.heating_season else 0.0)
         boiler_w = min(max(need, 0.0), cfg.boiler_max_w)
         source_heat_w = boiler_w
         elec_w += boiler_w
         pts["EB-01.ElectricPower"] = boiler_w
     tank_c = state.tank_c + dt * (source_heat_w + backup_w - demand_w - loss_w) / tank_c_j
+    pts["HYD-01.HeatingSeason"] = 1.0 if exo.heating_season else 0.0
+    for zone in cfg.zones:
+        pts[f"{zone.zone_id}.EquipmentFactor"] = exo.equipment_factor.get(zone.zone_id, 1.0)
     pts.update({"TANK-01.Temp": tank_c, "TANK-01.Loss": loss_w,
                 "HYD-01.SupplyTemp": supply_water_c, "HYD-01.HeatDemand": demand_w})
 

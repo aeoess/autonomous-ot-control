@@ -134,6 +134,9 @@ def build() -> Catalogue:
     P(Point("OUT-01.IcingRisk", "outdoor", "BV", "bool", (0, 1),
             "Outdoor -6..+2 degC with precipitation within 3 h either side.",
             "Scenario.icing_risk", affects=tuple(f"{c_}.Power" for c_ in CIRCUITS)))
+    P(Point("OUT-01.Temp24hMean", "outdoor", "AV", "degC", (-40, 35),
+            "Mean outdoor temperature over the preceding 24 h; drives the summer stop.",
+            "Scenario.mean_outdoor_24h", affects=("HYD-01.HeatingSeason",)))
     P(Point("GRID-01.SpotPrice", "market", "EX", "NOK/kWh", (-1, 20),
             "Day-ahead spot price for the site's area (NO3), spot only.",
             "scenario price series (hvakosterstrommen.no snapshot)",
@@ -152,6 +155,9 @@ def build() -> Catalogue:
                 "calendar x design_occupants",
                 affects=(f"{z}.CO2", f"{z}.Airflow", f"{z}.LightingPower", f"{z}.EquipmentPower",
                          f"{z}.AirTemp")))
+        P(Point(f"{z}.EquipmentFactor", z, "EX", "x", (0.5, 1.6),
+                f"Hourly multiplier on the equipment load, {nm} (seeded lognormal; 1.0 without variation).",
+                "Scenario.equipment_factor", affects=(f"{z}.EquipmentPower",)))
         P(Point(f"{z}.HeatingSetpoint", z, "SP", "degC", (8, 23),
                 f"Heating setpoint, {nm}: the radiator valve's target.",
                 "supervisory (governed)", affects=(f"{z}.RadiatorValve",),
@@ -201,6 +207,12 @@ def build() -> Catalogue:
     P(Point("HYD-01.SupplyTemp", "hydronic", "AI", "degC", (20, 75),
             "Radiator supply temperature: weather-compensated curve (60 at -20, 30 at +15), never hotter than the tank.",
             "plant.weather_compensated_supply_c", affects=tuple(f"{z}.RadiatorPower" for z in ZONES)))
+    P(Point("HYD-01.HeatingSeason", "hydronic", "BV", "bool", (0, 1),
+            "Space heating enabled. Off (summer stop) when the 24 h mean outdoor temperature rises above "
+            "plant.heating_limit.off_above_c, on again below on_below_c. Off means radiator circuit and AHU "
+            "heating coil off and no tank charging for space heating; domestic hot water is not modelled.",
+            "Twin._heating_season", affects=tuple(f"{z}.RadiatorValve" for z in ZONES)
+            + ("AHU-01.HeatingCoilPower", "HP-01.Running", "DH-01.HeatPower", "EB-01.ElectricPower")))
     P(Point("HYD-01.HeatDemand", "hydronic", "AV", "W", (0, 60000),
             "Heat drawn from the tank by radiators and the AHU heating coil.",
             "plant", affects=("TANK-01.Temp",)))

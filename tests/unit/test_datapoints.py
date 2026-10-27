@@ -43,7 +43,7 @@ def test_every_emitted_point_is_catalogued_and_applies_to_its_variant(source):
 def test_every_measured_point_is_emitted_by_some_variant():
     emitted = set().union(*(_emitted(s) for s in ("heat_pump", "district_heating", "electric_boiler")))
     plant_kinds = {"AI", "AV", "BI", "BV", "CV"}
-    not_plant = {"EM-01.Cost", "OUT-01.IcingRisk"} | {f"{z}.AirTemp" for z in dp.ZONES}
+    not_plant = {"EM-01.Cost", "OUT-01.IcingRisk", "OUT-01.Temp24hMean"} | {f"{z}.AirTemp" for z in dp.ZONES}
     declared = {p.id for p in CAT.points if p.kind in plant_kinds} - not_plant
     assert declared <= emitted, f"catalogued but never emitted: {sorted(declared - emitted)}"
 

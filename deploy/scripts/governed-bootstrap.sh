@@ -73,7 +73,7 @@ out="$(docker run --rm --network none \
   -e OT_LIMITS_SIGNING_SEED="$(cat deploy/.keys/limits.seed)" \
   -v "$PWD/deploy/.generated:/out" \
   --entrypoint python autonomous-ot-control/remora-ot:local \
-  /app/sign_deployment.py --out /out)"
+  /app/sign_deployment.py --out /out --limits "/app/${LIMITS_POLICY:-ot_limits.policy.json}")"
 
 while IFS='=' read -r key val; do
   case "$key" in
@@ -82,5 +82,8 @@ while IFS='=' read -r key val; do
     *) echo "governed-bootstrap: unexpected signer output: ${key}" >&2; exit 1 ;;
   esac
 done <<< "$out"
+
+# Work-order source REMORA reads on every assess (the demo appends day plans).
+cp deploy/ot/ot_intents.json deploy/.generated/ot_intents.json
 
 echo "governed-bootstrap: .env, deploy/.keys/ and deploy/.generated/ are ready (all gitignored)."

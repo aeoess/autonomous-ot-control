@@ -4,7 +4,7 @@
 
 Every value the simulated building exposes or accepts. The twin is synthetic and uncalibrated (ADR-007); ranges are plausibility bounds for validation, not design values. Writable points change only through the governed tools below, never directly.
 
-94 points, 11 interlocks, 9 tools, 5 procedures, 7 documented cascades.
+99 points, 11 interlocks, 9 tools, 5 procedures, 7 documented cascades.
 
 Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` computed binary; `CV` counter; `EX` exogenous input; `SP` writable setpoint; `SB` writable command.
 
@@ -19,6 +19,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 | `OUT-01.RH` | EX | % | 0 .. 100 | Outdoor relative humidity. | scenario humidity series | `HP-01.Defrost` |  |
 | `OUT-01.Precipitation` | EX | mm/h | 0 .. 50 | Precipitation, preceding hour. | scenario precipitation series | `OUT-01.IcingRisk` |  |
 | `OUT-01.IcingRisk` | BV | bool | 0 .. 1 | Outdoor -6..+2 degC with precipitation within 3 h either side. | Scenario.icing_risk | `CABLE-RAMP.Power`, `CABLE-GUTTER.Power` |  |
+| `OUT-01.Temp24hMean` | AV | degC | -40 .. 35 | Mean outdoor temperature over the preceding 24 h; drives the summer stop. | Scenario.mean_outdoor_24h | `HYD-01.HeatingSeason` |  |
 
 ### market
 
@@ -40,6 +41,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 |---|---|---|---|---|---|---|---|
 | `ZONE-01.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, open-plan office. | zone RC node (Twin._step) | `ZONE-01.RadiatorValve`, `ZONE-01.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
 | `ZONE-01.Occupants` | EX | persons | 0 .. 50 | People present, open-plan office. | calendar x design_occupants | `ZONE-01.CO2`, `ZONE-01.Airflow`, `ZONE-01.LightingPower`, `ZONE-01.EquipmentPower`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, open-plan office (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-01.EquipmentPower` |  |
 | `ZONE-01.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, open-plan office: the radiator valve's target. | supervisory (governed) | `ZONE-01.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
 | `ZONE-01.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, open-plan office: zone cooling starts above it. | supervisory (governed) | `ZONE-01.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
 | `ZONE-01.CO2Setpoint` | SP | ppm | 600 .. 1000 | DCV target, open-plan office: airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-01.Airflow` | `set_zone_co2_setpoint` (IL-07) |
@@ -61,6 +63,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 |---|---|---|---|---|---|---|---|
 | `ZONE-02.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, meeting room. | zone RC node (Twin._step) | `ZONE-02.RadiatorValve`, `ZONE-02.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
 | `ZONE-02.Occupants` | EX | persons | 0 .. 50 | People present, meeting room. | calendar x design_occupants | `ZONE-02.CO2`, `ZONE-02.Airflow`, `ZONE-02.LightingPower`, `ZONE-02.EquipmentPower`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, meeting room (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-02.EquipmentPower` |  |
 | `ZONE-02.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, meeting room: the radiator valve's target. | supervisory (governed) | `ZONE-02.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
 | `ZONE-02.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, meeting room: zone cooling starts above it. | supervisory (governed) | `ZONE-02.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
 | `ZONE-02.CO2Setpoint` | SP | ppm | 600 .. 1000 | DCV target, meeting room: airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-02.Airflow` | `set_zone_co2_setpoint` (IL-07) |
@@ -82,6 +85,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 |---|---|---|---|---|---|---|---|
 | `ZONE-03.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, laboratory (constant equipment load). | zone RC node (Twin._step) | `ZONE-03.RadiatorValve`, `ZONE-03.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
 | `ZONE-03.Occupants` | EX | persons | 0 .. 50 | People present, laboratory (constant equipment load). | calendar x design_occupants | `ZONE-03.CO2`, `ZONE-03.Airflow`, `ZONE-03.LightingPower`, `ZONE-03.EquipmentPower`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, laboratory (constant equipment load) (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-03.EquipmentPower` |  |
 | `ZONE-03.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, laboratory (constant equipment load): the radiator valve's target. | supervisory (governed) | `ZONE-03.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
 | `ZONE-03.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, laboratory (constant equipment load): zone cooling starts above it. | supervisory (governed) | `ZONE-03.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
 | `ZONE-03.CO2Setpoint` | SP | ppm | 600 .. 1000 | DCV target, laboratory (constant equipment load): airflow rises over 200 ppm above it. | supervisory (governed) | `ZONE-03.Airflow` | `set_zone_co2_setpoint` (IL-07) |
@@ -102,6 +106,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 | Id | Kind | Unit | Range | Description | Source | Affects | Written by |
 |---|---|---|---|---|---|---|---|
 | `HYD-01.SupplyTemp` | AI | degC | 20 .. 75 | Radiator supply temperature: weather-compensated curve (60 at -20, 30 at +15), never hotter than the tank. | plant.weather_compensated_supply_c | `ZONE-01.RadiatorPower`, `ZONE-02.RadiatorPower`, `ZONE-03.RadiatorPower` |  |
+| `HYD-01.HeatingSeason` | BV | bool | 0 .. 1 | Space heating enabled. Off (summer stop) when the 24 h mean outdoor temperature rises above plant.heating_limit.off_above_c, on again below on_below_c. Off means radiator circuit and AHU heating coil off and no tank charging for space heating; domestic hot water is not modelled. | Twin._heating_season | `ZONE-01.RadiatorValve`, `ZONE-02.RadiatorValve`, `ZONE-03.RadiatorValve`, `AHU-01.HeatingCoilPower`, `HP-01.Running`, `DH-01.HeatPower`, `EB-01.ElectricPower` |  |
 | `HYD-01.HeatDemand` | AV | W | 0 .. 60000 | Heat drawn from the tank by radiators and the AHU heating coil. | plant | `TANK-01.Temp` |  |
 | `TANK-01.Temp` | AI | degC | 10 .. 80 | Buffer tank temperature. | tank energy balance | `HYD-01.SupplyTemp`, `HP-01.Running`, `HP-01.BackupHeaterPower`, `HP-01.HighPressureCutout` |  |
 | `TANK-01.Setpoint` | SP | degC | 35 .. 60 | Target the heat source charges the tank to. Higher stores more heat and lowers heat-pump COP. | supervisory (governed) | `HP-01.Running`, `HP-01.COP`, `DH-01.HeatPower`, `EB-01.ElectricPower` | `set_tank_setpoint` (IL-04, IL-11) |

@@ -1,0 +1,209 @@
+{
+  "schema": "ot-twin-config/v1",
+  "building_id": "demo-building-001",
+  "model": "three-zone-hvac-v1",
+  "step_seconds": 60,
+  "controller_step_seconds": 900,
+  "observation_step_seconds": 300,
+  "local_timezone": "Europe/Oslo",
+  "envelope": {
+    "inter_zone_conductance_w_per_k": 40.0
+  },
+  "zones": [
+    {
+      "id": "ZONE-01",
+      "tfm": "DEMO=360.001",
+      "area_m2": 120.0,
+      "ua_w_per_k": 110.0,
+      "capacity_j_per_k": 6000000.0,
+      "heater_max_w": 9000.0,
+      "heater_gain_w_per_k": 0.0,
+      "heating_efficiency": 0.95,
+      "initial_temp_c": 21.0,
+      "initial_setpoint_c": 21.0,
+      "min_setpoint_c": 8.0,
+      "max_setpoint_c": 23.0
+    },
+    {
+      "id": "ZONE-02",
+      "tfm": "DEMO=360.002",
+      "area_m2": 90.0,
+      "ua_w_per_k": 85.0,
+      "capacity_j_per_k": 4500000.0,
+      "heater_max_w": 7000.0,
+      "heater_gain_w_per_k": 0.0,
+      "heating_efficiency": 0.95,
+      "initial_temp_c": 21.0,
+      "initial_setpoint_c": 21.0,
+      "min_setpoint_c": 8.0,
+      "max_setpoint_c": 23.0
+    },
+    {
+      "id": "ZONE-03",
+      "tfm": "DEMO=360.003",
+      "area_m2": 60.0,
+      "ua_w_per_k": 70.0,
+      "capacity_j_per_k": 3000000.0,
+      "heater_max_w": 5000.0,
+      "heater_gain_w_per_k": 0.0,
+      "heating_efficiency": 0.95,
+      "initial_temp_c": 21.0,
+      "initial_setpoint_c": 21.0,
+      "min_setpoint_c": 8.0,
+      "max_setpoint_c": 23.0
+    }
+  ],
+  "adjacency": [
+    [
+      "ZONE-01",
+      "ZONE-02"
+    ],
+    [
+      "ZONE-02",
+      "ZONE-03"
+    ]
+  ],
+  "guard": {
+    "max_delta_c": 1.0,
+    "min_interval_seconds": 900,
+    "max_changes_per_hour": 2,
+    "max_observation_age_seconds": 600
+  },
+  "comment": "Fictitious demo-building-001 with building services: hydronic radiators fed from a buffer tank, an air-to-water heat pump (or district heating / electric boiler as plant variants), one AHU with rotary heat recovery and DCV, a chiller for the lab and AHU cooling coil, dimmable lighting with daylight, and two heating-cable circuits. All parameters are illustrative and uncalibrated; see docs/datapoints.md for every data point and docs/adr/ADR-007-building-services-plant.md for the model. Seasonal variant: a summer stop on the 24 h mean outdoor temperature (heating off above 15 degC, on again below 12 degC) and a declared district-heating tariff.",
+  "plant": {
+    "heat_source": "heat_pump",
+    "tank_volume_l": 1500.0,
+    "tank_loss_w_per_k": 4.0,
+    "plant_room_c": 18.0,
+    "hp_nominal_heat_w": 24000.0,
+    "hp_carnot_fraction": 0.45,
+    "hp_min_outdoor_c": -22.0,
+    "hp_max_supply_c": 60.0,
+    "hp_min_run_s": 600,
+    "hp_min_stop_s": 600,
+    "hp_hysteresis_k": 3.0,
+    "hp_defrost_band_c": [
+      -7.0,
+      5.0
+    ],
+    "hp_defrost_rh_pct": 75.0,
+    "hp_defrost_penalty": 0.1,
+    "backup_heater_w": 9000.0,
+    "dh_max_w": 40000.0,
+    "dh_substation_efficiency": 0.98,
+    "boiler_max_w": 30000.0,
+    "radiator_dt_k": 10.0,
+    "sfp_kw_per_m3_s": 1.5,
+    "hrv_efficiency": 0.8,
+    "hrv_frost_limit_c": -15.0,
+    "ahu_coil_max_w": 15000.0,
+    "chiller_carnot_fraction": 0.45,
+    "chiller_condenser_offset_k": 10.0,
+    "chiller_evaporator_c": 8.0,
+    "cables": [
+      {
+        "circuit": "CABLE-RAMP",
+        "rated_w": 6000.0
+      },
+      {
+        "circuit": "CABLE-GUTTER",
+        "rated_w": 3000.0
+      }
+    ],
+    "zones": [
+      {
+        "zone_id": "ZONE-01",
+        "area_m2": 120.0,
+        "volume_m3": 360.0,
+        "window_area_m2": 24.0,
+        "g_value": 0.35,
+        "radiator_nominal_w": 9000.0,
+        "cooling_max_w": 2000.0,
+        "equipment_w_per_m2": 8.0,
+        "equipment_base_w_per_m2": 0.5,
+        "lighting_w_per_m2": 6.0,
+        "daylight_factor": 0.02,
+        "min_airflow_l_s_m2": 0.35,
+        "airflow_per_person_l_s": 7.0,
+        "max_airflow_l_s": 420.0
+      },
+      {
+        "zone_id": "ZONE-02",
+        "area_m2": 60.0,
+        "volume_m3": 180.0,
+        "window_area_m2": 10.0,
+        "g_value": 0.35,
+        "radiator_nominal_w": 5000.0,
+        "cooling_max_w": 2500.0,
+        "equipment_w_per_m2": 4.0,
+        "equipment_base_w_per_m2": 0.5,
+        "lighting_w_per_m2": 7.0,
+        "daylight_factor": 0.015,
+        "min_airflow_l_s_m2": 0.35,
+        "airflow_per_person_l_s": 7.0,
+        "max_airflow_l_s": 300.0
+      },
+      {
+        "zone_id": "ZONE-03",
+        "area_m2": 80.0,
+        "volume_m3": 240.0,
+        "window_area_m2": 8.0,
+        "g_value": 0.35,
+        "radiator_nominal_w": 6000.0,
+        "cooling_max_w": 5000.0,
+        "equipment_w_per_m2": 15.0,
+        "equipment_base_w_per_m2": 25.0,
+        "lighting_w_per_m2": 8.0,
+        "daylight_factor": 0.01,
+        "min_airflow_l_s_m2": 0.35,
+        "airflow_per_person_l_s": 7.0,
+        "max_airflow_l_s": 320.0
+      }
+    ],
+    "heating_limit": {
+      "on_below_c": 12.0,
+      "off_above_c": 15.0
+    },
+    "district_heating_tariff": {
+      "spot_factor": 0.9,
+      "adder_nok_per_kwh": 0.12,
+      "comment": "ASSUMPTION (D-13): a spot-linked energy price below electricity, as Norwegian district-heating prices are capped by the electricity price; not a real supplier tariff."
+    }
+  },
+  "design_occupants": {
+    "ZONE-01": 10,
+    "ZONE-02": 6,
+    "ZONE-03": 4
+  },
+  "default_setpoints": {
+    "zones": {
+      "ZONE-01": {
+        "heating_c": 21.0,
+        "cooling_c": 24.0,
+        "co2_ppm": 900.0,
+        "lux": 500.0
+      },
+      "ZONE-02": {
+        "heating_c": 21.0,
+        "cooling_c": 24.0,
+        "co2_ppm": 900.0,
+        "lux": 500.0
+      },
+      "ZONE-03": {
+        "heating_c": 21.0,
+        "cooling_c": 23.0,
+        "co2_ppm": 900.0,
+        "lux": 500.0
+      }
+    },
+    "supply_air_c": 19.0,
+    "tank_c": 45.0,
+    "hp_max_fraction": 1.0,
+    "ahu_enabled": true,
+    "cable_modes": {}
+  },
+  "initial_plant": {
+    "tank_c": 45.0,
+    "co2_ppm": 420.0
+  }
+}

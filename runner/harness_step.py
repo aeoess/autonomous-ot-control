@@ -78,6 +78,50 @@ def op_execute(a: dict[str, Any]) -> dict[str, Any]:
                    {"item_id": a["item_id"], "tool_call": _call(a)})
 
 
+def op_execute_accepted(a: dict[str, Any]) -> dict[str, Any]:
+    """Redeem an ACCEPT token with the exact assessed call."""
+    return _remora("POST", "/v1/execution/execute-accepted", a.get("role", "operator"),
+                   {"execution_token": a["execution_token"], "tool_call": _call(a)})
+
+
+def op_proposal(a: dict[str, Any]) -> dict[str, Any]:
+    return _remora("GET", f"/v1/execution/proposals/{a['proposal_id']}", a.get("role", "viewer"))
+
+
+def op_envelope(a: dict[str, Any]) -> dict[str, Any]:
+    """REMORA's DecisionEnvelope for one proposal."""
+    return _remora("GET", f"/v1/execution/proposals/{a['proposal_id']}/envelope",
+                   a.get("role", "viewer"))
+
+
+def op_evidence(a: dict[str, Any]) -> dict[str, Any]:
+    """REMORA's evidence bundle (sections + hashed manifest), verbatim."""
+    return _remora("GET", f"/v1/execution/proposals/{a['proposal_id']}/evidence",
+                   a.get("role", "viewer"))
+
+
+def op_record_effect(a: dict[str, Any]) -> dict[str, Any]:
+    """Observe the effect through the read-only observer and record it in REMORA."""
+    import remora.sdk as sdk
+
+    from adapter.verifier import EffectAttestor
+    from twin.effect_observer import EffectObserver
+
+    observer = EffectObserver(os.environ["TWIN_READ_URL"], os.environ["TWIN_READ_TOKEN"],
+                              tenant_id="ot-pilot", run_id=a.get("run_id", "demo"))
+    with sdk.RemoraClient(base_url=os.environ["REMORA_URL"], token=_token("operator")) as c:
+        try:
+            out = EffectAttestor(observer, sdk=sdk).attest(
+                proposal_id=a["proposal_id"], execution_id=a.get("execution_id") or a["proposal_id"],
+                toolspec_hash=a.get("toolspec_hash", ""), zone_id=a["zone_id"],
+                expected_setpoint_c=float(a["setpoint_c"]), operation_id=a["proposal_id"], client=c)
+        except Exception as e:  # reported as data
+            return {"ok": False, "error": type(e).__name__, "detail": str(e)[:300]}
+    v = out.get("verification") or {}
+    return {"ok": bool(out.get("remora_recorded")), "effect_status": v.get("status"),
+            "observation": out.get("observation"), "record_error": out.get("remora_record_error")}
+
+
 def op_lifecycle(a: dict[str, Any]) -> dict[str, Any]:
     return _remora("GET", f"/v1/execution/proposals/{a['proposal_id']}/lifecycle",
                    a.get("role", "viewer"))
@@ -109,6 +153,10 @@ def _twin(path: str) -> dict[str, Any]:
         return {"ok": False, "status": None, "error": type(e).__name__}
     return {"ok": r.is_success, "status": r.status_code,
             "body": r.json() if r.content else None}
+
+
+def op_energy(a: dict[str, Any]) -> dict[str, Any]:
+    return _twin("/v1/energy")
 
 
 def op_zone(a: dict[str, Any]) -> dict[str, Any]:
