@@ -34,6 +34,32 @@ One synthetic three-zone office building with its own heat pump, hot-water tank,
 
 **What this does and does not show.** The savings are properties of the simulated building: real levers, synthetic plant. They show which levers matter and by how much relative to each other, and what the validator is worth when sensors lie. They are not a real-building saving, and a real site must be measured before any figure here means anything there.
 
+## What drives the number
+
+The headline saving of P3 is dominated by one lever: the heating cables. As found (P0) they run on an air thermostat and heat the ramp and gutter through most of the winter; with the ground moisture sensor they run only while the surface is wet and freezing. That share rests on three stated assumptions of the twin, none of them measured: the cable rating (9 kW installed for a 260 m² building), the as-found control (air thermostat −8..+3 °C, the practice in older installations), and the surface moisture model. **Treat the figure without the cable lever as the headline until a real site has been measured.**
+
+| Area | P3 saves (NOK %) | of which the cable lever (kWh, share of saved kWh) | HVAC and lighting levers alone (kWh %) | cost saving without the cable lever (estimate, %) |
+|---|---:|---:|---:|---:|
+| NO1 Oslo | 41.9 | 18 605 kWh (85 %) | **12.3** | 15.6 |
+| NO2 Kristiansand | 39.9 | 13 619 kWh (79 %) | **13.9** | 17.7 |
+| NO3 Trondheim | 33.8 | 18 865 kWh (85 %) | **12.0** | 15.4 |
+| NO4 Tromsø | 25.5 | 24 446 kWh (90 %) | **8.7** | 13.9 |
+| NO5 Bergen | 39.8 | 15 771 kWh (83 %) | **12.1** | 17.7 |
+
+The cost estimate without the cable lever subtracts the cable kWh at the area's P0-weighted spot price; the grid power part depends on monthly peaks and is not attributable per consumer, so this column is an estimate, the kWh column is exact.
+
+**Reasonableness check, P0 energy intensity (260 m² floor area).** Whole-building figures for a small Norwegian office typically fall in the low hundreds of kWh/m²·year; what matters here is the composition, which is an assumption of the twin, not a measurement.
+
+| Area | P0 kWh/m² total | heating cables | equipment (uncontrollable base load) | HVAC, lighting, rest |
+|---|---:|---:|---:|---:|
+| NO1 | 182 | 76 | 54 | 52 |
+| NO2 | 155 | 55 | 54 | 46 |
+| NO3 | 188 | 83 | 54 | 51 |
+| NO4 | 250 | 132 | 54 | 65 |
+| NO5 | 168 | 65 | 54 | 49 |
+
+A cable share of roughly 40 % of a building's electricity is high; it follows from the installed rating and the thermostat baseline, both assumptions. The equipment base load is constant in every strategy and dilutes every percentage.
+
 ## Year
 
 | Area | P0 NOK | P0 kWh | Spot NOK/kWh (P0) | P1 saves NOK (min..max) | P1 % | P1 kWh % | P2 saves NOK (min..max) | P2 % | P2 kWh % | P3 saves NOK (min..max) | P3 % | P3 kWh % |

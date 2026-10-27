@@ -30,11 +30,20 @@ tools in [datapoints.md](datapoints.md) and carries its decision record
 | **NO3 Trondheim** | 37 092 | 48 840 | **33.8 %** | 12 539 | 27.3 % | +6.5 pp (0 h tank > 60 °C vs 355 h) |
 | **NO4 Tromsø** | 29 997 | 65 101 | **25.5 %** | 7 637 | 16.4 % | +9.5 pp (0 h tank > 60 °C vs 283 h) |
 
+**Read the headline with care.** 80–90 % of the saved kWh in every area is one
+lever: the heating cables, which as found (P0) run on an air thermostat and
+with P3 on the ground moisture sensor. That lever rests on three stated,
+unmeasured assumptions of the twin: the installed cable rating (9 kW for a
+260 m² building), the as-found control, and the surface moisture model. The
+figure to quote until a real site has been measured is the one **without the
+cable lever: P3 saves 9–14 % of the kWh** from the HVAC and lighting levers
+(roughly 14–18 % of cost, an estimate because the grid power part is not
+attributable per consumer). Each report opens with a "What drives the number"
+section that gives this split per area and a kWh/m² reasonableness check.
+
 Synthetic, uncalibrated building (3 seeds, full year 2025, verified local Nord
 Pool spot prices + ERA5 weather + declared reference grid tariff, taxes
-excluded). Without the heating-cable lever (ground moisture sensor vs air
-thermostat), P3 saves 9–14 % kWh across the remaining HVAC and lighting levers.
-None of this is a real-building saving.
+excluded). None of this is a real-building saving.
 
 Full reports: [areas-2025.md](results/2026-10-27/areas-2025.md) /
 [areas-2025.html](results/2026-10-27/areas-2025.html) and
