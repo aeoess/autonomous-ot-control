@@ -12,11 +12,35 @@ opening a pull request; that pull request is your consent record, and you
 leave the same way. The machine-readable entry point is
 [`federation/index.json`](../../federation/index.json).
 
+## Pinned evaluations already in progress
+
+The bounded, offline `runner_validity` evaluation started on
+`4b9f6ec7882b81ca95ecf414e107ec202663bb13`. That revision is retained on
+[`archive/federation-runner-validity-2026-10-27-v1`](https://github.com/darklordVirtual/autonomous-ot-control/tree/archive/federation-runner-validity-2026-10-27-v1).
+Keep that archive branch at this exact SHA; do not move or delete it.
+
+```bash
+git fetch origin archive/federation-runner-validity-2026-10-27-v1
+git checkout --detach 4b9f6ec7882b81ca95ecf414e107ec202663bb13
+python -m pytest -q tests/unit/test_federation_runner_contract.py
+```
+
+An ongoing evaluation keeps its agreed revision, fixture set and scope.
+Later fixes and the v2 default do not change an earlier run's inputs or
+upgrade its result. A run on a newer revision is a separate run with its
+own SHA and fixture digest, only if the evaluator chooses to do it. This
+preservation record does not enroll a participant or add any obligation.
+
+The reviewed PR #21 revision, `67baebd8a3b74208db2c8700d157423268c6b9ab`,
+is also retained on `archive/pr21-pre-ci-fix-67baebd8`, including the earlier
+commits named by fixture provenance. Preserve that branch too. Integrate
+PR #21 with a merge commit, so the named ancestors remain on `main`.
+
 ## What you get
 
 | Artifact | Where | Contract |
 |---|---|---|
-| Sealed fixture set: 12 recorded decision trails, 6 negative controls with one seeded fault each, per-file SHA-256, package digest, the six claims | `federation/fixtures/v1/` | [`federation-fixtures-v1`](../../contracts/federation-fixtures-v1.schema.json), cases: [`federation-case-v1`](../../contracts/federation-case-v1.schema.json) |
+| Sealed fixture sets: 12 recorded decision trails and negative controls with one seeded fault each (6 in `v1`, 10 in `v2`), per-file SHA-256, package digest, the six claims, the expected verdict per negative | `federation/fixtures/v2/` (default), `federation/fixtures/v1/` | [`federation-fixtures-v1`](../../contracts/federation-fixtures-v1.schema.json), cases: [`federation-case-v1`](../../contracts/federation-case-v1.schema.json) |
 | Reference verifier, standard library only, no testbed imports | `federation/edges/_template/adapter.py` | — |
 | Edge manifest: who you are, pin, licence, claims with ceilings, what your evaluator is | `federation/edges/<id>/edge.json` | [`edge-manifest-v1`](../../contracts/edge-manifest-v1.schema.json) |
 | Result: one verdict per case | written by your adapter | [`edge-result-v1`](../../contracts/edge-result-v1.schema.json) |
@@ -57,8 +81,18 @@ ceiling each, and every run is scored per claim.
 | `single_dispatch` | the approved proposal executed exactly once | `replayed_execution` |
 | `call_binding` | the twin's own operation record belongs to this proposal | `proposal_swapped` |
 | `declared_effect_observed` | the twin recorded APPLIED for the claimed zone and value, and the observation shows that value | `effect_value_not_reached` |
-| `observation_after_dispatch` | the effect was observed at or after the dispatch | `observed_before_dispatch` |
+| `observation_after_dispatch` | the effect was observed at or after the dispatch | `observed_before_dispatch`; v2: `dispatch_time_missing`, `observation_time_missing` |
 | `evidence_digest_integrity` | `evidence_sha256` is the canonical SHA-256 of `remora_evidence` | `evidence_digest_mismatch` |
+| (`single_dispatch`, `decision_correspondence` again) | | v2: `execution_count_missing`, `denied_but_applied` |
+
+Each negative control names the verdict a correct verifier gives
+(`expected_verdict` in the manifest). The v1 faults are trails that disagree
+with themselves: `CONTRADICTED`. Three v2 faults remove evidence a claim
+needs (the dispatch time, the observation time, the execution count): the
+right answer is `NOT_ESTABLISHED`, never an assumed value. The fourth,
+`denied_but_applied`, says nothing executed while the twin's own record says
+APPLIED: `CONTRADICTED`. The scorer counts a negative as caught only when the
+verdict is the expected one; `ESTABLISHED` on any negative fails the run.
 
 ## In five steps
 
@@ -218,6 +252,32 @@ new directory. `v1` was sealed on 2026-10-27, before any participant joined.
 | Set | Cases | Built from | Reference result |
 |---|---|---|---|
 | `v1` | 12 positive, 6 negative (one per fault) | governed demo week 2026-01-15..21, testbed `942ba37` | 12/12 established, 6/6 faults caught, all six claims (L0) |
+| `v2` | the 18 v1 cases byte for byte, plus 4 negatives (missing dispatch time, missing observation time, missing execution count, denied-but-applied) | `python -m runner.federation_fixtures --derive-from federation/fixtures/v1`, sealed 2026-10-27 against the testbed revision in its manifest | 12/12 established, 10/10 faults caught (L0) |
+
+`v2` is the default set for `run-edge.sh`. It exists because the reference
+verifier at the v1 freeze accepted the three missing-evidence mutations and
+the denied-but-applied trail as `ESTABLISHED`. `v1` keeps its bytes, its
+seal and its records.
+
+**Provenance of a set has two parts, kept apart.** `testbed_commit` is the
+revision the decision trails were recorded on (for `v2`, inherited from
+`v1`). `sealed_against` is the verifier and scorer the set was sealed
+against: an existing, earlier commit plus the SHA-256 of
+`federation/edges/_template/adapter.py` and `runner/edge_check.py` at that
+commit. A set never names the commit that adds it, because that commit
+cannot be known when the manifest is written. The check
+
+```bash
+python -m runner.edge_check --check-provenance federation/fixtures/v2
+```
+
+fetches those two files at the declared commit out of git, requires their
+digests to match the declaration, runs that exact verifier against the set
+in a fresh directory, and requires every case, the set's added faults first
+among them, to get the verdict the manifest expects. CI runs it on every
+derived set. Every run record also carries `provenance`: the commit the
+working tree was at, whether it was dirty, and the digests of the edge's
+files and of the scorer that scored it.
 
 Questions go in an issue on this repository. The discussion that motivated
 the testbed is aeoess/agent-governance-vocabulary#177, but joining happens

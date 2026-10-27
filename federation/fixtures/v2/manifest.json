@@ -1,0 +1,303 @@
+{
+  "added_faults": [
+    "dispatch_time_missing",
+    "observation_time_missing",
+    "execution_count_missing",
+    "denied_but_applied"
+  ],
+  "cases": [
+    {
+      "case_id": "neg-denied_but_applied-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "claim_id": "decision_correspondence",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "denied_but_applied",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-dispatch_time_missing-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "claim_id": "observation_after_dispatch",
+      "expected_verdict": "NOT_ESTABLISHED",
+      "fault": "dispatch_time_missing",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-effect_value_not_reached-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "claim_id": "declared_effect_observed",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "effect_value_not_reached",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-evidence_digest_mismatch-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "claim_id": "evidence_digest_integrity",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "evidence_digest_mismatch",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-executed_without_approval-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "claim_id": "decision_correspondence",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "executed_without_approval",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-execution_count_missing-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "claim_id": "single_dispatch",
+      "expected_verdict": "NOT_ESTABLISHED",
+      "fault": "execution_count_missing",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-observation_time_missing-05e55692-c8d8-4558-aec1-5890ad028480",
+      "claim_id": "observation_after_dispatch",
+      "expected_verdict": "NOT_ESTABLISHED",
+      "fault": "observation_time_missing",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-observed_before_dispatch-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "claim_id": "observation_after_dispatch",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "observed_before_dispatch",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-proposal_swapped-05e55692-c8d8-4558-aec1-5890ad028480",
+      "claim_id": "call_binding",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "proposal_swapped",
+      "kind": "negative"
+    },
+    {
+      "case_id": "neg-replayed_execution-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "claim_id": "single_dispatch",
+      "expected_verdict": "CONTRADICTED",
+      "fault": "replayed_execution",
+      "kind": "negative"
+    },
+    {
+      "case_id": "pos-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-05e55692-c8d8-4558-aec1-5890ad028480",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-2b913957-c61e-4a11-964a-c36f3d8cc878",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-346ee3c4-2238-4fa9-838b-e54ba02f7c83",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-371e1786-5bdd-4c98-a663-14d6cab6bc64",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-38f39dcc-0d3c-4625-9a3c-a9879910358a",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-3e234cda-8d8a-4519-906f-fc0ea9b5ebd4",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    },
+    {
+      "case_id": "pos-3f2191da-5a16-4110-aefe-0175fbee13a7",
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "fault": null,
+      "kind": "positive"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "decision_correspondence",
+      "statement": "a dispatch is attested only when a captured ACCEPT, or an approved VERIFY/ESCALATE, is bound to the proposal"
+    },
+    {
+      "claim_id": "single_dispatch",
+      "statement": "the approved proposal executed exactly once"
+    },
+    {
+      "claim_id": "call_binding",
+      "statement": "the twin's own operation record belongs to this proposal (operation_id = proposal_id)"
+    },
+    {
+      "claim_id": "declared_effect_observed",
+      "statement": "the twin recorded APPLIED for the claimed zone and value, and the observation shows that value"
+    },
+    {
+      "claim_id": "observation_after_dispatch",
+      "statement": "the effect was observed at or after the dispatch"
+    },
+    {
+      "claim_id": "evidence_digest_integrity",
+      "statement": "evidence_sha256 is the canonical SHA-256 of remora_evidence"
+    }
+  ],
+  "derivation_note": "The twelve trails and six v1 negatives are v1's bytes (recorded at 942ba37). The four v2 negatives were seeded on 2026-10-27 after the reference verifier was found to accept missing and contradictory evidence; sealed_against names the commit that fixed it, with file digests.",
+  "derived_from": "v1",
+  "digest_rules": {
+    "evidence_sha256": "SHA-256 over the UTF-8 bytes of json.dumps(remora_evidence, sort_keys=True, separators=(',', ':'), ensure_ascii=False)",
+    "fixtures_sha256": "SHA-256 over the raw bytes of manifest.json, reported by the edge in its result"
+  },
+  "files": [
+    {
+      "path": "cases/neg-denied_but_applied-15391a46-8858-4c4d-a0f3-3bb65914ad3e.json",
+      "sha256": "599012e46a7b31aba7a6dc39bb5c73abc2c76f2d173110faccc57152e5843bc5"
+    },
+    {
+      "path": "cases/neg-dispatch_time_missing-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63.json",
+      "sha256": "dadf702c11eb601b14bde2d2dba214502770cc2b0555c855069f5207f36dc00c"
+    },
+    {
+      "path": "cases/neg-effect_value_not_reached-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63.json",
+      "sha256": "5e472d203b0f78acc65f98866146675bf878dfd15e618b7c4dfe3f1935b98ebd"
+    },
+    {
+      "path": "cases/neg-evidence_digest_mismatch-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb.json",
+      "sha256": "a83e4176dd8ee301450166349f413d2c40de1b57d77193d6edee1e7d09b24211"
+    },
+    {
+      "path": "cases/neg-executed_without_approval-274d9b03-f7e4-499f-b9f7-8f89720559d4.json",
+      "sha256": "91fd4c056edcb1e908fba873157733ded55a45e0ab726323ffcd0e6f3c1a21d9"
+    },
+    {
+      "path": "cases/neg-execution_count_missing-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb.json",
+      "sha256": "6aeaa28cc7095e2ff0fc7ba949e451ac6d8e727365a18b2be219dd4da9fa6d04"
+    },
+    {
+      "path": "cases/neg-observation_time_missing-05e55692-c8d8-4558-aec1-5890ad028480.json",
+      "sha256": "644aec8f32699f8a444d515dff12fe24e8bc4b3bb7483a6f7c7772eb868687e6"
+    },
+    {
+      "path": "cases/neg-observed_before_dispatch-15391a46-8858-4c4d-a0f3-3bb65914ad3e.json",
+      "sha256": "89760bc4a13990ad3611587642ad9058ecc741aad10504bdb9fcc12e8c4772e9"
+    },
+    {
+      "path": "cases/neg-proposal_swapped-05e55692-c8d8-4558-aec1-5890ad028480.json",
+      "sha256": "afc1d47b6e26f3cee67e8a387c59b9a25ae4810b79d101e97bd7cca6ea94e8e4"
+    },
+    {
+      "path": "cases/neg-replayed_execution-2a271bfa-8ddc-4268-b340-feaf478ddabc.json",
+      "sha256": "019ac6f5a3b8a63df6690854b39802d149e08673339c2d1bb209542e45765ef2"
+    },
+    {
+      "path": "cases/pos-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63.json",
+      "sha256": "6109397b8bfa5c71257fe1fee827f1c8c2ec9079cf840bb17392aaf477f64105"
+    },
+    {
+      "path": "cases/pos-05e55692-c8d8-4558-aec1-5890ad028480.json",
+      "sha256": "41bf101b61cff53861baf4e8a6d192dfdcab23c6736d85862e222e40cd9f6e80"
+    },
+    {
+      "path": "cases/pos-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb.json",
+      "sha256": "b7b30716a1485091691a01821b30266d4a312766a802e19a04ea8414936316c9"
+    },
+    {
+      "path": "cases/pos-15391a46-8858-4c4d-a0f3-3bb65914ad3e.json",
+      "sha256": "abee0cd3b0fad0b50c89dd0453519a37967fb24d646765d941e61275dbf60b2f"
+    },
+    {
+      "path": "cases/pos-274d9b03-f7e4-499f-b9f7-8f89720559d4.json",
+      "sha256": "844132e9f539f0c84c8ba00d094fdebd81fe104d4080533348f7841769c8aa08"
+    },
+    {
+      "path": "cases/pos-2a271bfa-8ddc-4268-b340-feaf478ddabc.json",
+      "sha256": "6adc835664c7252379bb7413eb4d2793d43110916f55d5e6dd20aa29eeb45fb6"
+    },
+    {
+      "path": "cases/pos-2b913957-c61e-4a11-964a-c36f3d8cc878.json",
+      "sha256": "2b12510b3ba0524470c827afc573ed24fcef087f4faef9b908602e3d93b24fe9"
+    },
+    {
+      "path": "cases/pos-346ee3c4-2238-4fa9-838b-e54ba02f7c83.json",
+      "sha256": "72aa429dba1b90fa82ad436de946c054201ac026a5a0dbbc60f7ffe37125efc5"
+    },
+    {
+      "path": "cases/pos-371e1786-5bdd-4c98-a663-14d6cab6bc64.json",
+      "sha256": "aedfeb2662d247e245d5a8305c48411d17709ca10c4b1bf6aaa46bf3c440a622"
+    },
+    {
+      "path": "cases/pos-38f39dcc-0d3c-4625-9a3c-a9879910358a.json",
+      "sha256": "d9a47071914435db9032e7e5c700152e34f5225baa958da4947a4391944a9832"
+    },
+    {
+      "path": "cases/pos-3e234cda-8d8a-4519-906f-fc0ea9b5ebd4.json",
+      "sha256": "e8674ee6d8d236026faeb6b6b0f6cc4249da77d438c1eed9a9bd501b9b39fe25"
+    },
+    {
+      "path": "cases/pos-3f2191da-5a16-4110-aefe-0175fbee13a7.json",
+      "sha256": "505208e4fff9fcf656bbeaf873f68021b3e3e7e514f6a8c6bd3b272432a5e4c3"
+    }
+  ],
+  "fixture_set": "v2",
+  "package_digest": "sha256:407a3c57ce2b488ffa0e13c01454fd8b63f6f1f71c382247be09a721cd214b24",
+  "package_digest_rule": "sha256 over the UTF-8 text formed by one line per files entry, '<path> <sha256>\\n', sorted by path. manifest.json is outside the package and is never hashed into it.",
+  "schema": "ot-federation-fixtures/v1",
+  "scope": "Decision trails from a governed demo of the simulated building (same-test-deployment vantage); the twin's operation log is the independent witness. Not a real plant.",
+  "sealed_against": {
+    "note": "The commit that adds this set is later than verifier_commit and is never named here; python -m runner.edge_check --check-provenance fetches these files at verifier_commit, checks the digests and runs that verifier against this set.",
+    "scorer_path": "runner/edge_check.py",
+    "scorer_sha256": "915bd34f2f580f35c561e38742a86f22ac14222feac0856ce26c055d85a433e5",
+    "verifier_commit": "e8a4aa5fd12afddc6c2916627c4a3c10f92b5723",
+    "verifier_path": "federation/edges/_template/adapter.py",
+    "verifier_sha256": "9734179ae950cff380071e730d9ccbc8a5e5f594817d10911b8eceb4f06e44ab"
+  },
+  "source_run": "demo-week1-work",
+  "source_trails_commit": "942ba37f33b766a1b127852894b79de20668efc8",
+  "testbed_commit": "942ba37f33b766a1b127852894b79de20668efc8",
+  "testbed_commit_note": "The revision the decision trails were recorded on, inherited from the source set. It says nothing about which verifier sealed this set: see sealed_against."
+}

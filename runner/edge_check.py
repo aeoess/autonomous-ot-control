@@ -111,6 +111,103 @@ def read_manifest(fixtures: Path) -> tuple[dict[str, Any], str]:
     return json.loads(raw), sha256_bytes(raw)
 
 
+# -- provenance ----------------------------------------------------------------
+
+SCORER_PATH = "runner/edge_check.py"
+REFERENCE_VERIFIER_PATH = "federation/edges/_template/adapter.py"
+
+
+def _git(*args: str, cwd: Path = ROOT) -> str | None:
+    """Run git and return stdout, or None when git or the repository is unavailable."""
+    try:
+        proc = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def git_file_at(commit: str, path: str) -> bytes | None:
+    """The bytes of ``path`` at ``commit``, from the repository's history; None if unavailable."""
+    try:
+        proc = subprocess.run(["git", "show", f"{commit}:{path}"], cwd=ROOT, capture_output=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return proc.stdout if proc.returncode == 0 else None
+
+
+def run_provenance(edge_dir: Path) -> dict[str, Any]:
+    """What actually ran: the working tree's commit (and whether it was dirty), and the
+    digests of the edge's own files and of this scorer. Recorded in every run record so a
+    reader can tell a run at one revision from a run at another without trusting a label."""
+    head = _git("rev-parse", "HEAD")
+    dirty = _git("status", "--porcelain", "--untracked-files=no")
+    files = {str(p.relative_to(edge_dir)).replace("\\", "/"): sha256_file(p)
+             for p in sorted(edge_dir.rglob("*")) if p.is_file() and "__pycache__" not in p.parts}
+    return {"testbed_commit_at_run": head or "UNKNOWN",
+            "worktree_dirty": None if dirty is None else bool(dirty),
+            "edge_files_sha256": files,
+            "scorer_path": SCORER_PATH, "scorer_sha256": sha256_file(ROOT / SCORER_PATH)}
+
+
+def check_provenance(fixtures: Path) -> list[str]:
+    """Use the verifier a sealed set declares it was sealed against, not a label about it.
+
+    The manifest's ``sealed_against`` names a commit and the digests of the
+    reference verifier and the scorer at that commit. This fetches those
+    files from the repository's history, requires their digests to match the
+    declaration, runs that exact verifier against the set in a fresh
+    directory, and requires every case, the set's newly added negatives first
+    among them, to get the verdict the manifest expects. Returns problems;
+    an empty list means the declaration held.
+    """
+    problems: list[str] = []
+    manifest, sha = read_manifest(fixtures)
+    sealed = manifest.get("sealed_against")
+    if not isinstance(sealed, dict):
+        return ["manifest has no sealed_against: nothing declares which verifier sealed this set"]
+    commit = str(sealed.get("verifier_commit", ""))
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        return [f"sealed_against.verifier_commit is not a full commit id: {commit!r}"]
+    head = _git("rev-parse", "HEAD")
+    if head and _git("merge-base", "--is-ancestor", commit, head) is None:
+        problems.append(f"declared verifier commit {commit[:12]} is not an ancestor of HEAD {head[:12]}")
+    blobs: dict[str, bytes] = {}
+    for role in ("verifier", "scorer"):
+        path, digest = str(sealed.get(f"{role}_path", "")), str(sealed.get(f"{role}_sha256", ""))
+        raw = git_file_at(commit, path)
+        if raw is None:
+            problems.append(f"cannot read {path} at {commit[:12]} from git history")
+            continue
+        if sha256_bytes(raw) != digest:
+            problems.append(f"{path} at {commit[:12]} has sha256 {sha256_bytes(raw)[:12]}…, manifest declares {digest[:12]}…")
+        blobs[role] = raw
+    if problems or "verifier" not in blobs:
+        return problems
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="provenance-") as tmp:
+        adapter = Path(tmp) / "adapter.py"
+        adapter.write_bytes(blobs["verifier"])
+        out = Path(tmp) / "result.json"
+        proc = subprocess.run([sys.executable, "-I", str(adapter), "run", "--fixtures", str(fixtures.resolve()),
+                               "--out", str(out)], cwd=tmp, capture_output=True, text=True, timeout=ADAPTER_TIMEOUT_S)
+        if proc.returncode != 0:
+            return [f"declared verifier exited {proc.returncode}: {(proc.stderr or '')[-500:]}"]
+        try:
+            result = json.loads(out.read_text("utf-8"))
+        except (OSError, ValueError) as e:
+            return [f"declared verifier wrote no valid result: {e}"]
+    s = score(manifest, sha, result)
+    if not s["ok"]:
+        problems.extend(f"declared verifier: {p}" for p in s["problems"])
+    added = set(manifest.get("added_faults") or [])
+    for c in s["cases"]:
+        if c["verdict"] != c["expected_verdict"]:
+            tag = " (added in this set)" if c.get("fault") in added else ""
+            problems.append(f"{c['case_id']}: declared verifier said {c['verdict']}, manifest expects "
+                            f"{c['expected_verdict']}{tag}")
+    return problems
+
+
 def check_fixture_set(fixtures: Path) -> list[str]:
     """Verify a sealed fixture set against its manifest. Empty list means it verifies."""
     problems: list[str] = []
@@ -181,7 +278,10 @@ def score(manifest: dict[str, Any], manifest_sha: str, result: Any) -> dict[str,
     def verdict_of(c: dict[str, Any]) -> str | None:
         return seen.get(c["case_id"], {}).get("verdict")
 
-    caught = [c for c in neg if verdict_of(c) == "CONTRADICTED"]
+    # A negative control is caught when the verdict is the one the manifest expects for its
+    # fault: CONTRADICTED for a trail that disagrees with itself, NOT_ESTABLISHED for a trail
+    # whose evidence is missing. ESTABLISHED is always a pass-through and fails the run.
+    caught = [c for c in neg if verdict_of(c) == c.get("expected_verdict", "CONTRADICTED")]
     passed_negatives = [c for c in neg if verdict_of(c) == "ESTABLISHED"]
     established = [c for c in pos if verdict_of(c) == "ESTABLISHED"]
     if passed_negatives:
@@ -195,7 +295,7 @@ def score(manifest: dict[str, Any], manifest_sha: str, result: Any) -> dict[str,
         mine = [c for c in neg if c.get("claim_id") == claim]
         by_claim[claim] = {
             "negatives": len(mine),
-            "caught": sum(1 for c in mine if verdict_of(c) == "CONTRADICTED"),
+            "caught": sum(1 for c in mine if verdict_of(c) == c.get("expected_verdict", "CONTRADICTED")),
             "passed": sum(1 for c in mine if verdict_of(c) == "ESTABLISHED"),
         }
     cases = [{"case_id": c["case_id"], "kind": c["kind"], "fault": c.get("fault"),
@@ -348,7 +448,7 @@ def _now() -> str:
 
 def build_record(edge: dict[str, Any], fixtures: Path, manifest: dict[str, Any], manifest_sha: str,
                  s: dict[str, Any], *, operator: str, host: str, command: str, run_ref: str | None,
-                 started_at: str, completed_at: str) -> dict[str, Any]:
+                 started_at: str, completed_at: str, provenance: dict[str, Any] | None = None) -> dict[str, Any]:
     level = derive_level(edge["evaluator"], operator, host)
     ceilings = [c["claim_ceiling"] for c in edge["claims"]]
     rel = str(fixtures.resolve().relative_to(ROOT)).replace("\\", "/") if fixtures.resolve().is_relative_to(ROOT) \
@@ -377,6 +477,7 @@ def build_record(edge: dict[str, Any], fixtures: Path, manifest: dict[str, Any],
                     "implies_broader_validity": False, "confers_authority": False},
         "runner_contract": dict(RUNNER_CONTRACT),
         "run_ref": run_ref,
+        "provenance": provenance or {},
     }
 
 
@@ -412,6 +513,17 @@ def validate_record(rec: Any) -> list[str]:
         p.append(f"fixture set {fx.get('path')} is not in this repository")
     if rec["status"] == "PASS" and rec["result"].get("negatives_passed", 1) != 0:
         p.append("a PASS with a negative control ESTABLISHED")
+    prov = rec.get("provenance") or {}
+    commit = str(prov.get("testbed_commit_at_run", "UNKNOWN"))
+    if commit != "UNKNOWN":
+        # A record may only name a revision that exists in this history and is an
+        # ancestor of HEAD: a run on a commit that was later rewritten away names nothing.
+        head = _git("rev-parse", "HEAD")
+        if head is not None:
+            if not re.fullmatch(r"[0-9a-f]{40}", commit) or _git("cat-file", "-e", f"{commit}^{{commit}}") is None:
+                p.append(f"provenance.testbed_commit_at_run {commit[:12]} is not a commit in this repository")
+            elif _git("merge-base", "--is-ancestor", commit, head) is None:
+                p.append(f"provenance.testbed_commit_at_run {commit[:12]} is not an ancestor of HEAD")
     return p
 
 
@@ -484,8 +596,8 @@ def render(edge: dict[str, Any], manifest: dict[str, Any], manifest_sha: str, s:
              "| | Count |", "|---|---|",
              f"| Positive cases ESTABLISHED | {s['positives_established']} / {s['positives']} |",
              f"| Positive cases refused (false refusals) | {s['false_refusals']} |",
-             f"| Negative controls caught (CONTRADICTED) | {s['negatives_caught']} / {s['negatives']} |",
-             f"| Negative controls NOT_ESTABLISHED | {s['negatives_not_established']} |",
+             f"| Negative controls caught (the verdict the manifest expects) | {s['negatives_caught']} / {s['negatives']} |",
+             f"| Negative controls answered otherwise, not ESTABLISHED | {s['negatives_not_established']} |",
              f"| Negative controls passed (must be 0) | {s['negatives_passed']} |", "",
              "Caught by fault: " + ", ".join(f"{k} {v}" for k, v in s["by_fault"].items()), "",
              "By claim: " + ", ".join(f"{k} {v['caught']}/{v['negatives']}" for k, v in s["by_claim"].items()), "",
@@ -521,7 +633,8 @@ def score_and_write(edge_dir: Path, fixtures: Path, result_path: Path, out: Path
     level = derive_level(edge["evaluator"], operator, host)
     out.mkdir(parents=True, exist_ok=True)
     rec = build_record(edge, fixtures, manifest, sha, s, operator=operator, host=host, command=command,
-                       run_ref=run_ref, started_at=started_at, completed_at=_now())
+                       run_ref=run_ref, started_at=started_at, completed_at=_now(),
+                       provenance=run_provenance(edge_dir))
     (out / "score.json").write_text(json.dumps(s, indent=2) + "\n", encoding="utf-8")
     (out / "run-record.json").write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8")
     text = render(edge, manifest, sha, s, level, operator, host, command)
@@ -541,6 +654,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--mode", default="offline", choices=list(MODES))
     p.add_argument("--validate", metavar="EDGE_DIR", help="validate an edge manifest and exit")
     p.add_argument("--check-fixtures", metavar="DIR", help="verify a sealed fixture set and exit")
+    p.add_argument("--check-provenance", metavar="DIR",
+                   help="fetch the verifier a set declares it was sealed against from git, run it, require the expected verdicts")
     p.add_argument("--run", metavar="EDGE_DIR", help="run the edge's adapter locally, then score it")
     p.add_argument("--edge")
     p.add_argument("--fixtures")
@@ -573,6 +688,18 @@ def main(argv: list[str] | None = None) -> int:
         if not probs:
             m, sha = read_manifest(Path(a.check_fixtures))
             print(f"{a.check_fixtures}: sealed, manifest sha256 {sha}, {m['package_digest']}")
+        return 1 if probs else 0
+    if a.check_provenance:
+        fx = Path(a.check_provenance)
+        probs = check_fixture_set(fx) or check_provenance(fx)
+        for pr in probs:
+            print(f"error: {pr}", file=sys.stderr)
+        if not probs:
+            m, _ = read_manifest(fx)
+            sa = m["sealed_against"]
+            print(f"{a.check_provenance}: the verifier at {sa['verifier_commit'][:12]} "
+                  f"(sha256 {sa['verifier_sha256'][:12]}…) gives every expected verdict, "
+                  f"added faults included: {', '.join(m.get('added_faults') or []) or 'none'}")
         return 1 if probs else 0
     if a.check_records or a.results or a.check_results:
         recs = load_records()

@@ -195,6 +195,42 @@
         "string",
         "null"
       ]
+    },
+    "provenance": {
+      "type": "object",
+      "description": "What actually ran, as digests and a commit id: the testbed commit of the working tree at run time (and whether it was dirty), the SHA-256 of every file in the edge directory, and the SHA-256 of the scorer. Written by runner.edge_check; a reader can tell runs at different revisions apart without trusting a label.",
+      "required": [
+        "testbed_commit_at_run",
+        "worktree_dirty",
+        "edge_files_sha256",
+        "scorer_path",
+        "scorer_sha256"
+      ],
+      "properties": {
+        "testbed_commit_at_run": {
+          "type": "string"
+        },
+        "worktree_dirty": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "edge_files_sha256": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "scorer_path": {
+          "type": "string"
+        },
+        "scorer_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     }
   }
 }

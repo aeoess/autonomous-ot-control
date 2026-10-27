@@ -89,6 +89,7 @@
     },
     "execution": {
       "type": "object",
+      "description": "Optional members are evidence, not defaults: a verifier that needs one and does not find it answers NOT_ESTABLISHED for that claim, never an assumed value. executed=false together with an APPLIED twin record or an observation is a trail that disagrees with itself (CONTRADICTED).",
       "required": [
         "executed"
       ],
@@ -100,10 +101,12 @@
           "type": [
             "integer",
             "null"
-          ]
+          ],
+          "description": "Needed by observation_after_dispatch; absent or null means that claim is NOT_ESTABLISHED."
         },
         "executions": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Needed by single_dispatch; absent means that claim is NOT_ESTABLISHED (never assumed to be 1)."
         }
       }
     },
@@ -119,12 +122,15 @@
         "object",
         "null"
       ],
+      "description": "null means the effect was not observed (NOT_ESTABLISHED for declared_effect_observed). Optional members are evidence, not defaults.",
       "properties": {
         "observed_setpoint_c": {
-          "type": "number"
+          "type": "number",
+          "description": "Needed by declared_effect_observed; absent means that claim is NOT_ESTABLISHED."
         },
         "observed_at_sim_s": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Needed by observation_after_dispatch; absent means that claim is NOT_ESTABLISHED (never assumed to equal the dispatch time)."
         }
       }
     },

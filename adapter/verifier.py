@@ -20,10 +20,48 @@ from __future__ import annotations
 
 from typing import Any
 
-from twin.effect_observer import (EFFECT_UNOBSERVABLE, EFFECT_VERIFIER_FAILED, EffectObserver)
+from twin.effect_observer import (EFFECT_MISMATCH, EFFECT_UNOBSERVABLE, EFFECT_VERIFIER_FAILED,
+                                  EffectObserver)
+from twin.state import canonical_digest
 
 TOOL_ID = "set_zone_setpoint"
 DEFAULT_VERIFIER_IDENTITY = "ot-effect-observer/v1"
+
+#: Observer refusals that say "this record is not evidence for this claim".
+#: For these the plant's current value is not an observation of the named
+#: operation's effect, so it is never handed to the SDK, or to REMORA, for
+#: comparison: a coincidentally matching value would come back VERIFIED and
+#: the refusal would be lost. A plant value that genuinely differs
+#: (plant_setpoint_differs, superseded_by_later_operation, plant_state_differs)
+#: is compared as before, so the SDK and the server compute that MISMATCH
+#: themselves.
+BINDING_REFUSALS = frozenset({
+    "operation_tool_mismatch", "operation_target_mismatch", "recorded_value_differs",
+    "zone_mismatch", "recorded_setpoint_differs",
+})
+
+
+def binding_refusal(envelope: dict[str, Any]) -> str | None:
+    """The observer's binding refusal in this envelope, or None."""
+    if envelope.get("effect_status") != EFFECT_MISMATCH:
+        return None
+    detail = str(envelope.get("detail") or "")
+    if detail in BINDING_REFUSALS or detail.startswith("operation_rejected:"):
+        return detail
+    return None
+
+
+class _RefusedView:
+    """A MISMATCH view built from the observer's refusal, when the SDK's own view class is unavailable."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self._p = dict(payload)
+        self.raw = dict(payload)
+        self.status = payload["status"]
+        self.reason_code = payload["reason_code"]
+
+    def to_dict(self) -> dict[str, Any]:
+        return dict(self._p)
 
 
 def _load_sdk() -> Any | None:
@@ -67,12 +105,20 @@ class EffectAttestor:
             expected_fields={"setpoint_c": expected_setpoint_c},
             reader=self._verifier_identity,
         )
-        observed = self._observed_fields(envelope)
-        view = self._sdk.verify_effect(
-            spec, observed,
-            proposal_id=proposal_id, execution_id=execution_id,
-            toolspec_hash=toolspec_hash, verifier_identity=self._verifier_identity,
-        )
+        refusal = binding_refusal(envelope)
+        if refusal is not None:
+            observed = None  # not an observation of this operation's effect; never compared, never attached
+            view = self._refused_view(envelope, refusal, tool_id=TOOL_ID,
+                                      expected_fields={"setpoint_c": expected_setpoint_c},
+                                      proposal_id=proposal_id, execution_id=execution_id,
+                                      toolspec_hash=toolspec_hash)
+        else:
+            observed = self._observed_fields(envelope)
+            view = self._sdk.verify_effect(
+                spec, observed,
+                proposal_id=proposal_id, execution_id=execution_id,
+                toolspec_hash=toolspec_hash, verifier_identity=self._verifier_identity,
+            )
         result["verification"] = view.to_dict() if hasattr(view, "to_dict") else view
         if client is not None:
             try:
@@ -112,13 +158,20 @@ class EffectAttestor:
             reader=self._verifier_identity,
         )
         status = envelope.get("effect_status")
-        observed = (None if status in (EFFECT_UNOBSERVABLE, EFFECT_VERIFIER_FAILED)
-                    else envelope.get("observed_fields"))
-        view = self._sdk.verify_effect(
-            spec, observed,
-            proposal_id=proposal_id, execution_id=execution_id,
-            toolspec_hash=toolspec_hash, verifier_identity=self._verifier_identity,
-        )
+        refusal = binding_refusal(envelope)
+        if refusal is not None:
+            observed = None
+            view = self._refused_view(envelope, refusal, tool_id=tool_id, expected_fields=expected,
+                                      proposal_id=proposal_id, execution_id=execution_id,
+                                      toolspec_hash=toolspec_hash)
+        else:
+            observed = (None if status in (EFFECT_UNOBSERVABLE, EFFECT_VERIFIER_FAILED)
+                        else envelope.get("observed_fields"))
+            view = self._sdk.verify_effect(
+                spec, observed,
+                proposal_id=proposal_id, execution_id=execution_id,
+                toolspec_hash=toolspec_hash, verifier_identity=self._verifier_identity,
+            )
         result["verification"] = view.to_dict() if hasattr(view, "to_dict") else view
         if client is not None:
             try:
@@ -132,6 +185,38 @@ class EffectAttestor:
             except Exception as e:
                 result["remora_record_error"] = f"{type(e).__name__}: {e}"
         return result
+
+    def _refused_view(self, envelope: dict[str, Any], refusal: str, *, tool_id: str,
+                      expected_fields: dict[str, Any], proposal_id: str, execution_id: str,
+                      toolspec_hash: str) -> Any:
+        """A MISMATCH view carrying the observer's binding refusal as its reason.
+
+        Built without comparing values: the observer has said the named
+        operation is not the source of whatever the plant shows, so there is
+        nothing to compare. The payload carries no ``observed`` fields, so the
+        recording boundary cannot attach any and a server cannot recompute
+        VERIFIED from them. The observation envelope is referenced by its digest.
+        """
+        payload = {
+            "proposal_id": proposal_id, "execution_id": execution_id, "tool_id": tool_id,
+            "toolspec_hash": toolspec_hash, "status": EFFECT_MISMATCH, "reason_code": refusal,
+            "verifier_identity": self._verifier_identity,
+            "expected_sha256": canonical_digest(expected_fields),
+            "observed_sha256": str(envelope.get("observation_digest", "")),
+            "verified_at": str(envelope.get("observed_at", "")),
+            "detail": f"observer refused to bind operation {envelope.get('operation_id')} to this claim: {refusal}",
+            "vantage": "same_deployment", "scope": "declared_delta_only",
+        }
+        view_cls = getattr(self._sdk, "EffectVerificationView", None)
+        if view_cls is None:
+            try:
+                from remora.sdk.effects import EffectVerificationView as view_cls  # noqa: N813
+            except Exception:
+                return _RefusedView(payload)
+        try:
+            return view_cls.from_payload(payload)
+        except Exception:
+            return _RefusedView(payload)
 
     @staticmethod
     def _selector_and_expected(tool_id: str, arguments: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:

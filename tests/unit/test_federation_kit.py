@@ -20,7 +20,8 @@ from pathlib import Path
 import pytest
 
 from runner import edge_check
-from runner.federation_fixtures import CLAIMS, FAULT_CLAIM, FAULTS, positive, seal_manifest, seed_fault
+from runner.federation_fixtures import (CLAIMS, FAULT_CLAIM, FAULTS, FAULTS_V1, FAULTS_V2, positive,
+                                        seal_manifest, seed_fault)
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "federation" / "edges" / "_template"
@@ -133,7 +134,7 @@ def test_the_committed_v1_set_is_sealed_and_valid():
     jsonschema.validate(manifest, schema)
     assert {c["claim_id"] for c in manifest["claims"]} == set(CLAIMS)
     negs = [c for c in manifest["cases"] if c["kind"] == "negative"]
-    assert len(negs) == len(FAULTS) and {c["fault"] for c in negs} == set(FAULTS)
+    assert len(negs) == len(FAULTS_V1) and {c["fault"] for c in negs} == set(FAULTS_V1)
     assert all(c["claim_id"] == FAULT_CLAIM[c["fault"]] for c in negs)
     assert sum(1 for c in manifest["cases"] if c["kind"] == "positive") == 12
 
