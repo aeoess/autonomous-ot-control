@@ -1,30 +1,17 @@
 """Tests that need the real, pinned remora.sdk (upstream/remora.lock.json).
 
-They are deselected, not skipped, when the SDK is not importable, so a CI
-run without the REMORA checkout stays green and honest ("deselected" is not
-"skipped"). Run them against the pin with:
+They are excluded before module import when the SDK is not importable.
+The separate SDK CI job checks out the upstream pin and requires the SDK;
+that job cannot succeed by excluding these tests. Run against the pin with:
 
-    PYTHONPATH=<checkout of REMORA-research at the pinned commit> python -m pytest tests/sdk -v
+    PYTHONPATH=<checkout of REMORA-research at the pinned commit> python -m pytest --require-remora-sdk tests/sdk -v
 """
 from __future__ import annotations
 
-import pytest
+from tests.conftest import remora_sdk_available
 
 
-def _sdk_available() -> bool:
-    try:
-        import remora.sdk  # noqa: F401
-        from remora.sdk.effects import verify_effect  # noqa: F401
-    except Exception:
-        return False
-    return True
-
-
-def pytest_collection_modifyitems(config, items):
-    if _sdk_available():
-        return
-    deselected = [it for it in items if "tests/sdk" in str(it.fspath).replace("\\", "/")]
-    if deselected:
-        config.hook.pytest_deselected(items=deselected)
-        for it in deselected:
-            items.remove(it)
+def pytest_ignore_collect(collection_path, config):
+    if collection_path.name.startswith("test_") and collection_path.suffix == ".py":
+        return not remora_sdk_available()
+    return None

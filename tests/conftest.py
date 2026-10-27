@@ -23,6 +23,24 @@ TEST_ENV = {
 }
 
 
+def remora_sdk_available() -> bool:
+    try:
+        from remora.sdk.effects import verify_effect  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def pytest_addoption(parser):
+    parser.addoption("--require-remora-sdk", action="store_true",
+                     help="Fail if the pinned SDK is unavailable; used by the SDK CI job")
+
+
+def pytest_sessionstart(session):
+    if session.config.getoption("--require-remora-sdk") and not remora_sdk_available():
+        raise pytest.UsageError("this job requires the pinned remora.sdk; see upstream/remora.lock.json")
+
+
 @pytest.fixture
 def config() -> dict:
     return copy.deepcopy(load_config(CONFIG))

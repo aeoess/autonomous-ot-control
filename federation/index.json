@@ -180,7 +180,21 @@
         "fixed_in": "commit 'fix(federation): the reference verifier requires the evidence each claim needs' on the branch after 4b9f6ec. Fixture set v2 is sealed against that verifier: federation/fixtures/v2/manifest.json sealed_against names the commit and the file digests, and runner.edge_check --check-provenance runs that verifier from git against v2. testbed_commit in the same manifest is the trails' revision (942ba37), not the verifier's.",
         "pinned_by": "tests/unit/test_reference_verifier_evidence.py, tests/unit/test_fixture_set_v2.py, federation/fixtures/v2/manifest.json#sealed_against"
       }
-    ]
+    ],
+    "ongoing_evaluations": [
+      {
+        "boundary": "runner_validity",
+        "revision": "4b9f6ec7882b81ca95ecf414e107ec202663bb13",
+        "preservation_ref": "refs/heads/archive/federation-runner-validity-2026-10-27-v1",
+        "scope": "One bounded offline evaluation on the originally agreed revision; no automatic rerun, scope expansion or participant enrollment.",
+        "update_policy": "Preserve this ref at the declared SHA. New revisions or fixture sets require separate run records and do not supersede results on this pin."
+      }
+    ],
+    "historical_review": {
+      "revision": "67baebd8a3b74208db2c8700d157423268c6b9ab",
+      "preservation_ref": "refs/heads/archive/pr21-pre-ci-fix-67baebd8",
+      "note": "Retains PR #21 before the CI fixes, including all commits named by fixture provenance. Keep this ref; use a merge commit for PR #21."
+    }
   },
   "licence": {
     "code": "NOT_DECIDED (SDD D-01)",

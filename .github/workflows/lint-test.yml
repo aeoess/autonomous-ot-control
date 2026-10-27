@@ -52,8 +52,50 @@ jobs:
       - name: Install (hash-locked)
         run: python -m pip install --require-hashes --no-deps -r requirements-dev.lock
       - name: Tests (skips are failures)
+        shell: bash
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
+          set -euo pipefail
           python -m pytest -q -rs | tee pytest.out
           ! grep -Eq "[0-9]+ (skipped|xfailed|xpassed)" pytest.out
+  sdk-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read the upstream SDK pin
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, re
+          pin = json.load(open("upstream/remora.lock.json"))["commit"]
+          if not re.fullmatch(r"[0-9a-f]{40}", pin):
+              raise SystemExit("upstream SDK pin must be a full commit SHA")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"sha={pin}\n")
+          PY
+      - uses: actions/checkout@v4
+        with:
+          repository: darklordVirtual/REMORA-research
+          ref: ${{ steps.upstream.outputs.sha }}
+          path: .remora-upstream
+          persist-credentials: false
+      - name: Install test dependencies (hash-locked)
+        run: python -m pip install --require-hashes --no-deps -r requirements-dev.lock
+      - name: Test the real pinned SDK (required, no skips)
+        shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.remora-upstream:${{ github.workspace }}
+          REMORA_PIN: ${{ steps.upstream.outputs.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C .remora-upstream rev-parse HEAD)" = "$REMORA_PIN"
+          python -m pytest --require-remora-sdk -q -rs tests/sdk | tee pytest-sdk.out
+          ! grep -Eq "[0-9]+ (skipped|xfailed|xpassed)" pytest-sdk.out

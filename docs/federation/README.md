@@ -12,6 +12,30 @@ opening a pull request; that pull request is your consent record, and you
 leave the same way. The machine-readable entry point is
 [`federation/index.json`](../../federation/index.json).
 
+## Pinned evaluations already in progress
+
+The bounded, offline `runner_validity` evaluation started on
+`4b9f6ec7882b81ca95ecf414e107ec202663bb13`. That revision is retained on
+[`archive/federation-runner-validity-2026-10-27-v1`](https://github.com/darklordVirtual/autonomous-ot-control/tree/archive/federation-runner-validity-2026-10-27-v1).
+Keep that archive branch at this exact SHA; do not move or delete it.
+
+```bash
+git fetch origin archive/federation-runner-validity-2026-10-27-v1
+git checkout --detach 4b9f6ec7882b81ca95ecf414e107ec202663bb13
+python -m pytest -q tests/unit/test_federation_runner_contract.py
+```
+
+An ongoing evaluation keeps its agreed revision, fixture set and scope.
+Later fixes and the v2 default do not change an earlier run's inputs or
+upgrade its result. A run on a newer revision is a separate run with its
+own SHA and fixture digest, only if the evaluator chooses to do it. This
+preservation record does not enroll a participant or add any obligation.
+
+The reviewed PR #21 revision, `67baebd8a3b74208db2c8700d157423268c6b9ab`,
+is also retained on `archive/pr21-pre-ci-fix-67baebd8`, including the earlier
+commits named by fixture provenance. Preserve that branch too. Integrate
+PR #21 with a merge commit, so the named ancestors remain on `main`.
+
 ## What you get
 
 | Artifact | Where | Contract |
