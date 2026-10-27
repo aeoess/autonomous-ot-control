@@ -1,0 +1,1542 @@
+{
+ "schema": "ot-tfm-examples/v1",
+ "source": {
+  "title": "PA 0802 Tverrfaglig merkesystem (TFM) Vedlegg 9.3 Eksempler",
+  "approved": "02.02.2024",
+  "url": "https://dok.statsbygg.no/ (Prosjekteringsanvisning PA 0802, Vedlegg 9.3)",
+  "sha256": "29a020220f13cdf8e2cde2ebeb8e6be626a3daa151da94bb6b5f5ff7b32afdcf",
+  "extraction": "PyMuPDF text, page-wrapped identifiers rejoined"
+ },
+ "note": "Every identifier in Statsbygg's worked examples, with twin.tfm's verdict. The invalid ones are headings or typos in the source; nothing official is rejected.",
+ "identifiers": [
+  {
+   "id": "+555555=762.001-VD001T",
+   "valid": true
+  },
+  {
+   "id": "+555555=762.001-VD002T",
+   "valid": true
+  },
+  {
+   "id": "+555555=762.001-VK001T",
+   "valid": true
+  },
+  {
+   "id": "+555555=771.001-VG001T",
+   "valid": true
+  },
+  {
+   "id": "+555555=772.001-VP001T",
+   "valid": true
+  },
+  {
+   "id": "+555555=772.002-VP001T",
+   "valid": true
+  },
+  {
+   "id": "+555555=772.002-VP002T",
+   "valid": true
+  },
+  {
+   "id": "+555555=773.001-GO001T",
+   "valid": true
+  },
+  {
+   "id": "=216.001-AH001T",
+   "valid": true
+  },
+  {
+   "id": "=222.001-AS001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AF001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AO001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AO002T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AP001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AP002T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AV001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AV002T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AV003T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-AV501T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-BB001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-BC001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-BI001T",
+   "valid": true
+  },
+  {
+   "id": "=231.001-BI501T",
+   "valid": true
+  },
+  {
+   "id": "=232.001",
+   "valid": true
+  },
+  {
+   "id": "=232.001-AF001T",
+   "valid": true
+  },
+  {
+   "id": "=232.001-AO001T",
+   "valid": true
+  },
+  {
+   "id": "=232.001-AO002T",
+   "valid": true
+  },
+  {
+   "id": "=232.001-AP001T",
+   "valid": true
+  },
+  {
+   "id": "=232.001-AV001T",
+   "valid": true
+  },
+  {
+   "id": "=232.001-BB001T",
+   "valid": true
+  },
+  {
+   "id": "=232.001-BC001T",
+   "valid": true
+  },
+  {
+   "id": "=232.001-BI001T",
+   "valid": true
+  },
+  {
+   "id": "=234.001",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU001",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU002",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU003",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU004",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU005",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU006",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU007",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU101T",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU102T",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU103T",
+   "valid": true
+  },
+  {
+   "id": "=234.001-DU104T",
+   "valid": true
+  },
+  {
+   "id": "=234.002",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV001",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV001T",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV002",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV002T",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV003",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV003T",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV004",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV004T",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV005",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV006",
+   "valid": true
+  },
+  {
+   "id": "=234.002-DV007",
+   "valid": true
+  },
+  {
+   "id": "=235.001",
+   "valid": true
+  },
+  {
+   "id": "=235.001-AO005T",
+   "valid": true
+  },
+  {
+   "id": "=235.001-EB001T",
+   "valid": true
+  },
+  {
+   "id": "=241.001",
+   "valid": true
+  },
+  {
+   "id": "=241.001-AO102T",
+   "valid": true
+  },
+  {
+   "id": "=241.001-AV001T",
+   "valid": true
+  },
+  {
+   "id": "=241.001-BA101T",
+   "valid": true
+  },
+  {
+   "id": "=241.001-BP101T",
+   "valid": true
+  },
+  {
+   "id": "=241.001-BP201T",
+   "valid": true
+  },
+  {
+   "id": "=242.001",
+   "valid": true
+  },
+  {
+   "id": "=242.001-AF101T",
+   "valid": true
+  },
+  {
+   "id": "=242.001-AP101T",
+   "valid": true
+  },
+  {
+   "id": "=242.001-AP201T",
+   "valid": true
+  },
+  {
+   "id": "=242.001-AV001T",
+   "valid": true
+  },
+  {
+   "id": "=242.001-AV002T",
+   "valid": true
+  },
+  {
+   "id": "=242.001-BI101T",
+   "valid": true
+  },
+  {
+   "id": "=243.001",
+   "valid": true
+  },
+  {
+   "id": "=243.001-AV001T",
+   "valid": true
+  },
+  {
+   "id": "=243.001-AV002T",
+   "valid": true
+  },
+  {
+   "id": "=243.001-DI001T",
+   "valid": true
+  },
+  {
+   "id": "=243.001-DV001T",
+   "valid": true
+  },
+  {
+   "id": "=243.001-DV002T",
+   "valid": true
+  },
+  {
+   "id": "=243.001-DV101T",
+   "valid": true
+  },
+  {
+   "id": "=243.001-DV102T",
+   "valid": true
+  },
+  {
+   "id": "=244.001",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DB001",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DB001T",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DB002",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DI001",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DI001T",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DI002",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DI002T",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DI003",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DI003T",
+   "valid": true
+  },
+  {
+   "id": "=244.001-DI004",
+   "valid": true
+  },
+  {
+   "id": "=246.001",
+   "valid": true
+  },
+  {
+   "id": "=246.001-BF001T",
+   "valid": true
+  },
+  {
+   "id": "=246.001-CM002T",
+   "valid": true
+  },
+  {
+   "id": "=246.001-EB001T",
+   "valid": true
+  },
+  {
+   "id": "=246.001-EC001T",
+   "valid": true
+  },
+  {
+   "id": "=246.001-EC002T",
+   "valid": true
+  },
+  {
+   "id": "=246.001-EC003T",
+   "valid": true
+  },
+  {
+   "id": "=246.001-EC101T",
+   "valid": true
+  },
+  {
+   "id": "=251.001",
+   "valid": true
+  },
+  {
+   "id": "=251.001-AD001T",
+   "valid": true
+  },
+  {
+   "id": "=252.001",
+   "valid": true
+  },
+  {
+   "id": "=252.001-AO001T",
+   "valid": true
+  },
+  {
+   "id": "=252.001-AO010T",
+   "valid": true
+  },
+  {
+   "id": "=252.001-BB001T",
+   "valid": true
+  },
+  {
+   "id": "=252.001-BB002T",
+   "valid": true
+  },
+  {
+   "id": "=252.001-BI001T",
+   "valid": true
+  },
+  {
+   "id": "=255.001",
+   "valid": true
+  },
+  {
+   "id": "=255.001-BF001T",
+   "valid": true
+  },
+  {
+   "id": "=255.001-CM001T",
+   "valid": true
+  },
+  {
+   "id": "=255.001-EB002T",
+   "valid": true
+  },
+  {
+   "id": "=255.001-EB003T",
+   "valid": true
+  },
+  {
+   "id": "=256.001",
+   "valid": true
+  },
+  {
+   "id": "=256.001-EC002T",
+   "valid": true
+  },
+  {
+   "id": "=257.001-EH001T",
+   "valid": true
+  },
+  {
+   "id": "=273",
+   "valid": false,
+   "note": "heading: a system code without a running number (\"=273 KJØKKENINNREDNING\")"
+  },
+  {
+   "id": "=273.001",
+   "valid": true
+  },
+  {
+   "id": "=273.001-CR001",
+   "valid": true
+  },
+  {
+   "id": "=273.001-CR001T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FA001",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FA001T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FB001",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FB001T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS001",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS001T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS002",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS002T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS003",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS003T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS004",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS004T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS005",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS005T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS006",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS006T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS007",
+   "valid": true
+  },
+  {
+   "id": "=273.001-FS008",
+   "valid": true
+  },
+  {
+   "id": "=273.001-GV001",
+   "valid": true
+  },
+  {
+   "id": "=273.001-GV001T",
+   "valid": true
+  },
+  {
+   "id": "=273.001-NY001",
+   "valid": true
+  },
+  {
+   "id": "=273.001-NY001T",
+   "valid": true
+  },
+  {
+   "id": "=273.002",
+   "valid": true
+  },
+  {
+   "id": "=273.002-CR001",
+   "valid": true
+  },
+  {
+   "id": "=273.002-CR001T",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FA001",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FB001",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FB002T",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS001",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS001T",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS002",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS002T",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS003",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS003T",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS004",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS005",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS006",
+   "valid": true
+  },
+  {
+   "id": "=273.002-FS007T",
+   "valid": true
+  },
+  {
+   "id": "=273.002-GA001",
+   "valid": true
+  },
+  {
+   "id": "=273.002-GV001T",
+   "valid": true
+  },
+  {
+   "id": "=273.002-NY001",
+   "valid": true
+  },
+  {
+   "id": "=273.002-NY002T",
+   "valid": true
+  },
+  {
+   "id": "=310.001",
+   "valid": true
+  },
+  {
+   "id": "=310.001-FS001",
+   "valid": true
+  },
+  {
+   "id": "=310.001-FS001T",
+   "valid": true
+  },
+  {
+   "id": "=310.001-KR005T",
+   "valid": true
+  },
+  {
+   "id": "=310.001-KR010T",
+   "valid": true
+  },
+  {
+   "id": "=310.001-NX001",
+   "valid": true
+  },
+  {
+   "id": "=310.001-NX001T",
+   "valid": true
+  },
+  {
+   "id": "=310.001-NY001",
+   "valid": true
+  },
+  {
+   "id": "=310.001-NY001T",
+   "valid": true
+  },
+  {
+   "id": "=310.001-UB001",
+   "valid": true
+  },
+  {
+   "id": "=310.001-UB001T",
+   "valid": true
+  },
+  {
+   "id": "=311.001",
+   "valid": true
+  },
+  {
+   "id": "=311.001-KR110T",
+   "valid": true
+  },
+  {
+   "id": "=320.001",
+   "valid": true
+  },
+  {
+   "id": "=320.001-JP401",
+   "valid": true
+  },
+  {
+   "id": "=320.001-JP402",
+   "valid": true
+  },
+  {
+   "id": "=320.001-RT401",
+   "valid": true
+  },
+  {
+   "id": "=320.001-RT501",
+   "valid": true
+  },
+  {
+   "id": "=320.001-RT901",
+   "valid": true
+  },
+  {
+   "id": "=320.001-SB401T",
+   "valid": true
+  },
+  {
+   "id": "=320.001-SM401",
+   "valid": true
+  },
+  {
+   "id": "=320.001-SV501",
+   "valid": true
+  },
+  {
+   "id": "=320.002",
+   "valid": true
+  },
+  {
+   "id": "=320.002-RT401",
+   "valid": true
+  },
+  {
+   "id": "=320.002-RT501",
+   "valid": true
+  },
+  {
+   "id": "=320.002-SM401",
+   "valid": true
+  },
+  {
+   "id": "=320.002-SV501",
+   "valid": true
+  },
+  {
+   "id": "=320.003",
+   "valid": true
+  },
+  {
+   "id": "=320.003-JP401",
+   "valid": true
+  },
+  {
+   "id": "=320.003-RT401",
+   "valid": true
+  },
+  {
+   "id": "=320.003-RT501",
+   "valid": true
+  },
+  {
+   "id": "=320.003-SB401",
+   "valid": true
+  },
+  {
+   "id": "=320.003-SM401",
+   "valid": true
+  },
+  {
+   "id": "=320.003-SM402",
+   "valid": true
+  },
+  {
+   "id": "=320.003-SV501",
+   "valid": true
+  },
+  {
+   "id": "=320.003-SV502",
+   "valid": true
+  },
+  {
+   "id": "=320.004",
+   "valid": true
+  },
+  {
+   "id": "=320.004-JP401",
+   "valid": true
+  },
+  {
+   "id": "=320.004-RT401",
+   "valid": true
+  },
+  {
+   "id": "=320.004-RT501",
+   "valid": true
+  },
+  {
+   "id": "=320.004-SB401",
+   "valid": true
+  },
+  {
+   "id": "=320.004-SM401",
+   "valid": true
+  },
+  {
+   "id": "=320.004-SM402",
+   "valid": true
+  },
+  {
+   "id": "=320.004-SV501",
+   "valid": true
+  },
+  {
+   "id": "=320.004-SV502",
+   "valid": true
+  },
+  {
+   "id": "=320.010",
+   "valid": true
+  },
+  {
+   "id": "=320.020",
+   "valid": true
+  },
+  {
+   "id": "=320.020-KA001T",
+   "valid": true
+  },
+  {
+   "id": "=320.020-KA401",
+   "valid": true
+  },
+  {
+   "id": "=320.020-KA402",
+   "valid": true
+  },
+  {
+   "id": "=320.020-KA403",
+   "valid": true
+  },
+  {
+   "id": "=320.020-KA404",
+   "valid": true
+  },
+  {
+   "id": "=320.020-KA405",
+   "valid": true
+  },
+  {
+   "id": "=320.020-KA406",
+   "valid": true
+  },
+  {
+   "id": "=331.001",
+   "valid": true
+  },
+  {
+   "id": "=331.001-KR001T",
+   "valid": true
+  },
+  {
+   "id": "=331.001-UO001",
+   "valid": true
+  },
+  {
+   "id": "=331.001-UO001T",
+   "valid": true
+  },
+  {
+   "id": "=331.001-UO002",
+   "valid": true
+  },
+  {
+   "id": "=332.001",
+   "valid": true
+  },
+  {
+   "id": "=332.001-KR001T",
+   "valid": true
+  },
+  {
+   "id": "=332.001-QP401",
+   "valid": true
+  },
+  {
+   "id": "=332.001-QP402",
+   "valid": true
+  },
+  {
+   "id": "=332.001-RF401",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SG401",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SJ401",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SM401",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SM402",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SM403",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SM404",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SM405",
+   "valid": true
+  },
+  {
+   "id": "=332.001-SM406",
+   "valid": true
+  },
+  {
+   "id": "=332.002",
+   "valid": true
+  },
+  {
+   "id": "=332.002-JP401",
+   "valid": true
+  },
+  {
+   "id": "=332.002-KR001T",
+   "valid": true
+  },
+  {
+   "id": "=332.002-NT401",
+   "valid": true
+  },
+  {
+   "id": "=332.002-QV401",
+   "valid": true
+  },
+  {
+   "id": "=332.002-SG402",
+   "valid": true
+  },
+  {
+   "id": "=332.002-SM402",
+   "valid": true
+  },
+  {
+   "id": "=337.001",
+   "valid": true
+  },
+  {
+   "id": "=337.001-NZ001",
+   "valid": true
+  },
+  {
+   "id": "=337.001-NZ001T",
+   "valid": true
+  },
+  {
+   "id": "=337.001-NZ002",
+   "valid": true
+  },
+  {
+   "id": "=360.001",
+   "valid": true
+  },
+  {
+   "id": "=360.001--ST001T",
+   "valid": false,
+   "note": "typo in the source: a double hyphen (page 24)"
+  },
+  {
+   "id": "=360.001-RT001T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-RT401",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SF501T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SF502T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SF503T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ001T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ002T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ003T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ401",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ402",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ403",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ404",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ405",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ406",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ407",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ408",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ501",
+   "valid": true
+  },
+  {
+   "id": "=360.001-SQ502",
+   "valid": true
+  },
+  {
+   "id": "=360.001-ST001T",
+   "valid": true
+  },
+  {
+   "id": "=360.001-ST401",
+   "valid": true
+  },
+  {
+   "id": "=360.001-ST402",
+   "valid": true
+  },
+  {
+   "id": "=360.001-ST403",
+   "valid": true
+  },
+  {
+   "id": "=360.001-ST404",
+   "valid": true
+  },
+  {
+   "id": "=360.001-ST405",
+   "valid": true
+  },
+  {
+   "id": "=360.010",
+   "valid": true
+  },
+  {
+   "id": "=370.001",
+   "valid": true
+  },
+  {
+   "id": "=370.001-SB401T",
+   "valid": true
+  },
+  {
+   "id": "=411",
+   "valid": false,
+   "note": "heading \"=411.XXX SYSTEMER FOR KABELFØRING\": the running number is a placeholder"
+  },
+  {
+   "id": "=411.001-CR001T",
+   "valid": true
+  },
+  {
+   "id": "=411.002-CR002T",
+   "valid": true
+  },
+  {
+   "id": "=411.003-KK001T",
+   "valid": true
+  },
+  {
+   "id": "=411.004-KK002T",
+   "valid": true
+  },
+  {
+   "id": "=430",
+   "valid": false,
+   "note": "heading \"=430.XXX FORDELINGSANLEGG\": 43 is a group, and the running number is a placeholder"
+  },
+  {
+   "id": "=431.001-KS001",
+   "valid": true
+  },
+  {
+   "id": "=432.001",
+   "valid": true
+  },
+  {
+   "id": "=432.001-KW001",
+   "valid": true
+  },
+  {
+   "id": "=432.001-KW003",
+   "valid": true
+  },
+  {
+   "id": "=432.001-KW004",
+   "valid": true
+  },
+  {
+   "id": "=432.001-XF001",
+   "valid": true
+  },
+  {
+   "id": "=433.001",
+   "valid": true
+  },
+  {
+   "id": "=433.002",
+   "valid": true
+  },
+  {
+   "id": "=433.003",
+   "valid": true
+  },
+  {
+   "id": "=433.003-KW025",
+   "valid": true
+  },
+  {
+   "id": "=433.003-KW040",
+   "valid": true
+  },
+  {
+   "id": "=433.003-KW150",
+   "valid": true
+  },
+  {
+   "id": "=433.003-KW155",
+   "valid": true
+  },
+  {
+   "id": "=433.003-KW201",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE001T",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE002T",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE003T",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE020T",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE025",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE150",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE155",
+   "valid": true
+  },
+  {
+   "id": "=433.003-UE201",
+   "valid": true
+  },
+  {
+   "id": "=433.003-XS001T",
+   "valid": true
+  },
+  {
+   "id": "=433.003-XS025",
+   "valid": true
+  },
+  {
+   "id": "=433.003UE001T",
+   "valid": false,
+   "note": "typo in the source: the hyphen before UE is missing (page 27)"
+  },
+  {
+   "id": "=433.004",
+   "valid": true
+  },
+  {
+   "id": "=433.005",
+   "valid": true
+  },
+  {
+   "id": "=433.006",
+   "valid": true
+  },
+  {
+   "id": "=434.001",
+   "valid": true
+  },
+  {
+   "id": "=434.002",
+   "valid": true
+  },
+  {
+   "id": "=442.001-UP001",
+   "valid": true
+  },
+  {
+   "id": "=442.001-UP002",
+   "valid": true
+  },
+  {
+   "id": "=442.001-UP003",
+   "valid": true
+  },
+  {
+   "id": "=442.001-UP004",
+   "valid": true
+  },
+  {
+   "id": "=442.001-UP114T",
+   "valid": true
+  },
+  {
+   "id": "=443.001",
+   "valid": true
+  },
+  {
+   "id": "=443.001-KW001",
+   "valid": true
+  },
+  {
+   "id": "=443.001-KX003",
+   "valid": true
+  },
+  {
+   "id": "=443.001-UN001T",
+   "valid": true
+  },
+  {
+   "id": "=443.001-UN002T",
+   "valid": true
+  },
+  {
+   "id": "=443.001-UN047",
+   "valid": true
+  },
+  {
+   "id": "=443.001-UN048",
+   "valid": true
+  },
+  {
+   "id": "=443.001-UN049",
+   "valid": true
+  },
+  {
+   "id": "=461.001",
+   "valid": true
+  },
+  {
+   "id": "=461.001-FS001",
+   "valid": true
+  },
+  {
+   "id": "=462.001",
+   "valid": true
+  },
+  {
+   "id": "=529.001",
+   "valid": true
+  },
+  {
+   "id": "=529.001-UD001",
+   "valid": true
+  },
+  {
+   "id": "=529.001-UD001T",
+   "valid": true
+  },
+  {
+   "id": "=529.001-UD002",
+   "valid": true
+  },
+  {
+   "id": "=529.001-UD003",
+   "valid": true
+  },
+  {
+   "id": "=529.001-UD004",
+   "valid": true
+  },
+  {
+   "id": "=529.001-UD005",
+   "valid": true
+  },
+  {
+   "id": "=542.001",
+   "valid": true
+  },
+  {
+   "id": "=542.001-KX401",
+   "valid": true
+  },
+  {
+   "id": "=542.001-KX405",
+   "valid": true
+  },
+  {
+   "id": "=542.001-RY001T",
+   "valid": true
+  },
+  {
+   "id": "=542.001-XS001T",
+   "valid": true
+  },
+  {
+   "id": "=543.001",
+   "valid": true
+  },
+  {
+   "id": "=554.001",
+   "valid": true
+  },
+  {
+   "id": "=554.001-KX501",
+   "valid": true
+  },
+  {
+   "id": "=554.001-KX502",
+   "valid": true
+  },
+  {
+   "id": "=554.001-UH001",
+   "valid": true
+  },
+  {
+   "id": "=554.001-UH002",
+   "valid": true
+  },
+  {
+   "id": "=554.001-UH101T",
+   "valid": true
+  },
+  {
+   "id": "=554.001-UH102T",
+   "valid": true
+  },
+  {
+   "id": "=563.001",
+   "valid": true
+  },
+  {
+   "id": "=563.002",
+   "valid": true
+  },
+  {
+   "id": "=563.003",
+   "valid": true
+  },
+  {
+   "id": "=564.001",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA001",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA001T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA002",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA003",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA004",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA101",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA102",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA103",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA104",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KA105",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KX001",
+   "valid": true
+  },
+  {
+   "id": "=564.001-KX001T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-OU001",
+   "valid": true
+  },
+  {
+   "id": "=564.001-OU001T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-OU002",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RB001",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RB001T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RB002",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RB100T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RB601",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RB602",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RM001T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RM601",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RT001T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RT002",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RT601",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RT602",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RY001T",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RY601",
+   "valid": true
+  },
+  {
+   "id": "=564.001-RY602",
+   "valid": true
+  },
+  {
+   "id": "=621.001-FS001",
+   "valid": true
+  }
+ ]
+}

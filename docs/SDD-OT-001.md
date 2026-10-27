@@ -271,18 +271,18 @@ Example pinned configuration (illustrative, refine with documented assumptions):
   "step_seconds": 60,
   "controller_step_seconds": 900,
   "zones": [
-    {"id": "ZONE-01", "tfm": "DEMO=360.001", "initial_temp_c": 21.0,
+    {"id": "ZONE-01", "tfm": "+DEMO01=564.001-RT601", "initial_temp_c": 21.0,
      "initial_setpoint_c": 21.0, "min_setpoint_c": 19.0, "max_setpoint_c": 23.0},
-    {"id": "ZONE-02", "tfm": "DEMO=360.002", "initial_temp_c": 21.0,
+    {"id": "ZONE-02", "tfm": "+DEMO01=564.001-RT602", "initial_temp_c": 21.0,
      "initial_setpoint_c": 21.0, "min_setpoint_c": 19.0, "max_setpoint_c": 23.0},
-    {"id": "ZONE-03", "tfm": "DEMO=360.003", "initial_temp_c": 21.0,
+    {"id": "ZONE-03", "tfm": "+DEMO01=564.001-RT603", "initial_temp_c": 21.0,
      "initial_setpoint_c": 21.0, "min_setpoint_c": 19.0, "max_setpoint_c": 23.0}
   ],
-  "comment": "TFM examples above are placeholders, not verified Statsbygg/WebPort identifiers"
+  "comment": "TFM identifiers are valid PA 0802 codes for the fictitious building +DEMO01, not identifiers of a real site"
 }
 ```
 
-Design avoids treating those illustrative TFM identifiers as official values. Official project-specific TFM codes must be mapped from authorized data in a separate change and tested against the site inventory.
+A zone's `tfm` is the TFM identifier of its temperature sensor in the bus system (`=564.001-RT60n`). The testbed validates every identifier against Statsbygg's code lists and maps every data point to a TFM object (`twin/tfm.py`, `docs/tfm.md`, ADR-010). Those identifiers belong to the fictitious building only. Official project-specific TFM codes must still be mapped from authorized data in a separate change and tested against the site inventory (D-08).
 
 ### Environmental result
 

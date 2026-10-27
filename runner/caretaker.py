@@ -38,7 +38,9 @@ The parts:
   the caretaker holds the current state and escalates.
 - **Telemetry checks**: a reading older than the guard's observation age is
   stale. A reading that jumps more than is physically plausible in one step
-  is suspect. Either puts the zone on the fallback and escalates once. The
+  is suspect. So is one with the wrong unit, or one that does not carry the
+  TFM identifier of that zone's temperature sensor (`twin.tfm`): a mis-mapped
+  point. Either puts the zone on the fallback and escalates once. The
   zone recovers only when a recovery criterion holds (fresh again, or the
   reverse jump) for an hour, and never in under 24 h.
 - **Optimizer faults** (`proposal_fault_rate`, seeded): a share of the
@@ -66,6 +68,7 @@ from typing import Any
 
 from runner.demo import STEP_S, ZONES, ReheatLearner, next_step, p1_target
 from twin.model import Twin
+from twin.tfm import zone_sensor_tfm
 from twin.plant import weather_compensated_supply_c
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -179,24 +182,27 @@ class Caretaker:
             stale = r.age_seconds > self.policy["max_observation_age_s"]
             jump = prev is not None and abs(r.measured_temp_c - prev) > self.policy["max_reading_jump_k_per_step"]
             wrong_unit = r.unit != "degC"
+            wrong_tfm = r.tfm != zone_sensor_tfm(z)   # a mis-mapped point (AT-09)
             delta = 0.0 if prev is None else r.measured_temp_c - prev
             newly = False
             fault = self._fault.get(z)
-            if self.validated and fault is None and (stale or jump or wrong_unit):
-                rule = "stale" if stale else "unit" if wrong_unit else "jump"
+            if self.validated and fault is None and (stale or jump or wrong_unit or wrong_tfm):
+                rule = "stale" if stale else "unit" if wrong_unit else "tfm" if wrong_tfm else "jump"
                 self._fault[z] = {"rule": rule, "sign": (delta > 0) - (delta < 0), "since": t, "recovered_at": None}
                 newly = True
                 self._alarm(t, z, r.measured_temp_c, prev, r.age_seconds, rule)
             elif fault is not None:
                 # Recovery criteria: a stale sensor is fresh again; a jumped one has
-                # jumped back by as much in the other direction; a wrong unit is
-                # right again. Then it must hold for recovery_hold_s, and the zone
+                # jumped back by as much in the other direction; a wrong unit or
+                # TFM identifier is right again. Then it must hold for recovery_hold_s, and the zone
                 # stays distrusted for at least suspect_latch_s in all.
                 rule = fault["rule"]
                 if rule == "stale":
                     ok = not stale
                 elif rule == "unit":
                     ok = not wrong_unit
+                elif rule == "tfm":
+                    ok = not wrong_tfm
                 else:
                     ok = fault["recovered_at"] is not None or (jump and (delta > 0) - (delta < 0) == -fault["sign"])
                 if not ok:
@@ -228,7 +234,8 @@ class Caretaker:
                                           "max_reading_jump_k_per_step": self.policy["max_reading_jump_k_per_step"]},
                             "action": "zone on the fallback until the recovery criterion holds; escalated",
                             "recovery": {"stale": "fresh for recovery_hold_s", "jump": "the reverse jump, then recovery_hold_s",
-                                         "unit": "degC again for recovery_hold_s"}[rule],
+                                         "unit": "degC again for recovery_hold_s",
+                                         "tfm": "the expected TFM identifier again for recovery_hold_s"}[rule],
                             "ground_truth": [d.kind for d in truth] or ["none (false alarm)"]})
 
     def finish(self) -> None:

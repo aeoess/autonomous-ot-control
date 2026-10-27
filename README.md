@@ -40,6 +40,7 @@ suite against that stack from a clean bootstrap; evidence lands in `artifacts/`.
 | Governed-agent vs baseline comparison (AT-16) | `NOT_ESTABLISHED` |
 | Strategies P0/P1/P2/P3 over 2025 in all five price areas, verified local prices and weather ([report](docs/results/2026-10-27/areas-2025.html)) | `TESTED_LOCALLY` — offline, applied directly, not through REMORA |
 | Caretaker P3: overlays, profiles, independent validator, fallback, FDD; A/B/C with seeded faults ([report](docs/results/2026-10-27/abc-2025.html), ADR-009) | `TESTED_LOCALLY` — offline; only `set_zone_setpoint` is a governed tool |
+| TFM (Statsbygg PA 0802): register of every system and component code, parser and validator, every data point mapped to a TFM object ([docs/tfm.md](docs/tfm.md), ADR-010) | `TESTED_LOCALLY` — fictitious building `+DEMO01`; a real site's TFM needs its approved inventory (D-08) |
 | Miniflare / Cloudflare / federation | `NOT_ESTABLISHED` (PR 4–6) |
 | Real-building savings, physical OT safety | `NOT_ESTABLISHED` — synthetic model only |
 

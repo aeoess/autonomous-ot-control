@@ -36,7 +36,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-RT901",
+      "tfm_role": "measured"
     },
     {
       "id": "OUT-01.Solar",
@@ -60,7 +62,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RJ901",
+      "tfm_role": "measured"
     },
     {
       "id": "OUT-01.RH",
@@ -79,7 +83,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RH901",
+      "tfm_role": "measured"
     },
     {
       "id": "OUT-01.Precipitation",
@@ -98,7 +104,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=745.001-QH901",
+      "tfm_role": "measured"
     },
     {
       "id": "OUT-01.IcingRisk",
@@ -118,7 +126,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "OUT-01.SurfaceWet",
@@ -140,7 +150,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=745.001-QH902",
+      "tfm_role": "measured"
     },
     {
       "id": "OUT-01.Temp24hMean",
@@ -159,7 +171,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "GRID-01.SpotPrice",
@@ -178,7 +192,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": null,
+      "tfm_role": "input"
     },
     {
       "id": "EM-01.Cost",
@@ -195,7 +211,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "ZONE-01.AirTemp",
@@ -216,7 +234,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RT601",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-01.Occupants",
@@ -239,7 +259,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RB601",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-01.LightingMode",
@@ -260,7 +282,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-OU601",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-01.DaylightHarvesting",
@@ -281,7 +305,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-OU601",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-01.EquipmentFactor",
@@ -300,7 +326,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": null,
+      "tfm_role": "input"
     },
     {
       "id": "ZONE-01.HeatingSetpoint",
@@ -324,7 +352,9 @@
         "IL-03",
         "IL-11"
       ],
-      "resolution": 0.1
+      "resolution": 0.1,
+      "tfm": "+DEMO01=564.001-OU601",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-01.CoolingSetpoint",
@@ -346,7 +376,9 @@
         "IL-01",
         "IL-11"
       ],
-      "resolution": 0.1
+      "resolution": 0.1,
+      "tfm": "+DEMO01=564.001-OU601",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-01.CO2Setpoint",
@@ -367,7 +399,9 @@
       "interlocks": [
         "IL-07"
       ],
-      "resolution": 10
+      "resolution": 10,
+      "tfm": "+DEMO01=564.001-OU601",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-01.LuxSetpoint",
@@ -388,7 +422,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": 10
+      "resolution": 10,
+      "tfm": "+DEMO01=564.001-OU601",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-01.RadiatorValve",
@@ -407,7 +443,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-KA101",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-01.RadiatorPower",
@@ -427,7 +465,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.002-LH001",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-01.CoolingPower",
@@ -447,7 +487,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=370.001-LC001",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-01.Airflow",
@@ -468,7 +510,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-SQ401",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-01.CO2",
@@ -487,7 +531,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RY601",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-01.Daylight",
@@ -506,7 +552,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RJ601",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-01.Illuminance",
@@ -523,7 +571,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RJ601",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-01.LightingPower",
@@ -543,7 +593,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=442.001-SI001",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-01.EquipmentPower",
@@ -563,7 +615,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=433.001-UE101",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-01.SolarGain",
@@ -582,7 +636,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "ZONE-02.AirTemp",
@@ -603,7 +659,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RT602",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-02.Occupants",
@@ -626,7 +684,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RB602",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-02.LightingMode",
@@ -647,7 +707,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-OU602",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-02.DaylightHarvesting",
@@ -668,7 +730,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-OU602",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-02.EquipmentFactor",
@@ -687,7 +751,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": null,
+      "tfm_role": "input"
     },
     {
       "id": "ZONE-02.HeatingSetpoint",
@@ -711,7 +777,9 @@
         "IL-03",
         "IL-11"
       ],
-      "resolution": 0.1
+      "resolution": 0.1,
+      "tfm": "+DEMO01=564.001-OU602",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-02.CoolingSetpoint",
@@ -733,7 +801,9 @@
         "IL-01",
         "IL-11"
       ],
-      "resolution": 0.1
+      "resolution": 0.1,
+      "tfm": "+DEMO01=564.001-OU602",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-02.CO2Setpoint",
@@ -754,7 +824,9 @@
       "interlocks": [
         "IL-07"
       ],
-      "resolution": 10
+      "resolution": 10,
+      "tfm": "+DEMO01=564.001-OU602",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-02.LuxSetpoint",
@@ -775,7 +847,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": 10
+      "resolution": 10,
+      "tfm": "+DEMO01=564.001-OU602",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-02.RadiatorValve",
@@ -794,7 +868,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-KA102",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-02.RadiatorPower",
@@ -814,7 +890,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.002-LH002",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-02.CoolingPower",
@@ -834,7 +912,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=370.001-LC002",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-02.Airflow",
@@ -855,7 +935,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-SQ402",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-02.CO2",
@@ -874,7 +956,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RY602",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-02.Daylight",
@@ -893,7 +977,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RJ602",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-02.Illuminance",
@@ -910,7 +996,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RJ602",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-02.LightingPower",
@@ -930,7 +1018,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=442.001-SI002",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-02.EquipmentPower",
@@ -950,7 +1040,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=433.001-UE102",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-02.SolarGain",
@@ -969,7 +1061,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "ZONE-03.AirTemp",
@@ -990,7 +1084,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RT603",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-03.Occupants",
@@ -1013,7 +1109,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RB603",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-03.LightingMode",
@@ -1034,7 +1132,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-OU603",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-03.DaylightHarvesting",
@@ -1055,7 +1155,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-OU603",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-03.EquipmentFactor",
@@ -1074,7 +1176,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": null,
+      "tfm_role": "input"
     },
     {
       "id": "ZONE-03.HeatingSetpoint",
@@ -1098,7 +1202,9 @@
         "IL-03",
         "IL-11"
       ],
-      "resolution": 0.1
+      "resolution": 0.1,
+      "tfm": "+DEMO01=564.001-OU603",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-03.CoolingSetpoint",
@@ -1120,7 +1226,9 @@
         "IL-01",
         "IL-11"
       ],
-      "resolution": 0.1
+      "resolution": 0.1,
+      "tfm": "+DEMO01=564.001-OU603",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-03.CO2Setpoint",
@@ -1141,7 +1249,9 @@
       "interlocks": [
         "IL-07"
       ],
-      "resolution": 10
+      "resolution": 10,
+      "tfm": "+DEMO01=564.001-OU603",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-03.LuxSetpoint",
@@ -1162,7 +1272,9 @@
       "interlocks": [
         "IL-08"
       ],
-      "resolution": 10
+      "resolution": 10,
+      "tfm": "+DEMO01=564.001-OU603",
+      "tfm_role": "setpoint"
     },
     {
       "id": "ZONE-03.RadiatorValve",
@@ -1181,7 +1293,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-KA103",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-03.RadiatorPower",
@@ -1201,7 +1315,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.002-LH003",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-03.CoolingPower",
@@ -1221,7 +1337,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=370.001-LC003",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-03.Airflow",
@@ -1242,7 +1360,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-SQ403",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-03.CO2",
@@ -1261,7 +1381,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RY603",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-03.Daylight",
@@ -1280,7 +1402,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RJ603",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-03.Illuminance",
@@ -1297,7 +1421,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=564.001-RJ603",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-03.LightingPower",
@@ -1317,7 +1443,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=442.001-SI003",
+      "tfm_role": "state"
     },
     {
       "id": "ZONE-03.EquipmentPower",
@@ -1337,7 +1465,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=433.001-UE103",
+      "tfm_role": "measured"
     },
     {
       "id": "ZONE-03.SolarGain",
@@ -1356,7 +1486,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "HYD-01.SupplyTemp",
@@ -1377,7 +1509,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.002-RT401",
+      "tfm_role": "measured"
     },
     {
       "id": "HYD-01.HeatingSeason",
@@ -1402,7 +1536,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-OU001",
+      "tfm_role": "state"
     },
     {
       "id": "HYD-01.HeatDemand",
@@ -1421,7 +1557,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-OU001",
+      "tfm_role": "state"
     },
     {
       "id": "TANK-01.Temp",
@@ -1443,7 +1581,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-RT402",
+      "tfm_role": "measured"
     },
     {
       "id": "TANK-01.Setpoint",
@@ -1468,7 +1608,9 @@
         "IL-04",
         "IL-11"
       ],
-      "resolution": 0.5
+      "resolution": 0.5,
+      "tfm": "+DEMO01=320.001-OU001",
+      "tfm_role": "setpoint"
     },
     {
       "id": "TANK-01.Loss",
@@ -1485,7 +1627,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-NT001",
+      "tfm_role": "state"
     },
     {
       "id": "HP-01.Running",
@@ -1508,7 +1652,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=356.001-IK001",
+      "tfm_role": "state"
     },
     {
       "id": "HP-01.COP",
@@ -1529,7 +1675,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "HP-01.HeatOutput",
@@ -1550,7 +1698,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=356.001-IK001",
+      "tfm_role": "state"
     },
     {
       "id": "HP-01.ElectricPower",
@@ -1571,7 +1721,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=356.001-RE001",
+      "tfm_role": "measured"
     },
     {
       "id": "HP-01.Starts",
@@ -1590,7 +1742,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=356.001-IK001",
+      "tfm_role": "state"
     },
     {
       "id": "HP-01.Defrost",
@@ -1609,7 +1763,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=356.001-IK001",
+      "tfm_role": "state"
     },
     {
       "id": "HP-01.HighPressureCutout",
@@ -1628,7 +1784,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=356.001-QP001",
+      "tfm_role": "state"
     },
     {
       "id": "HP-01.BackupHeaterPower",
@@ -1650,7 +1808,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-LI401",
+      "tfm_role": "state"
     },
     {
       "id": "HP-01.MaxFraction",
@@ -1676,7 +1836,9 @@
         "IL-09",
         "IL-11"
       ],
-      "resolution": 0.05
+      "resolution": 0.05,
+      "tfm": "+DEMO01=356.001-IK001",
+      "tfm_role": "setpoint"
     },
     {
       "id": "DH-01.HeatPower",
@@ -1698,7 +1860,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-OE001",
+      "tfm_role": "measured"
     },
     {
       "id": "DH-01.SupplyTemp",
@@ -1717,7 +1881,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-RT403",
+      "tfm_role": "measured"
     },
     {
       "id": "EB-01.ElectricPower",
@@ -1739,7 +1905,9 @@
       ],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-IE001",
+      "tfm_role": "state"
     },
     {
       "id": "AHU-01.Enabled",
@@ -1762,7 +1930,9 @@
       "interlocks": [
         "IL-06"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-OU001",
+      "tfm_role": "setpoint"
     },
     {
       "id": "AHU-01.SupplyAirSetpoint",
@@ -1786,7 +1956,9 @@
         "IL-05",
         "IL-11"
       ],
-      "resolution": 0.5
+      "resolution": 0.5,
+      "tfm": "+DEMO01=360.001-OU001",
+      "tfm_role": "setpoint"
     },
     {
       "id": "AHU-01.Airflow",
@@ -1806,7 +1978,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-RF401",
+      "tfm_role": "measured"
     },
     {
       "id": "AHU-01.FanPower",
@@ -1825,7 +1999,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-JV401",
+      "tfm_role": "state"
     },
     {
       "id": "AHU-01.HRV_Efficiency",
@@ -1842,7 +2018,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-LX401",
+      "tfm_role": "state"
     },
     {
       "id": "AHU-01.HRV_Bypass",
@@ -1859,7 +2037,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-SS401",
+      "tfm_role": "state"
     },
     {
       "id": "AHU-01.HRV_AfterTemp",
@@ -1879,7 +2059,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-RT402",
+      "tfm_role": "measured"
     },
     {
       "id": "AHU-01.ExtractAirTemp",
@@ -1898,7 +2080,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-RT501",
+      "tfm_role": "measured"
     },
     {
       "id": "AHU-01.SupplyAirTemp",
@@ -1919,7 +2103,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-RT401",
+      "tfm_role": "measured"
     },
     {
       "id": "AHU-01.HeatingCoilPower",
@@ -1938,7 +2124,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-LV402",
+      "tfm_role": "state"
     },
     {
       "id": "AHU-01.CoolingCoilPower",
@@ -1957,7 +2145,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=360.001-LK401",
+      "tfm_role": "state"
     },
     {
       "id": "CH-01.CoolingLoad",
@@ -1976,7 +2166,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=370.001-IK001",
+      "tfm_role": "state"
     },
     {
       "id": "CH-01.EER",
@@ -1995,7 +2187,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "CH-01.ElectricPower",
@@ -2014,7 +2208,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=370.001-RE001",
+      "tfm_role": "measured"
     },
     {
       "id": "CABLE-RAMP.Mode",
@@ -2036,7 +2232,9 @@
       "interlocks": [
         "IL-10"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=745.001-OU001",
+      "tfm_role": "setpoint"
     },
     {
       "id": "CABLE-RAMP.Power",
@@ -2055,7 +2253,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=745.001-LZ001",
+      "tfm_role": "state"
     },
     {
       "id": "CABLE-RAMP.IcingRiskUncovered",
@@ -2072,7 +2272,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "CABLE-RAMP.IcingHazardUncovered",
@@ -2089,7 +2291,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "CABLE-GUTTER.Mode",
@@ -2111,7 +2315,9 @@
       "interlocks": [
         "IL-10"
       ],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=450.001-OU001",
+      "tfm_role": "setpoint"
     },
     {
       "id": "CABLE-GUTTER.Power",
@@ -2130,7 +2336,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=450.001-LZ001",
+      "tfm_role": "state"
     },
     {
       "id": "CABLE-GUTTER.IcingRiskUncovered",
@@ -2147,7 +2355,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "CABLE-GUTTER.IcingHazardUncovered",
@@ -2164,7 +2374,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "EM-01.ElectricPower",
@@ -2183,7 +2395,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=432.001-RE001",
+      "tfm_role": "measured"
     },
     {
       "id": "EM-01.DistrictHeatPower",
@@ -2202,7 +2416,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=320.001-OE001",
+      "tfm_role": "measured"
     },
     {
       "id": "EM-01.MonthlyPeakKw",
@@ -2221,7 +2437,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     },
     {
       "id": "EM-01.GridCost",
@@ -2238,7 +2456,9 @@
       "variants": [],
       "writable_via": null,
       "interlocks": [],
-      "resolution": null
+      "resolution": null,
+      "tfm": "+DEMO01=562.001-OF001",
+      "tfm_role": "calculated"
     }
   ],
   "interlocks": [

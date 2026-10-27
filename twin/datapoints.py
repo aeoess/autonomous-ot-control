@@ -35,6 +35,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from twin import tfm as _tfm
+
 ROOT = Path(__file__).resolve().parents[1]
 ZONES = ("ZONE-01", "ZONE-02", "ZONE-03")
 ZONE_NAMES = {"ZONE-01": "open-plan office", "ZONE-02": "meeting room",
@@ -491,7 +493,8 @@ def build() -> Catalogue:
 def as_json(c: Catalogue) -> dict[str, Any]:
     return {"schema": "ot-datapoints/v1", "model": "three-zone-hvac-v1",
             "kinds": KINDS,
-            "points": [asdict(p) for p in c.points],
+            "points": [{**asdict(p), "tfm": _tfm.point_tfm(p.id)["tfm"], "tfm_role": _tfm.point_tfm(p.id)["role"]}
+                       for p in c.points],
             "interlocks": [asdict(i) for i in c.interlocks],
             "tools": [asdict(t) for t in c.tools],
             "procedures": [asdict(r) for r in c.procedures],
@@ -511,6 +514,10 @@ def render_markdown(c: Catalogue) -> str:
            "Every value the simulated building exposes or accepts. The twin is synthetic and "
            "uncalibrated (ADR-007); ranges are plausibility bounds for validation, not design values. "
            "Writable points change only through the governed tools below, never directly.", "",
+           "Every point names the TFM object behind it (Statsbygg PA 0802; `docs/tfm.md`) and its role: "
+           "`measured` by a sensor, `setpoint` written to a controller, `state` of equipment, `calculated` "
+           "in central operations, or `input` with no building object. The TFM identifiers belong to the "
+           "fictitious building `+DEMO01`.", "",
            f"{len(c.points)} points, {len(c.interlocks)} interlocks, {len(c.tools)} tools, "
            f"{len(c.procedures)} procedures, {len(c.cascades)} documented cascades.", "",
            "Kinds: " + "; ".join(f"`{k}` {v}" for k, v in KINDS.items()) + ".", ""]
@@ -520,12 +527,14 @@ def render_markdown(c: Catalogue) -> str:
     out += ["## Points", ""]
     for sysname, pts in systems.items():
         out += [f"### {sysname}", "",
-                "| Id | Kind | Unit | Range | Description | Source | Affects | Written by |",
-                "|---|---|---|---|---|---|---|---|"]
+                "| Id | TFM | Kind | Unit | Range | Description | Source | Affects | Written by |",
+                "|---|---|---|---|---|---|---|---|---|"]
         for p in pts:
             var = f" *(only: {', '.join(p.variants)})*" if p.variants else ""
             w = f"`{p.writable_via}` ({', '.join(p.interlocks)})" if p.writable_via else ""
-            out.append(f"| `{p.id}` | {p.kind} | {p.unit} | {_fmt_range(p.range)} | "
+            t = _tfm.point_tfm(p.id)
+            tf = f"`{t['tfm']}` ({t['role']})" if t["tfm"] else f"({t['role']})"
+            out.append(f"| `{p.id}` | {tf} | {p.kind} | {p.unit} | {_fmt_range(p.range)} | "
                        f"{p.description}{var} | {p.source} | "
                        f"{', '.join(f'`{a}`' for a in p.affects)} | {w} |")
         out.append("")
