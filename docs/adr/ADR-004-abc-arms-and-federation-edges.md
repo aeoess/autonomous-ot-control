@@ -140,40 +140,38 @@ execution → observed effect itself. Each claim is isolated per
 (AT-17) are generated beside the originals, so a verifier's negative path is
 exercised as well as its positive one.
 
-### Edge candidates from #177 (not commitments)
+### Who takes part: opt-in only
 
-`docs/federation/edge-registry.yaml` lists every #177 participant whose
-published artifact fits a testbed boundary. For each it records the pin, the
-licence as stated, the boundary, whether the participant offered to run or
-integrate, the claim ceiling, and `status: CANDIDATE_NOT_INVITED`. Being
-listed is not consent (SDD §9). A status moves only when the participant
-says yes in public.
+No project is listed or named before it joins. A participant joins by opening a
+pull request that adds `federation/edges/<edge-id>/` with its own manifest and
+adapter (`docs/federation/README.md`). That pull request is the consent record,
+and `docs/federation/edge-registry.yaml` lists only edges that joined this way.
+Being mentioned in a public discussion, including issue #177, is not joining.
 
-**Recommended first pair (D-07): one offline edge and one inline edge.**
+**Recommended first pair (D-07): one offline edge and one inline edge**, by
+boundary, whoever volunteers for them:
 
-1. **Offline: corpus adequacy** (Rul1an, `corpus-adequacy`).
-   - It mutates our acceptance corpus and reports which seeded faults survive, which tests the suite itself (AT-18).
-   - It has three completed rounds against REMORA's evidence-sufficiency corpus, and the report-to-owner-first protocol already works.
-   - It needs only the exported corpus, with no credentials and no live loop.
-2. **Inline: federation-port v0 admission** (aeoess, `federation-port`).
-   - REMORA already ships an adapter at `integrations/federation-port/remora-adapter`.
-   - Federation-port v0 checks before dispatch only, which is exactly the inline position.
-   - It gives C a second, independently authored pre-dispatch decision.
+1. **Offline: corpus adequacy.** It mutates the acceptance corpus and reports
+   which seeded faults survive. That tests the suite itself (AT-18). It needs
+   only the exported corpus, with no credentials and no live loop.
+2. **Inline: an independent pre-dispatch admission check.** It gives arm C a
+   second, independently authored decision before dispatch, and may only add
+   refusals.
 
-Next candidates, each blocked on something stated:
-- **Probity `agent-evidence-vectors`** (astrogilda): an offline execution → effect check. It needs the envelope export first.
-- **Agent Errata's negative-runner check** (piiiico): runner validity. It is offered conditionally.
-- **AgentAvow / DriftGuard:** tool-definition integrity. They need an MCP surface the testbed does not have yet, which is the OT-006 gateway.
+Next, each blocked on something stated:
 
-Frequency stays excluded until altrudev designates a version, because altrudev
-said explicitly that no use is authorized.
+- **Offline execution → effect evidence verifiers.** These need the published
+  fixture set.
+- **Runner-validity checks.** These need the negative-control fixtures.
+- **Tool-definition integrity checks.** These need an MCP tool surface, which
+  is the OT-006 gateway.
 
 ## Owner decisions this ADR needs
 
 | ID | Decision | Recommended default |
 |---|---|---|
 | D-04 | Agent provider for episodes | Scripted, deterministic proposal stream first; an LLM proposer later, as a separate arm property, never mixed into the same counts |
-| D-07 | Which two edges to invite, and when | The first pair above, invited only after PR #3 and the envelope export have merged, so they get pinned, runnable artifacts |
+| D-07 | Which edge types to open first, and when | The first pair above, opened to volunteers once the fixture set and the onboarding kit are published, so a joining project gets pinned, runnable artifacts |
 | D-10 | Is arm A allowed in CI? | Yes, under its own compose project, with the `KNOWN_NEGATIVE` label and a test that the default files never reference it |
 | D-11 | Freeze point for the first comparison | Episode file, oracle and seeds committed in one PR before the first scored run; later changes make a new episode id, and old results stay |
 

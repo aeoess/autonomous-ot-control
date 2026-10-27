@@ -424,19 +424,19 @@ Contributor images receive synthetic fixtures, read-only test assets, non-root u
 
 Participants run `./deploy/scripts/run-demo.sh --profile federation` and publish only sanitized pinned artifacts under `artifacts/` in their own run. Federated adapters are opt-in and isolated: not auto-discovered from arbitrary packages and never loaded inside the REMORA credential-holder process.
 
-## 9. Federation edges worth inviting (not confirmed commitments)
+## 9. Federation edge types worth opening (participation is opt-in)
 
-The source is [Agent Governance Vocabulary #177](https://github.com/aeoess/agent-governance-vocabulary/issues/177): *independent projects, shared boundaries, verifiable evidence*. Being named in the thread is **not** consent or assignment. Seek explicit invitations before a name appears as an owner of a task.
+The source is [Agent Governance Vocabulary #177](https://github.com/aeoess/agent-governance-vocabulary/issues/177): *independent projects, shared boundaries, verifiable evidence*. Being named in the thread is **not** consent or assignment. No project is listed in this repository before its maintainer joins by pull request (`docs/federation/README.md`).
 
 | Potential edge | Why useful for OT demo | Bounded test offer | Claim ceiling |
 |---|---|---|---|
-| Agent Passport System / authority issuers (AGV participants) | Cross-project authority/delegation understanding | Read a **synthetic signed work-order/authority fixture** and determine what it permits; compare identifier and scope bindings | Verifies a fixture, not live BMS authorization or REMORA policy correctness |
-| AgentAvow / named-tool attestation | Recognize exact served MCP tool definitions and detect drift | Pin one tool's manifest/digest, alter a schema or target and demand mismatch | Definition integrity only; not evidence tool performed correctly |
-| JEP/evidence or independent receipt verifiers | Keep execution identity, observation and effect claims separate | Validate one synthetic `execution → observed effect` envelope and targeted mutations | Declared fields and verifier vantage only; not general physical effect authenticity |
-| Rul1an / corpus adequacy tooling | Find surviving adversarial cases in OT safety corpus | Seed bounded faults in fake sensor, stale observation, mismatch, failed effect verification | Adequacy *against seeded faults*, not independent measurement of full safety |
-| Agent Errata / test-runner validity | Catch false passes and stale artifacts in CI/test harness | Force failing verifier, require nonzero exit, no fresh PASS and no stale report reuse | Runner correctness, not control-system safety |
+| Authority / delegation issuers | Cross-project authority/delegation understanding | Read a **synthetic signed work-order/authority fixture** and determine what it permits; compare identifier and scope bindings | Verifies a fixture, not live BMS authorization or REMORA policy correctness |
+| Named-tool attestation | Recognize exact served MCP tool definitions and detect drift | Pin one tool's manifest/digest, alter a schema or target and demand mismatch | Definition integrity only; not evidence tool performed correctly |
+| Independent receipt / evidence verifiers | Keep execution identity, observation and effect claims separate | Validate one synthetic `execution → observed effect` envelope and targeted mutations | Declared fields and verifier vantage only; not general physical effect authenticity |
+| Corpus adequacy tooling | Find surviving adversarial cases in OT safety corpus | Seed bounded faults in fake sensor, stale observation, mismatch, failed effect verification | Adequacy *against seeded faults*, not independent measurement of full safety |
+| Test-runner validity checks | Catch false passes and stale artifacts in CI/test harness | Force failing verifier, require nonzero exit, no fresh PASS and no stale report reuse | Runner correctness, not control-system safety |
 
-Prioritize **two initial independent edges**, not all five. Recommended first pair: (1) named-tool digest/definition binding and (2) negative-test runner integrity or external evidence reader. Add authority/delegation only when an upstream pinned, permission-compatible fixture is available. A component by Probity or any other project remains separately owned: do **not** copy their code, tests, proprietary schema/text or unpublished vectors. Write a clean independent consumer for public protocols and cite source/provenance.
+Prioritize **two initial independent edges**, not all five. Recommended first pair: (1) named-tool digest/definition binding and (2) negative-test runner integrity or external evidence reader. Add authority/delegation only when an upstream pinned, permission-compatible fixture is available. A component by any participating project remains separately owned: do **not** copy their code, tests, proprietary schema/text or unpublished vectors. Write a clean independent consumer for public protocols and cite source/provenance.
 
 A participant's PR **may add** `federation/edges/<edge-id>/` with a pinned adapter and `run.md`. It **may not** alter `adapter/registry.py`, the protected dispatcher image, guard limits or the policy manifest without an internal review and a separate safety PR. No blanket code execution within the privileged runtime.
 
