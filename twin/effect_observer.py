@@ -72,6 +72,11 @@ class EffectObserver:
                                    "detail": "no_operation_record"})
             rec = op.json()
             base["operation_status"] = rec["status"]
+            # The record is proof only for its own tool and target. A record of another
+            # tool that happens to carry this zone and value is not this effect.
+            if rec.get("tool_name", "set_zone_setpoint") != "set_zone_setpoint":
+                return self._seal({**base, "effect_status": EFFECT_MISMATCH,
+                                   "detail": "operation_tool_mismatch"})
             if rec["zone_id"] != zone_id:
                 return self._seal({**base, "effect_status": EFFECT_MISMATCH, "detail": "zone_mismatch"})
             if rec["status"] != "APPLIED":
@@ -135,6 +140,12 @@ class EffectObserver:
             if rec["status"] != "APPLIED":
                 return self._seal({**base, "effect_status": EFFECT_MISMATCH,
                                    "detail": f"operation_rejected:{rec.get('reason')}"})
+            # Bind the record to the claim before looking at the plant: the plant
+            # showing the desired state proves nothing about *this* operation unless
+            # the record names the same tool, the same target and the same value.
+            binding = self._binding_mismatch(rec, tool_name, arguments)
+            if binding is not None:
+                return self._seal({**base, "effect_status": EFFECT_MISMATCH, "detail": binding})
             sp = p["setpoints"]
             obs_fields = self._extract_plant_fields(tool_name, arguments, sp)
             if obs_fields is None:
@@ -156,6 +167,47 @@ class EffectObserver:
         except (ValueError, KeyError, TypeError) as e:
             return self._seal({**base, "effect_status": EFFECT_VERIFIER_FAILED,
                                "detail": f"malformed_response:{type(e).__name__}"})
+
+    #: For every governed plant tool: how its target is named in the operation
+    #: record, and which argument carries the value the record must have applied.
+    _TOOL_BINDING: dict[str, tuple[str | None, str | tuple[str, ...]]] = {
+        "set_zone_cooling_setpoint": ("zone_id", "cooling_c"),
+        "set_zone_co2_setpoint": ("zone_id", "co2_ppm"),
+        "set_zone_lighting_setpoint": ("zone_id", "lux"),
+        "set_zone_lighting_mode": ("zone_id", ("mode", "daylight_harvesting")),
+        "set_supply_air_setpoint": (None, "supply_air_c"),
+        "set_tank_setpoint": (None, "tank_c"),
+        "set_heat_pump_limit": (None, "max_fraction"),
+        "set_ahu_enabled": (None, "enabled"),
+        "set_heating_cable_mode": ("circuit", "mode"),
+    }
+    _SYSTEM_TARGET = {"set_supply_air_setpoint": "AHU-01", "set_tank_setpoint": "TANK-01",
+                      "set_heat_pump_limit": "HP-01", "set_ahu_enabled": "AHU-01"}
+
+    @classmethod
+    def _binding_mismatch(cls, rec: dict[str, Any], tool_name: str, args: dict[str, Any]) -> str | None:
+        """Why this record is not evidence for this claim, or None when it is bound to it."""
+        if rec.get("tool_name") != tool_name:
+            return "operation_tool_mismatch"
+        spec = cls._TOOL_BINDING.get(tool_name)
+        if spec is None:
+            return "unknown_target"
+        target_arg, value_arg = spec
+        expected_target = cls._SYSTEM_TARGET.get(tool_name) if target_arg is None else str(args.get(target_arg))
+        if str(rec.get("target") or rec.get("zone_id")) != expected_target:
+            return "operation_target_mismatch"
+        applied = rec.get("new_value", rec.get("new_setpoint_c"))
+        if isinstance(value_arg, tuple):
+            expected: Any = {k: args.get(k) for k in value_arg}
+            if not isinstance(applied, dict) or any(applied.get(k) != v for k, v in expected.items()):
+                return "recorded_value_differs"
+            return None
+        expected = args.get(value_arg)
+        if isinstance(expected, bool) or isinstance(applied, bool):
+            return None if bool(applied) == bool(expected) else "recorded_value_differs"
+        if isinstance(expected, (int, float)) and isinstance(applied, (int, float)):
+            return None if abs(float(applied) - float(expected)) <= 1e-6 else "recorded_value_differs"
+        return None if applied == expected else "recorded_value_differs"
 
     @staticmethod
     def _extract_plant_fields(tool_name: str, args: dict[str, Any],

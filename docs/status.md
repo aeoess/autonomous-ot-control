@@ -32,6 +32,7 @@ Statsbygg PA 0802 TFM mapping, and the opt-in federation onboarding kit.
 | Separate read / actuator / control listeners and credentials | `TESTED_LOCALLY` |
 | Runner and harness cannot reach the actuator over Docker networks (AT-05) | `TESTED_DOCKER` |
 | Read-only effect observer (`same_test_deployment` vantage) + ToolSpec v5 signed postconditions | `TESTED_LOCALLY` |
+| Observer binds an effect to the operation that claims it: same tool, same target, same applied value, or `EFFECT_MISMATCH` whatever the plant shows (finding of 2026-10-27, `tests/unit/test_effect_observer_binding.py`) | `TESTED_LOCALLY` — before the fix an applied operation's id passed as proof of another tool's or zone's effect when the desired state already existed |
 | Rule baseline, scoring, evidence manifest | `TESTED_LOCALLY` |
 | Signed ToolSpec enforced by REMORA (schema, target, closure digest, pinned bundle) | `TESTED_DOCKER` |
 | Signed cumulative limits, mandatory; ZONE-03 budget refuses what the interlock allows (LIM-01) | `TESTED_DOCKER` |
