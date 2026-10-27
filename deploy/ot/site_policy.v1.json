@@ -1,0 +1,34 @@
+{
+  "schema": "ot-site-policy/v1",
+  "building_id": "demo-building-001",
+  "comment": "Hard constraints the caretaker's validator enforces, independent of any optimizer. Every value names its source. For the fictitious twin they come from the twin's interlocks (docs/datapoints.md) and the scenario. A real site must replace every value marked site_required from its design basis, commissioning and regulations (TEK17 13-1, NS-EN 16798-1/-3, the water-safety plan); none of them is a universal number.",
+  "constraints": {
+    "occupied_heating_min_c": {"value": 20.0, "source": "IL-02 (twin)", "site_required": true},
+    "setback_floor_c": {"value": 16.0, "source": "caretaker design: deepest recoverable setback in the twin (ADR-007 Addendum 2)", "site_required": true},
+    "frost_floor_c": {"value": 8.0, "source": "IL-03 (twin)", "site_required": true},
+    "frost_overlay_zone_c": {"value": 12.0, "source": "caretaker design: frost floor + 4 K margin", "site_required": true},
+    "frost_overlay_heating_min_c": {"value": 18.0, "source": "caretaker design", "site_required": true},
+    "frost_overlay_outdoor_mean_c": {"value": -20.0, "source": "caretaker design", "site_required": true},
+    "heating_cooling_deadband_k": {"value": 2.0, "source": "IL-01 (twin)", "site_required": true},
+    "cooling_max_c": {"value": 28.0, "source": "caretaker design: unoccupied cooling setback", "site_required": true},
+    "tank_min_c": {"value": 35.0, "source": "IL-04 (twin)", "site_required": true},
+    "tank_max_c": {"value": 55.0, "source": "IL-04 (twin) less a 5 K high-pressure margin", "site_required": true},
+    "tank_max_step_k": {"value": 3.0, "source": "IL-04 (twin), per 15 min", "site_required": true},
+    "supply_air_min_c": {"value": 15.0, "source": "IL-05 (twin)", "site_required": true},
+    "supply_air_max_c": {"value": 21.0, "source": "IL-05 (twin)", "site_required": true},
+    "supply_air_max_step_k": {"value": 1.0, "source": "IL-11 (twin), per 15 min", "site_required": true},
+    "co2_setpoint_min_ppm": {"value": 600.0, "source": "IL-07 (twin)", "site_required": true},
+    "co2_setpoint_max_ppm": {"value": 1000.0, "source": "IL-07 (twin)", "site_required": true},
+    "iaq_overlay_co2_ppm": {"value": 950.0, "source": "caretaker design: 50 ppm below the IL-07 ceiling", "site_required": true},
+    "occupied_lux_min": {"value": 300.0, "source": "IL-08 (twin)", "site_required": true},
+    "heating_max_step_k": {"value": 1.0, "source": "IL-11 (twin)", "site_required": true},
+    "icing_band_c": {"value": [-10.0, 1.0], "source": "IL-10 (twin)", "site_required": true},
+    "max_observation_age_s": {"value": 600, "source": "twin guard max_observation_age_seconds", "site_required": true},
+    "max_reading_jump_k_per_step": {"value": 1.5, "source": "caretaker design: largest plausible change of a zone over 15 min in the twin", "site_required": true},
+    "suspect_latch_s": {"value": 86400, "source": "caretaker design: a suspect sensor stays distrusted for at least 24 h and is escalated", "site_required": true},
+    "recovery_hold_s": {"value": 3600, "source": "caretaker design: the recovery criterion (fresh again, or the reverse jump) must hold for 1 h", "site_required": true}
+  },
+  "not_applicable": {
+    "domestic_hot_water": "The twin has no domestic hot water, so no water-safety overlay runs. A site with DHW must add one (FHI and Helsedirektoratet Legionella guidance; the site's water-safety plan) above every energy profile."
+  }
+}

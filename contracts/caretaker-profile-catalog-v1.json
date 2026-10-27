@@ -1,0 +1,92 @@
+{
+  "schema": "ot-caretaker-profile-catalog/v1",
+  "engine": "p3/1",
+  "implemented_in": "runner/caretaker.py",
+  "site_policy": "deploy/ot/site_policy.v1.json",
+  "fallback": "deploy/ot/caretaker_fallback.v1.json",
+  "assumptions": {
+    "building": "the fictitious three-zone twin (three-zone-hvac-seasonal-v2); every limit comes from the site policy, never from an algorithm",
+    "autonomous_physical_control": false,
+    "governed_today": "Only set_zone_setpoint is a governed write tool (signed ToolSpec, REMORA VERIFY, dispatcher, observer). Every other setpoint below is written directly in the offline runs; its governed tool is specified in docs/datapoints.md and not built.",
+    "expected_effects": "No profile carries a planning prior. The measured effect of each strategy is in docs/results and applies to the twin only."
+  },
+  "selection": {
+    "model": "safety overlays (any number) + exactly one base profile + one algorithm per setpoint",
+    "order": [
+      "site policy hard constraints",
+      "safety overlays",
+      "one base profile, highest priority that matches",
+      "algorithm per setpoint from the profile's allowlist",
+      "independent validator",
+      "hash-pinned deterministic fallback when invalid",
+      "decision record; a write goes to REMORA as VERIFY with the record as evidence"
+    ],
+    "deterministic": true
+  },
+  "overlays": [
+    {"id": "frost_protection", "priority": 100, "trigger": "any zone below frost_overlay_zone_c (an independent frost thermostat), or the 24 h outdoor mean below frost_overlay_outdoor_mean_c",
+     "effect": "heating never below frost_overlay_heating_min_c; no heat-pump cap", "status": "active_offline"},
+    {"id": "iaq_protection", "priority": 98, "trigger": "any zone CO2 above iaq_overlay_co2_ppm",
+     "effect": "the AHU cannot be stopped", "status": "active_offline"},
+    {"id": "icing_protection", "priority": 97, "trigger": "ground sensor wet at icing_band_c",
+     "effect": "cables cannot be off or on the air thermostat", "status": "active_offline"},
+    {"id": "telemetry_degraded", "priority": 96, "trigger": "a zone reading stale (older than max_observation_age_s), a jump above max_reading_jump_k_per_step, or a wrong unit",
+     "effect": "that zone runs on the fallback schedule (no sensor) until the recovery criterion holds; escalated once", "status": "active_offline"},
+    {"id": "water_safety", "priority": 99, "trigger": "a DHW hygiene cycle or alarm",
+     "effect": "overrides every energy profile", "status": "not_applicable", "note": "the twin has no domestic hot water"}
+  ],
+  "profiles": [
+    {"id": "comfort_priority", "priority": 80, "trigger": "the building is occupied",
+     "algorithms": ["occupied_schedule", "constant_laboratory", "adaptive_deadband", "occupied_cooling", "fixed_reset", "trim_respond", "occupancy_schedule", "weather_reset", "price_ranked_charge", "peak_limiter", "uncapped", "presence_daylight", "ground_sensor"],
+     "status": "active_offline"},
+    {"id": "demand_response", "priority": 75, "trigger": "a top-3 price hour of the day on a day with >= 0.40 NOK/kWh spread, or building power above 0.9 x the month's peak",
+     "algorithms": ["dr_offset", "recovery_setback", "setback", "unoccupied_cooling_setback", "occupied_cooling", "peak_limiter", "uncapped", "weather_reset", "night_purge", "trim_respond", "fixed_reset", "occupancy_schedule", "presence_daylight", "ground_sensor", "constant_laboratory", "optimal_start"],
+     "status": "active_offline", "note": "internal price and peak signals only; an external DR event (OpenADR) is not implemented"},
+    {"id": "preconditioning", "priority": 70, "trigger": "an optimal-start recovery is running, or a price block within 2 h and occupancy within 6 h (heating season)",
+     "algorithms": ["optimal_start", "dr_precondition", "recovery_setback", "setback", "constant_laboratory", "unoccupied_cooling_setback", "occupied_cooling", "fixed_reset", "trim_respond", "night_purge", "occupancy_schedule", "weather_reset", "price_ranked_charge", "uncapped", "peak_limiter", "presence_daylight", "ground_sensor"],
+     "status": "active_offline"},
+    {"id": "night_setback", "priority": 60, "trigger": "unoccupied with >= 10 h to occupancy",
+     "algorithms": ["recovery_setback", "setback", "constant_laboratory", "unoccupied_cooling_setback", "night_purge", "trim_respond", "fixed_reset", "occupancy_schedule", "weather_reset", "price_ranked_charge", "uncapped", "peak_limiter", "presence_daylight", "ground_sensor", "optimal_start"],
+     "status": "active_offline"},
+    {"id": "energy_saving", "priority": 50, "trigger": "otherwise",
+     "algorithms": ["setback", "optimal_start", "constant_laboratory", "unoccupied_cooling_setback", "occupied_cooling", "fixed_reset", "trim_respond", "night_purge", "occupancy_schedule", "weather_reset", "price_ranked_charge", "uncapped", "peak_limiter", "presence_daylight", "ground_sensor"],
+     "status": "active_offline"},
+    {"id": "balanced_default", "priority": 0, "trigger": "the fallback: a proposal failed validation",
+     "algorithms": ["fallback", "fallback_schedule"], "status": "active_offline"},
+    {"id": "price_preheat_mpc", "priority": 65, "trigger": "a valid thermal model and price and weather forecasts",
+     "algorithms": [], "status": "not_implemented", "note": "economic MPC; would run behind the same validator and fallback"},
+    {"id": "rl_shadow", "priority": 10, "trigger": "a validated twin", "algorithms": [], "status": "not_implemented",
+     "note": "shadow only, never a physical write"},
+    {"id": "portfolio_coordination", "priority": 40, "trigger": "several buildings", "algorithms": [], "status": "not_implemented",
+     "note": "a coordinator would assign budgets; each building's REMORA still authorizes"}
+  ],
+  "algorithms": [
+    {"id": "occupied_schedule", "setpoint": "zone heating", "family": "schedule", "rule": "21 degC while occupied (IL-02 floor 20)"},
+    {"id": "constant_laboratory", "setpoint": "zone heating", "family": "schedule", "rule": "the laboratory holds 21 degC"},
+    {"id": "setback", "setpoint": "zone heating", "family": "schedule", "rule": "19 degC unoccupied"},
+    {"id": "optimal_start", "setpoint": "zone heating", "family": "optimal start/stop", "rule": "the latest start that reaches 21 degC at occupancy: deficit over a self-tuning reheat rate + 1 h, at most 12 h, latched"},
+    {"id": "recovery_setback", "setpoint": "zone heating", "family": "rule-based", "rule": ">= 10 h to occupancy: 16 degC at a 24 h mean >= 0, 17 at >= -5, else 18"},
+    {"id": "dr_offset", "setpoint": "zone heating", "family": "demand-response heuristic", "rule": "a further -1 K in an unoccupied top-price hour, never below the setback floor"},
+    {"id": "dr_precondition", "setpoint": "zone heating", "family": "demand-response heuristic", "rule": "+0.5 K (max 21.5) when occupancy is within 3 h and a price block within 2 h"},
+    {"id": "adaptive_deadband", "setpoint": "zone heating", "family": "demand-response heuristic", "rule": "occupied heating -min(0.5, 0.5 z_p) K, z_p the price's relative excess over the day's median; floor 20.5",
+     "status": "disabled", "note": "measured on NO1 2025: -9 kWh, -31 NOK spot, +268 NOK power charge (rebound peak); off by default"},
+    {"id": "occupied_cooling", "setpoint": "zone cooling", "family": "schedule", "rule": "23.5 degC while occupied and 1 h before"},
+    {"id": "unoccupied_cooling_setback", "setpoint": "zone cooling", "family": "occupancy-driven", "rule": "28 degC when empty"},
+    {"id": "fixed_reset", "setpoint": "supply air", "family": "reset", "rule": "19 degC in the heating season"},
+    {"id": "trim_respond", "setpoint": "supply air", "family": "Trim & Respond (ASHRAE Guideline 36 style)", "rule": "requests = zones within 0.5 K of cooling; respond -0.5 K per request, at most 1 K; trim +0.5 K; 15..21 degC"},
+    {"id": "night_purge", "setpoint": "supply air + AHU", "family": "rule-based free cooling", "rule": "outside the heating season, unoccupied, 20..04 UTC, zones > 22.5 and outdoor 10 degC and >= 3 K colder: AHU on at 15 degC through the HRV bypass; stop below 21"},
+    {"id": "occupancy_schedule", "setpoint": "AHU", "family": "occupancy-driven", "rule": "on while occupied and 1 h before (IL-06), or for a purge or the IAQ overlay"},
+    {"id": "weather_reset", "setpoint": "tank", "family": "outdoor reset", "rule": "radiator curve + 5 K, 45..55 degC, <= 3 K per step"},
+    {"id": "price_ranked_charge", "setpoint": "tank", "family": "price-ranked schedule", "rule": "+5 K in the day's cheapest 4 hours when the spread >= 0.40 NOK/kWh, heating season"},
+    {"id": "peak_limiter", "setpoint": "heat-pump cap", "family": "peak shaving", "rule": "60 % while building power > 0.9 x the month's peak, or in an unoccupied top-price hour, and the tank holds (IL-09); never during a recovery or frost"},
+    {"id": "uncapped", "setpoint": "heat-pump cap", "family": "schedule", "rule": "100 %"},
+    {"id": "presence_daylight", "setpoint": "lighting", "family": "occupancy + daylight", "rule": "lit while present, dimmed by daylight"},
+    {"id": "ground_sensor", "setpoint": "cables", "family": "hysteresis", "rule": "on while the ground sensor reports a wet surface at the icing band"},
+    {"id": "fallback", "setpoint": "all", "family": "deterministic fallback", "rule": "deploy/ot/caretaker_fallback.v1.json; reads no zone sensor"},
+    {"id": "fallback_schedule", "setpoint": "zone heating", "family": "deterministic fallback", "rule": "21 degC when occupied or within 3 h, else 19; the laboratory 21"}
+  ],
+  "kpis": {
+    "kept_apart": ["kWh", "NOK spot", "NOK grid energy", "NOK grid power (monthly kW)", "comfort degree-hours", "CO2 ppm-hours above 1000 while occupied", "icing-hazard hours", "tank hours above 60 degC"],
+    "governance": ["routes submit/hold/fallback/escalate", "validator violations by interlock", "optimizer faults injected and caught", "FDD alarms, true alarms, episodes detected"]
+  }
+}

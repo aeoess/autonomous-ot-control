@@ -18,7 +18,7 @@ from twin.series import Series, load_series
 from twin.state import canonical_digest
 
 SCENARIO_SCHEMA = "ot-scenario/v1"
-_DISTURBANCE_KINDS = frozenset({"sensor_freeze"})
+_DISTURBANCE_KINDS = frozenset({"sensor_freeze", "sensor_offset"})
 
 
 class ScenarioError(ValueError):
@@ -40,6 +40,9 @@ class Disturbance:
     zone_id: str
     from_s: int
     to_s: int
+    #: sensor_offset only: the reading is the true temperature plus this, with
+    #: fresh timestamps (a drifted or miscalibrated sensor, not a stale one).
+    offset_c: float = 0.0
 
     def active(self, t_s: int) -> bool:
         return self.from_s <= t_s < self.to_s
@@ -204,6 +207,10 @@ class Scenario:
         return any(d.kind == "sensor_freeze" and d.zone_id == zone_id and d.active(t_s)
                    for d in self.disturbances)
 
+    def sensor_offset_c(self, zone_id: str, t_s: int) -> float:
+        return sum(d.offset_c for d in self.disturbances
+                   if d.kind == "sensor_offset" and d.zone_id == zone_id and d.active(t_s))
+
     def _hour_utc(self, t_s: int) -> float:
         start = parse_utc(self.start_utc)
         secs = start.hour * 3600 + start.minute * 60 + start.second + t_s
@@ -256,8 +263,9 @@ def load_scenario(source: str | Path | dict[str, Any], *, base_dir: str | Path |
     for d in _req(raw, "disturbances", list):
         if d.get("kind") not in _DISTURBANCE_KINDS:
             raise ScenarioError(f"unknown disturbance kind {d.get('kind')!r}")
+        off = float(_req(d, "offset_c", (int, float))) if d["kind"] == "sensor_offset" else 0.0
         dist.append(Disturbance(kind=d["kind"], zone_id=_req(d, "zone_id", str),
-                                from_s=_req(d, "from_s", int), to_s=_req(d, "to_s", int)))
+                                from_s=_req(d, "from_s", int), to_s=_req(d, "to_s", int), offset_c=off))
 
     extra: dict[str, Series] = {}
     for kind in ("solar", "humidity", "precipitation"):

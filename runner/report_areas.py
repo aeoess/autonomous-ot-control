@@ -1,7 +1,7 @@
 """Render the five-area comparison as Markdown and a self-contained HTML page (English).
 
     python -m runner.report_areas --results docs/results/2026-10-27/areas-2025.json \
-        --md docs/results/2026-10-27/areas-2025.md --html docs/results/2026-10-27/areas-report.html
+        --md docs/results/2026-10-27/areas-2025.md --html docs/results/2026-10-27/areas-2025.html
 
 Reads only the committed `areas-2025.json` written by `runner.areas`. Every
 strategy present in that file is shown, so a new strategy needs no change
@@ -21,6 +21,39 @@ from runner.report_html import nok
 E = html.escape
 CONSUMERS = ("heating_cables", "heat_pump", "backup_heater", "lighting", "fans", "cooling", "equipment")
 COST_PARTS = ("spot_nok", "grid_energy_nok", "grid_power_nok")
+SAFETY = (("comfort_dh", "comfort dh"), ("hazard_h", "icing h"), ("co2_excess_ppmh", "CO2>1000 ppm·h"),
+          ("tank_over_60_h", "tank>60 °C h"))
+
+
+def safety_keys(res: dict[str, Any]) -> list[tuple[str, str]]:
+    """The safety KPIs this result file carries (older files lack the CO2 and tank ones)."""
+    y = next(iter(next(iter(res["table"].values()))["year"].values()))["P0"]
+    return [(k, lbl) for k, lbl in SAFETY if k in y]
+
+
+def title(res: dict[str, Any]) -> str:
+    return "A/B/C With Faults, 2025" if res.get("faults") else "Five Price Areas, 2025"
+
+
+def caretaker_table(res: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
+    """(area, strategy, stats) for every caretaker arm in the file."""
+    return [(a, s, st) for a, by in res.get("caretaker", {}).items() for s, st in by.items()]
+
+
+CT_COLS = (("routes.submit", "submitted"), ("routes.hold", "held"), ("routes.fallback", "fallback"),
+           ("routes.escalate", "escalated"), ("optimizer_faults.*", "optimizer faults injected"),
+           ("optimizer_faults_caught", "caught"), ("fdd_alarms", "FDD alarms"), ("fdd_true_alarms", "true"),
+           ("fdd_episodes_detected", "fault episodes detected"), ("fdd_episodes", "of"),
+           ("purge_steps", "purge steps"))
+
+
+def ct_value(st: dict[str, Any], key: str) -> float:
+    if key.endswith(".*"):
+        return sum(st.get(key[:-2], {}).values())
+    if "." in key:
+        a, b = key.split(".")
+        return st.get(a, {}).get(b, 0)
+    return st.get(key, 0)
 
 
 def strategies(res: dict[str, Any]) -> list[str]:
@@ -56,11 +89,11 @@ def rows(res: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def render_md(res: dict[str, Any]) -> str:
-    rs, ss = rows(res), strategies(res)
+    rs, ss, sk = rows(res), strategies(res), safety_keys(res)
     best = ss[-1]
     by_nok = max(rs, key=lambda r: r["by"][best]["saving_nok"]["mean"])
     by_kwh = max(rs, key=lambda r: r["by"][best]["kwh_saved"])
-    L = ["# Five price areas, 2025", "",
+    L = [f"# {title(res)}", "",
          f"Seeds {', '.join(map(str, res['seeds']))}. Strategies: {', '.join(ss)}. Scope: {res['scope']}", "",
          "## Year", "",
          "| Area | P0 NOK | P0 kWh | Spot NOK/kWh (P0) | "
@@ -91,16 +124,25 @@ def render_md(res: dict[str, Any]) -> str:
           "That share rests on the twin's assumed cable ratings and the surface model, and a real site must be "
           "measured before the figure means anything. The last column shows the rest of the levers alone.", "",
           "## Comfort and safety", "",
-          "| Area | " + " | ".join(f"{s} comfort dh | {s} icing hazard h" for s in ss) + " |",
-          "|---|" + "---:|---:|" * len(ss)]
+          "| Area | " + " | ".join(f"{s} {lbl}" for s in ss for _, lbl in sk) + " |",
+          "|---|" + "---:|" * (len(ss) * len(sk))]
     for r in rs:
         y = year_row(res, r["area"])
-        L.append(f"| {r['area']} | " + " | ".join(f"{y[s]['comfort_dh']:.0f} | {y[s]['hazard_h']:.0f}" for s in ss) + " |")
+        L.append(f"| {r['area']} | " + " | ".join(f"{y[s][k]:.0f}" for s in ss for k, _ in sk) + " |")
     L += ["", "Comfort is degree-hours outside the occupied band, summed over three zones. The icing hazard is hours "
           "with the ground sensor reporting a wet surface at -10..+1 degC while a cable was off.", "",
           "Almost all the comfort deviation is summer overheating (May to September), not cold rooms. The "
           "strategies that light only occupied rooms and dim by daylight put less heat into the zones, so they "
           "overheat less. Winter comfort stays within a few degree-hours in every strategy.", ""]
+    ct = caretaker_table(res)
+    if ct:
+        L += ["## The caretaker's own record (P3 and P3raw)", "",
+              "Controller steps by route, optimizer faults injected and caught by the validator, and FDD alarms "
+              "scored against the injected sensor faults. Means over the seeds.", "",
+              "| Area | Arm | " + " | ".join(lbl for _, lbl in CT_COLS) + " |", "|---|---|" + "---:|" * len(CT_COLS)]
+        for a, s, st in ct:
+            L.append(f"| {a} | {s} | " + " | ".join(f"{ct_value(st, k):.0f}" for k, _ in CT_COLS) + " |")
+        L.append("")
     for lv in ("half", "quarter", "month"):
         L += [f"## By {lv}", "", "| Area | Period | P0 NOK | " + " | ".join(f"{s} saves NOK | {s} %" for s in ss[1:])
               + " | P0 peak kW |", "|---|---|---:|" + "---:|---:|" * (len(ss) - 1) + "---:|"]
@@ -158,8 +200,8 @@ def stacked_consumers(rs: list[dict[str, Any]], s: str, width: int = 760) -> str
     return "".join(out)
 
 
-def render_html(res: dict[str, Any]) -> str:
-    rs, ss = rows(res), strategies(res)
+def render_html(res: dict[str, Any], src: str = "docs/results/2026-10-27/areas-2025.json") -> str:
+    rs, ss, sk = rows(res), strategies(res), safety_keys(res)
     best = ss[-1]
     by_nok = max(rs, key=lambda r: r["by"][best]["saving_nok"]["mean"])
     by_kwh = max(rs, key=lambda r: r["by"][best]["kwh_saved"])
@@ -181,8 +223,21 @@ def render_html(res: dict[str, Any]) -> str:
                    + "".join(f"<td>{nok(r['by'][best]['cost_parts'][c])}</td>" for c in COST_PARTS)
                    + f"<td>{r['by'][best]['kwh_pct_ex_cables']:.1f} %</td></tr>" for r in rs)
     safety = "".join(f"<tr><td>{E(r['area'])}</td>" + "".join(
-        f"<td>{year_row(res, r['area'])[s]['comfort_dh']:.0f}</td><td>{year_row(res, r['area'])[s]['hazard_h']:.0f}</td>"
-        for s in ss) + "</tr>" for r in rs)
+        f"<td>{year_row(res, r['area'])[s][k]:.0f}</td>" for s in ss for k, _ in sk) + "</tr>" for r in rs)
+    ct = caretaker_table(res)
+    ct_html = ""
+    if ct:
+        ct_html = ("<h2>The caretaker's own record</h2><p>Controller steps by route, optimizer faults injected and "
+                   "caught by the validator, and FDD alarms scored against the injected sensor faults (means over "
+                   "the seeds). P3raw is the same engine without telemetry checks or validator.</p>"
+                   "<div class=card><table><tr><th>Area</th><th>Arm</th>"
+                   + "".join(f"<th>{E(lbl)}</th>" for _, lbl in CT_COLS) + "</tr>"
+                   + "".join(f"<tr><td>{E(a)}</td><td>{E(s)}</td>"
+                             + "".join(f"<td>{ct_value(st, k):.0f}</td>" for k, _ in CT_COLS) + "</tr>"
+                             for a, s, st in ct) + "</table></div>")
+    flags = (" --faults" if res.get("faults") else "")
+    stem = src.rsplit("/", 1)[-1].removesuffix(".json")
+    out_dir = src.rsplit("/", 1)[0]
     details = ""
     for r in rs:
         body = ""
@@ -201,7 +256,7 @@ def render_html(res: dict[str, Any]) -> str:
     sv = by_nok["by"][best]
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Five Price Areas</title>
+<title>{E(title(res).removesuffix(", 2025"))}</title>
 <style>
 :root{{--bg:#f6f7f5;--panel:#fff;--fg:#1d2422;--muted:#5d6b66;--line:#d9dfdc;--accent2:#c27a2c;
 --s0:#8a9692;--s1:#c27a2c;--s2:#2f6f5e;--s3:#3b5ea8;--s4:#8a4fa3;
@@ -226,7 +281,7 @@ svg .grid{{stroke:var(--line)}} svg .tick{{fill:var(--muted);font:11.5px var(--s
 {"".join(f"svg .c{j}{{fill:{ccol[j]}}}" for j in range(len(ccol)))}
 .legend span{{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12.5px;color:var(--muted)}} .sw{{width:12px;height:12px;border-radius:3px;display:inline-block}}
 </style></head><body><main>
-<h1>Five Price Areas, 2025</h1>
+<h1>{E(title(res))}</h1>
 <p class="muted">autonomous-ot-control · one fictitious building per Norwegian price area · seeds {", ".join(map(str, res["seeds"]))} · strategies {", ".join(ss)}</p>
 <p class="scope">{E(res["scope"])}</p>
 <div class="tiles">
@@ -239,21 +294,22 @@ svg .grid{{stroke:var(--line)}} svg .tick{{fill:var(--muted);font:11.5px var(--s
 <p>The same building and the same strategies at five coordinates, each with its own verified day-ahead prices and local ERA5 weather. Cost is spot plus a declared reference grid tariff (energy part and the monthly power charge on the highest hourly kW).</p>
 <div class="card"><div class="legend">{legend}</div>{grouped_bars(rs, res)}</div>
 <div class="card"><table><tr><th>Area</th><th>P0 NOK</th><th>P0 kWh</th><th>Spot NOK/kWh</th>{head}</tr>{yrows}</table></div>
-<p>The ranking in NOK and the ranking in kWh differ. Tromsø saves the most energy (the coldest site, so the cables run longest) but the least money, because NO4's spot price is a fraction of the southern areas'.</p>
+<p>The ranking in NOK and the ranking in kWh differ: a saved kWh is worth the area's spot price, and NO4's is a fraction of the southern areas'.</p>
 <h2>2. Where the {best} saving comes from</h2>
 <div class="card"><div class="legend">{clegend}</div>{stacked_consumers(rs, best)}</div>
 <div class="card"><table><tr><th>Area</th>{"".join(f"<th>{E(c.replace('_', ' '))} kWh</th>" for c in CONSUMERS)}<th>spot NOK</th><th>grid energy NOK</th><th>grid power NOK</th><th>kWh saved without the cable lever</th></tr>{crow}</table>
 <p class="muted">The heating cables dominate. As found they run on an air thermostat (−8..+3 °C) and heat a dry ramp for most of the winter; on the ground sensor they run only while the surface is wet and freezing. That share rests on the twin's assumed cable ratings and surface model: measure a real site before the figure means anything. The last column is everything else alone. Equipment (plug loads) is not controlled, so it never changes.</p></div>
-<h2>3. Comfort and icing safety</h2>
-<div class="card"><table><tr><th>Area</th>{"".join(f"<th>{s} comfort dh</th><th>{s} icing h</th>" for s in ss)}</tr>{safety}</table>
-<p class="muted">Comfort: degree-hours outside the occupied band, summed over three zones. Icing hazard: hours with the ground sensor reporting a wet surface at −10..+1 °C while a cable was off. The air thermostat misses ice below −8 °C (Tromsø, Oslo); the sensor mode never does. Almost all the comfort deviation is summer overheating (May to September), not cold rooms: presence lighting with daylight dimming puts less heat into the zones. Winter comfort stays within a few degree-hours in every strategy.</p></div>
+<h2>3. Comfort and safety</h2>
+<div class="card"><table><tr><th>Area</th>{"".join(f"<th>{s} {E(lbl)}</th>" for s in ss for _, lbl in sk)}</tr>{safety}</table>
+<p class="muted">Comfort: degree-hours outside the occupied band, summed over three zones. Icing hazard: hours with the ground sensor reporting a wet surface at −10..+1 °C while a cable was off. The air thermostat misses ice below −8 °C (Tromsø, Oslo); the sensor mode never does. Almost all the comfort deviation is summer overheating (May to September), not cold rooms: presence lighting with daylight dimming puts less heat into the zones. Winter comfort stays within a few degree-hours in every strategy. CO2: ppm-hours above 1000 ppm while occupied, summed over the zones. Tank: hours above 60 °C, beyond the heat pump's supply limit.</p></div>
+{ct_html}
 <h2>4. Halves, quarters and months</h2>
 {details}
 <h2>5. Reproduce</h2>
 <div class="card"><pre><code>python -m runner.exogenous verify scenarios/data/demo-building-no*/*.json   # re-fetch, compare hashes
-python -m runner.areas --seeds 177 178 179 --days 365 --out artifacts/areas-2025
-python -m runner.report_areas --results docs/results/2026-10-27/areas-2025.json \\
-    --md docs/results/2026-10-27/areas-2025.md --html docs/results/2026-10-27/areas-report.html</code></pre></div>
+python -m runner.areas --seeds {" ".join(map(str, res["seeds"]))} --days 365 --strategies {" ".join(ss)}{flags} --out artifacts/{stem}
+python -m runner.report_areas --results {src} \\
+    --md {out_dir}/{stem}.md --html {out_dir}/{stem}.html</code></pre></div>
 </main></body></html>
 """
 
@@ -268,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.md:
         Path(a.md).write_text(render_md(res) + "\n", encoding="utf-8", newline="\n")
     if a.html:
-        Path(a.html).write_text(render_html(res), encoding="utf-8", newline="\n")
+        Path(a.html).write_text(render_html(res, a.results.replace("\\", "/")), encoding="utf-8", newline="\n")
     return 0
 
 

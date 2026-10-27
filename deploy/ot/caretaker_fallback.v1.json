@@ -1,0 +1,12 @@
+{
+  "schema": "ot-caretaker-fallback/v1",
+  "comment": "The deterministic fallback the caretaker submits when a proposal fails validation or a zone's telemetry is degraded. It reads no sensor: only the calendar, the outdoor temperature and the ground sensor's hardware mode. Its sha256 is recorded in every decision record that uses it.",
+  "heating": {"occupied_or_within_s": 10800, "occupied_c": 21.0, "otherwise_c": 19.0, "laboratory_c": 21.0},
+  "cooling_c": 23.5,
+  "supply_air_c": 19.0,
+  "tank": {"follow_weather_curve_plus_k": 5.0, "min_c": 45.0, "max_c": 55.0},
+  "hp_max_fraction": 1.0,
+  "ahu": {"on_when_occupied_or_within_s": 7200},
+  "lighting": {"mode": "presence", "daylight_harvesting": true},
+  "cables": "sensor"
+}

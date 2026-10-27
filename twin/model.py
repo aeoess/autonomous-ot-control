@@ -299,7 +299,7 @@ class Twin:
         if now % self.obs_step_s == 0:
             for zid, z in self.zones.items():
                 if not self.scenario.sensor_frozen(zid, now):
-                    z.measured_temp_c = z.temp_c
+                    z.measured_temp_c = z.temp_c + self.scenario.sensor_offset_c(zid, now)
                     z.sample_at_s = now
             if self.record_trace:
                 self._trace_row()
