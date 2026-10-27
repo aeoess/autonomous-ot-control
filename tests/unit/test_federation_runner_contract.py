@@ -132,7 +132,7 @@ def test_run_edge_script_fails_closed_on_adapter_failure(fixtures, tmp_path):
     e["edge_id"] = "broken-edge"
     (edge / "edge.json").write_text(json.dumps(e), "utf-8")
     (edge / "adapter.py").write_text("import sys\nsys.exit(5)\n", "utf-8")
-    proc = subprocess.run(["bash", "deploy/scripts/run-edge.sh", "broken-edge", "--local"], cwd=repo,
+    proc = subprocess.run(["bash", "deploy/scripts/run-edge.sh", "broken-edge", "v1", "--local"], cwd=repo,
                           capture_output=True, text=True, env={**__import__("os").environ, "PYTHON": sys.executable})
     assert proc.returncode != 0
     assert not list((repo / "artifacts").rglob("report.md"))
@@ -152,6 +152,13 @@ def test_record_validates_against_schema_and_binds_the_sealed_set(tmp_path):
     assert rec["edge"]["pin"] == {"kind": "git_commit", "value": "in-tree"}
     assert edge_check.validate_record(rec) == []
     assert len(rec["does_not_establish"]) >= 6 + len(edge_check.TESTBED_NON_CLAIMS)
+    # The record says what actually ran, as digests, not as a label.
+    prov = rec["provenance"]
+    assert prov["scorer_sha256"] == edge_check.sha256_file(ROOT / "runner" / "edge_check.py")
+    assert prov["edge_files_sha256"]["adapter.py"] == edge_check.sha256_file(TEMPLATE / "adapter.py")
+    assert prov["edge_files_sha256"]["edge.json"] == edge_check.sha256_file(TEMPLATE / "edge.json")
+    assert re.fullmatch(r"[0-9a-f]{40}", prov["testbed_commit_at_run"]) or prov["testbed_commit_at_run"] == "UNKNOWN"
+    assert prov["worktree_dirty"] in (True, False, None)
 
 
 def test_record_ceiling_booleans_are_false(tmp_path):

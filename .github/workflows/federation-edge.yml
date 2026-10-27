@@ -36,6 +36,13 @@ jobs:
           for m in federation/fixtures/*/manifest.json; do
             python3 -m runner.edge_check --check-fixtures "$(dirname "$m")"
           done
+      - name: Derived sets were sealed by the verifier they declare (fetched from git, run, expected verdicts required)
+        run: |
+          for m in federation/fixtures/*/manifest.json; do
+            if python3 -c "import json,sys;sys.exit(0 if 'sealed_against' in json.load(open(sys.argv[1])) else 1)" "$m"; then
+              python3 -m runner.edge_check --check-provenance "$(dirname "$m")"
+            fi
+          done
       - name: Run records validate and RESULTS.md matches them
         run: |
           python3 -m runner.edge_check --check-records
@@ -48,14 +55,21 @@ jobs:
                   | awk -F/ 'NF>=3 && $3!="_template"{print $3}' | sort -u | tr '\n' ' ')
           echo "edges=${edges}" >> "$GITHUB_OUTPUT"
           echo "changed edges: ${edges:-none}"
-      - name: Template self-test (fixtures must still catch every seeded fault)
-        run: ./deploy/scripts/run-edge.sh _template
-      - name: Run changed edges
+      - name: Template self-test on every fixture set (each set must still catch every seeded fault)
+        run: |
+          rc=0
+          for m in federation/fixtures/*/manifest.json; do
+            ./deploy/scripts/run-edge.sh _template "$(basename "$(dirname "$m")")" || rc=1
+          done
+          exit $rc
+      - name: Run changed edges on every fixture set
         if: steps.changed.outputs.edges != ''
         run: |
           rc=0
           for e in ${{ steps.changed.outputs.edges }}; do
-            ./deploy/scripts/run-edge.sh "$e" || rc=1
+            for m in federation/fixtures/*/manifest.json; do
+              ./deploy/scripts/run-edge.sh "$e" "$(basename "$(dirname "$m")")" || rc=1
+            done
           done
           exit $rc
       - uses: actions/upload-artifact@v4

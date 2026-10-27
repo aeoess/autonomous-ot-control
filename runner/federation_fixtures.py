@@ -40,11 +40,26 @@ import argparse
 import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
-FAULTS = ("effect_value_not_reached", "proposal_swapped", "evidence_digest_mismatch",
-          "observed_before_dispatch", "executed_without_approval", "replayed_execution")
+#: The six faults of fixture set v1 (sealed 2026-10-27, never edited).
+FAULTS_V1 = ("effect_value_not_reached", "proposal_swapped", "evidence_digest_mismatch",
+             "observed_before_dispatch", "executed_without_approval", "replayed_execution")
+#: Added in v2 after the reference verifier was found to accept missing and
+#: contradictory evidence: three claims with their evidence removed (expected
+#: NOT_ESTABLISHED, never assumed) and one trail that disagrees with itself.
+FAULTS_V2 = ("dispatch_time_missing", "observation_time_missing", "execution_count_missing",
+             "denied_but_applied")
+FAULTS = FAULTS_V1 + FAULTS_V2
+#: What a correct verifier answers for each seeded fault.
+EXPECTED_VERDICT = {f: "CONTRADICTED" for f in FAULTS_V1} | {
+    "dispatch_time_missing": "NOT_ESTABLISHED",
+    "observation_time_missing": "NOT_ESTABLISHED",
+    "execution_count_missing": "NOT_ESTABLISHED",
+    "denied_but_applied": "CONTRADICTED",
+}
 
 #: One claim per seeded fault. An edge names which of these it checks.
 CLAIMS: dict[str, str] = {
@@ -64,6 +79,10 @@ FAULT_CLAIM: dict[str, str] = {
     "observed_before_dispatch": "observation_after_dispatch",
     "executed_without_approval": "decision_correspondence",
     "replayed_execution": "single_dispatch",
+    "dispatch_time_missing": "observation_after_dispatch",
+    "observation_time_missing": "observation_after_dispatch",
+    "execution_count_missing": "single_dispatch",
+    "denied_but_applied": "decision_correspondence",
 }
 PACKAGE_DIGEST_RULE = ("sha256 over the UTF-8 text formed by one line per files entry, '<path> <sha256>\\n', "
                        "sorted by path. manifest.json is outside the package and is never hashed into it.")
@@ -112,6 +131,15 @@ def seed_fault(case: dict[str, Any], fault: str, other: dict[str, Any]) -> dict[
         c["decision"]["approved"], c["decision"]["decision"] = False, "verify"
     elif fault == "replayed_execution":
         c["execution"]["executions"] = 2
+    elif fault == "dispatch_time_missing":
+        del c["execution"]["dispatched_at_sim_s"]
+    elif fault == "observation_time_missing":
+        del c["observation"]["observed_at_sim_s"]
+    elif fault == "execution_count_missing":
+        del c["execution"]["executions"]
+    elif fault == "denied_but_applied":
+        c["decision"]["decision"], c["decision"]["approved"] = "deny", False
+        c["execution"]["executed"] = False  # the twin's APPLIED record stays: the trail disagrees with itself
     else:  # pragma: no cover
         raise ValueError(fault)
     return c
@@ -121,7 +149,66 @@ def manifest_entry(case: dict[str, Any]) -> dict[str, Any]:
     fault = case.get("fault")
     return {"case_id": case["case_id"], "kind": case["kind"], "fault": fault,
             "claim_id": FAULT_CLAIM[fault] if fault else None,
-            "expected_verdict": "ESTABLISHED" if case["kind"] == "positive" else "CONTRADICTED"}
+            "expected_verdict": "ESTABLISHED" if case["kind"] == "positive" else EXPECTED_VERDICT[fault]}
+
+
+def sealed_against(verifier_commit: str, root: Path) -> dict[str, Any]:
+    """Pin the verifier and scorer a set is sealed against: a commit that already exists,
+    plus the digests of the two files at that commit (read from git, not from the
+    working tree, so the declaration cannot drift from the history it names)."""
+    from runner.edge_check import REFERENCE_VERIFIER_PATH, SCORER_PATH, git_file_at, sha256_bytes
+
+    if not re.fullmatch(r"[0-9a-f]{40}", verifier_commit):
+        raise ValueError("verifier_commit must be a full 40-hex commit id that already exists")
+    out = {"verifier_commit": verifier_commit}
+    for role, path in (("verifier", REFERENCE_VERIFIER_PATH), ("scorer", SCORER_PATH)):
+        raw = git_file_at(verifier_commit, path)
+        if raw is None:
+            raise ValueError(f"{path} is not readable at {verifier_commit[:12]} in this repository's history")
+        out[f"{role}_path"] = path
+        out[f"{role}_sha256"] = sha256_bytes(raw)
+    out["note"] = ("The commit that adds this set is later than verifier_commit and is never named here; "
+                   "python -m runner.edge_check --check-provenance fetches these files at verifier_commit, "
+                   "checks the digests and runs that verifier against this set.")
+    return out
+
+
+def derive_set(src: Path, out: Path, *, faults: tuple[str, ...] = FAULTS_V2, verifier_commit: str,
+               note: str = "", root: Path | None = None) -> dict[str, Any]:
+    """A new fixture set from an existing one: every case copied byte for byte, plus one new
+    negative per fault in ``faults`` seeded from the source's positives. The source is never touched.
+
+    ``testbed_commit`` stays the revision the trails were recorded on (the source's). The
+    verifier and scorer the set is sealed against are a separate, earlier commit with file
+    digests (``sealed_against``), so the set never names the commit that contains it."""
+    out.mkdir(parents=True, exist_ok=False)
+    (out / "cases").mkdir()
+    src_manifest = json.loads((src / "manifest.json").read_text("utf-8"))
+    positives = []
+    for path in sorted((src / "cases").glob("*.json")):
+        (out / "cases" / path.name).write_bytes(path.read_bytes())
+        case = json.loads(path.read_text("utf-8"))
+        if case["kind"] == "positive":
+            positives.append(case)
+    if len(positives) < 2:
+        raise SystemExit("need at least two positives to seed new negatives")
+    for i, fault in enumerate(faults):
+        case = seed_fault(positives[i % len(positives)], fault, positives[(i + 1) % len(positives)])
+        (out / "cases" / f"{case['case_id']}.json").write_text(
+            json.dumps(case, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = {"schema": "ot-federation-fixtures/v1", "fixture_set": out.name,
+                "testbed_commit": src_manifest.get("testbed_commit", "UNKNOWN"),
+                "testbed_commit_note": ("The revision the decision trails were recorded on, inherited from the "
+                                        "source set. It says nothing about which verifier sealed this set: see "
+                                        "sealed_against."),
+                "derived_from": src_manifest.get("fixture_set"),
+                "source_trails_commit": src_manifest.get("testbed_commit"),
+                "source_run": src_manifest.get("source_run"), "scope": src_manifest.get("scope", ""),
+                "added_faults": list(faults),
+                "sealed_against": sealed_against(verifier_commit, root or src.parents[2]),
+                "derivation_note": note}
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return seal_manifest(out)
 
 
 def seal_manifest(fixtures: Path) -> dict[str, Any]:
@@ -157,6 +244,10 @@ def seal_manifest(fixtures: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="runner.federation_fixtures")
     p.add_argument("--seal", metavar="DIR", help="(re)seal an existing fixture set's manifest and exit")
+    p.add_argument("--derive-from", metavar="SRC", help="build --out from an existing set plus the v2 faults")
+    p.add_argument("--verifier-commit", default="",
+                   help="for --derive-from: the existing commit whose reference verifier and scorer seal the set")
+    p.add_argument("--note", default="", help="derivation_note for a derived set")
     p.add_argument("--work")
     p.add_argument("--project", default="aoc-demo")
     p.add_argument("--out")
@@ -166,6 +257,14 @@ def main(argv: list[str] | None = None) -> int:
     if a.seal:
         m = seal_manifest(Path(a.seal))
         print(f"sealed {a.seal}: {len(m['cases'])} cases, {m['package_digest']}")
+        return 0
+    if a.derive_from:
+        if not (a.out and a.verifier_commit):
+            p.error("--derive-from needs --out and --verifier-commit")
+        m = derive_set(Path(a.derive_from), Path(a.out), verifier_commit=a.verifier_commit, note=a.note)
+        sa = m["sealed_against"]
+        print(f"derived {a.out} from {a.derive_from}: {len(m['cases'])} cases, {m['package_digest']}, "
+              f"sealed against verifier {sa['verifier_commit'][:12]} ({sa['verifier_sha256'][:12]}…)")
         return 0
     if not (a.work and a.out):
         p.error("--work and --out are required to build a set")

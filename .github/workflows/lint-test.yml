@@ -41,6 +41,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          # Full history: the fixture provenance test reads the verifier a sealed
+          # set declares it was sealed against out of git (runner.edge_check --check-provenance).
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}

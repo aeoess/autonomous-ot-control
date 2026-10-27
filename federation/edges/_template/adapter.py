@@ -48,31 +48,70 @@ def canonical_sha256(value: Any) -> str:
 
 
 def check(case: dict[str, Any]) -> tuple[str, str, str | None]:
-    """Return (verdict, reason, claim_id of the failing or missing check)."""
+    """Return (verdict, reason, claim_id of the failing or missing check).
+
+    Every claim names the evidence it needs. Evidence that is absent makes the
+    claim NOT_ESTABLISHED; nothing is assumed in its place. Evidence that
+    disagrees with other evidence in the same trail makes it CONTRADICTED.
+    Only a trail that carries everything, consistently, is ESTABLISHED.
+    """
     claim, decision, execution = case["claim"], case["decision"], case["execution"]
     op, obs = case.get("twin_operation"), case.get("observation")
-    if execution.get("executed") and not decision.get("approved") and decision.get("decision") != "accept":
+    executed = execution.get("executed")
+    approved = decision.get("approved") is True or decision.get("decision") == "accept"
+    applied = op is not None and op.get("status") == "APPLIED"
+
+    # 1. decision_correspondence: what the trail says happened must agree with itself,
+    #    and an execution needs a captured ACCEPT or an approved decision.
+    if executed is False and (applied or obs is not None):
+        return ("CONTRADICTED", "the trail says nothing executed, yet the twin recorded APPLIED or an effect "
+                "was observed", "decision_correspondence")
+    if executed is not True:
+        return "NOT_ESTABLISHED", "execution.executed is missing or not true", "decision_correspondence"
+    if not approved:
         return "CONTRADICTED", "executed without an approval or an ACCEPT", "decision_correspondence"
-    if execution.get("executions", 1) != 1:
-        return "CONTRADICTED", f"executed {execution.get('executions')} times", "single_dispatch"
+
+    # 2. single_dispatch: the count must be present and be exactly one.
+    executions = execution.get("executions")
+    if executions is None:
+        return "NOT_ESTABLISHED", "execution.executions is missing", "single_dispatch"
+    if executions != 1:
+        return "CONTRADICTED", f"executed {executions} times", "single_dispatch"
+
+    # 3. call_binding: the twin's own record must exist and belong to this proposal.
     if op is None:
         return "NOT_ESTABLISHED", "no twin operation record to compare with", "call_binding"
     if op.get("operation_id") != claim["proposal_id"]:
         return "CONTRADICTED", "the twin operation belongs to another proposal", "call_binding"
+
+    # 4. declared_effect_observed: APPLIED for the claimed zone and value, and observed so.
     if op.get("status") != "APPLIED":
         return "CONTRADICTED", f"the twin recorded {op.get('status')}, not APPLIED", "declared_effect_observed"
-    if op.get("zone_id") != claim["zone_id"] or abs(float(op.get("new_setpoint_c", -999)) - claim["setpoint_c"]) > 1e-6:
+    if op.get("zone_id") != claim["zone_id"] or op.get("new_setpoint_c") is None \
+            or abs(float(op["new_setpoint_c"]) - claim["setpoint_c"]) > 1e-6:
         return "CONTRADICTED", "the twin applied a different zone or value than claimed", "declared_effect_observed"
     if obs is None:
         return "NOT_ESTABLISHED", "no observation of the effect", "declared_effect_observed"
+    if obs.get("observed_setpoint_c") is None:
+        return "NOT_ESTABLISHED", "observation.observed_setpoint_c is missing", "declared_effect_observed"
     if abs(float(obs["observed_setpoint_c"]) - claim["setpoint_c"]) > 1e-6:
         return "CONTRADICTED", "the observed setpoint differs from the claim", "declared_effect_observed"
-    dispatched = execution.get("dispatched_at_sim_s")
-    if dispatched is not None and obs.get("observed_at_sim_s", dispatched) < dispatched:
+
+    # 5. observation_after_dispatch: both times must be present; the observation must not precede the dispatch.
+    dispatched, observed_at = execution.get("dispatched_at_sim_s"), obs.get("observed_at_sim_s")
+    if dispatched is None:
+        return "NOT_ESTABLISHED", "execution.dispatched_at_sim_s is missing", "observation_after_dispatch"
+    if observed_at is None:
+        return "NOT_ESTABLISHED", "observation.observed_at_sim_s is missing", "observation_after_dispatch"
+    if observed_at < dispatched:
         return "CONTRADICTED", "the effect was observed before the dispatch", "observation_after_dispatch"
+
+    # 6. evidence_digest_integrity.
+    if case.get("evidence_sha256") is None or "remora_evidence" not in case:
+        return "NOT_ESTABLISHED", "evidence or its digest is missing", "evidence_digest_integrity"
     if case["evidence_sha256"] != canonical_sha256(case["remora_evidence"]):
         return "CONTRADICTED", "the evidence digest does not match the evidence", "evidence_digest_integrity"
-    return "ESTABLISHED", "approval, single dispatch, twin record, observation and digest agree", None
+    return "ESTABLISHED", "approval, single dispatch, twin record, observation, timing and digest agree", None
 
 
 def main(argv: list[str] | None = None) -> int:

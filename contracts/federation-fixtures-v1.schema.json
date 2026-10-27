@@ -32,6 +32,58 @@
     "source_run": {
       "type": "string"
     },
+    "derived_from": {
+      "type": "string",
+      "description": "For a derived set: the fixture set whose cases were copied byte for byte."
+    },
+    "source_trails_commit": {
+      "type": "string",
+      "description": "For a derived set: the revision the copied trails were recorded on (the source's testbed_commit)."
+    },
+    "added_faults": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "For a derived set: the faults seeded in this set and not in its source."
+    },
+    "derivation_note": {
+      "type": "string"
+    },
+    "sealed_against": {
+      "type": "object",
+      "description": "The verifier and scorer this set was sealed against: an existing, earlier commit and the SHA-256 of the two files at that commit. Never the commit that contains this manifest. Checked by runner.edge_check --check-provenance, which fetches the files from history, compares the digests, runs that verifier and requires every expected verdict.",
+      "required": [
+        "verifier_commit",
+        "verifier_path",
+        "verifier_sha256",
+        "scorer_path",
+        "scorer_sha256"
+      ],
+      "properties": {
+        "verifier_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "verifier_path": {
+          "type": "string"
+        },
+        "verifier_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "scorer_path": {
+          "type": "string"
+        },
+        "scorer_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
     "scope": {
       "type": "string"
     },
