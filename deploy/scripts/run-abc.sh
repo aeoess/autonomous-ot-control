@@ -43,7 +43,8 @@ run_governed() {  # label, extra demo args...
     return 0
   fi
   echo "== arm ${label}"
-  rm -rf "artifacts/${RUN_ID}-${label}-work"
+  # Leftovers of an interrupted attempt of this arm: its work dir and its evidence bundle.
+  rm -rf "artifacts/${RUN_ID}-${label}-work" "artifacts/${RUN_ID}-${label}"
   # A governed arm that is not the careful acceptance may let a forbidden proposal through;
   # that is the measurement, so the demo exits 0 for such arms. Any other failure stops here.
   RUN_ID="${RUN_ID}-${label}" STRATEGY=P1 DAYS="$DAYS" DEMO_ARGS="$*" ./deploy/scripts/run-demo-governed.sh
