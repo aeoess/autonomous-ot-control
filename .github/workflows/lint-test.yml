@@ -18,14 +18,17 @@ jobs:
           fetch-depth: 0
       - name: Authors and trailers
         run: |
+          # The checkout is the synthetic refs/pull/N/merge commit, which GitHub
+          # authors with the profile name; check the branch's own commits only.
           base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
           bad=0
           while IFS=$'\t' read -r sha author; do
             if [[ "$author" != "darklordVirtual" ]]; then
               echo "::error::commit $sha is authored by '$author', not darklordVirtual"; bad=1
             fi
-          done < <(git log --format='%H%x09%an' "$base"..HEAD)
-          if git log --format='%B' "$base"..HEAD | grep -iE '^(Co-authored-by|Claude-Session):'; then
+          done < <(git log --format='%H%x09%an' "$base".."$head")
+          if git log --format='%B' "$base".."$head" | grep -iE '^(Co-authored-by|Claude-Session):'; then
             echo "::error::a commit carries a co-author or session trailer"; bad=1
           fi
           exit $bad
