@@ -662,6 +662,7 @@
               "set_zone_cooling_setpoint",
               "set_zone_co2_setpoint",
               "set_zone_lighting_setpoint",
+              "set_zone_lighting_mode",
               "set_supply_air_setpoint",
               "set_tank_setpoint",
               "set_heat_pump_limit",

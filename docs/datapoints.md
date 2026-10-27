@@ -4,7 +4,7 @@
 
 Every value the simulated building exposes or accepts. The twin is synthetic and uncalibrated (ADR-007); ranges are plausibility bounds for validation, not design values. Writable points change only through the governed tools below, never directly.
 
-99 points, 11 interlocks, 9 tools, 5 procedures, 7 documented cascades.
+110 points, 11 interlocks, 10 tools, 5 procedures, 7 documented cascades.
 
 Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` computed binary; `CV` counter; `EX` exogenous input; `SP` writable setpoint; `SB` writable command.
 
@@ -19,6 +19,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 | `OUT-01.RH` | EX | % | 0 .. 100 | Outdoor relative humidity. | scenario humidity series | `HP-01.Defrost` |  |
 | `OUT-01.Precipitation` | EX | mm/h | 0 .. 50 | Precipitation, preceding hour. | scenario precipitation series | `OUT-01.IcingRisk` |  |
 | `OUT-01.IcingRisk` | BV | bool | 0 .. 1 | Outdoor -6..+2 degC with precipitation within 3 h either side. | Scenario.icing_risk | `CABLE-RAMP.Power`, `CABLE-GUTTER.Power` |  |
+| `OUT-01.SurfaceWet` | AI | bool | 0 .. 1 | Ground moisture sensor at the ramp: the surface is wet, snowy or iced (twin surface model: wet after precipitation; above +2 degC dries in 2 h; at or below +2 degC stays until the snow-melt cable has run 1 h without new precipitation). | Twin._surface_wet | `CABLE-RAMP.Power`, `CABLE-GUTTER.Power`, `CABLE-RAMP.IcingHazardUncovered`, `CABLE-GUTTER.IcingHazardUncovered` |  |
 | `OUT-01.Temp24hMean` | AV | degC | -40 .. 35 | Mean outdoor temperature over the preceding 24 h; drives the summer stop. | Scenario.mean_outdoor_24h | `HYD-01.HeatingSeason` |  |
 
 ### market
@@ -34,6 +35,8 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 | `EM-01.Cost` | AV | NOK | 0 .. 10000000 | Accumulated simulated energy cost: electricity at spot, district heat at the declared tariff. | Twin._step |  |  |
 | `EM-01.ElectricPower` | AI | W | 0 .. 200000 | Building electricity meter: fans, chiller, heat pump, backup, boiler, lights, equipment, cables. | plant | `EM-01.Cost` |  |
 | `EM-01.DistrictHeatPower` | AI | W | 0 .. 100000 | District heat meter. | plant | `EM-01.Cost` |  |
+| `EM-01.MonthlyPeakKw` | AV | kW | 0 .. 500 | The month's highest hourly mean electric power: the basis of the grid tariff's power charge. | Twin._grid_tariff | `EM-01.GridCost` |  |
+| `EM-01.GridCost` | AV | NOK | 0 .. 10000000 | Declared reference grid tariff (ASSUMPTION): energy part per kWh plus the monthly power part. | Twin.grid_power_cost |  |  |
 
 ### ZONE-01
 
@@ -41,6 +44,8 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 |---|---|---|---|---|---|---|---|
 | `ZONE-01.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, open-plan office. | zone RC node (Twin._step) | `ZONE-01.RadiatorValve`, `ZONE-01.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
 | `ZONE-01.Occupants` | EX | persons | 0 .. 50 | People present, open-plan office. | calendar x design_occupants | `ZONE-01.CO2`, `ZONE-01.Airflow`, `ZONE-01.LightingPower`, `ZONE-01.EquipmentPower`, `ZONE-01.AirTemp` |  |
+| `ZONE-01.LightingMode` | SB | presence|schedule | 0 .. 1 | Lighting control, open-plan office: lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-01.DaylightHarvesting` | SB | bool | 0 .. 1 | Daylight dimming, open-plan office: electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-01.LightingPower` | `set_zone_lighting_mode` (IL-08) |
 | `ZONE-01.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, open-plan office (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-01.EquipmentPower` |  |
 | `ZONE-01.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, open-plan office: the radiator valve's target. | supervisory (governed) | `ZONE-01.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
 | `ZONE-01.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, open-plan office: zone cooling starts above it. | supervisory (governed) | `ZONE-01.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
@@ -63,6 +68,8 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 |---|---|---|---|---|---|---|---|
 | `ZONE-02.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, meeting room. | zone RC node (Twin._step) | `ZONE-02.RadiatorValve`, `ZONE-02.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
 | `ZONE-02.Occupants` | EX | persons | 0 .. 50 | People present, meeting room. | calendar x design_occupants | `ZONE-02.CO2`, `ZONE-02.Airflow`, `ZONE-02.LightingPower`, `ZONE-02.EquipmentPower`, `ZONE-02.AirTemp` |  |
+| `ZONE-02.LightingMode` | SB | presence|schedule | 0 .. 1 | Lighting control, meeting room: lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-02.DaylightHarvesting` | SB | bool | 0 .. 1 | Daylight dimming, meeting room: electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-02.LightingPower` | `set_zone_lighting_mode` (IL-08) |
 | `ZONE-02.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, meeting room (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-02.EquipmentPower` |  |
 | `ZONE-02.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, meeting room: the radiator valve's target. | supervisory (governed) | `ZONE-02.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
 | `ZONE-02.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, meeting room: zone cooling starts above it. | supervisory (governed) | `ZONE-02.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
@@ -85,6 +92,8 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 |---|---|---|---|---|---|---|---|
 | `ZONE-03.AirTemp` | AI | degC | -10 .. 40 | Room air temperature, laboratory (constant equipment load). | zone RC node (Twin._step) | `ZONE-03.RadiatorValve`, `ZONE-03.CoolingPower`, `AHU-01.ExtractAirTemp` |  |
 | `ZONE-03.Occupants` | EX | persons | 0 .. 50 | People present, laboratory (constant equipment load). | calendar x design_occupants | `ZONE-03.CO2`, `ZONE-03.Airflow`, `ZONE-03.LightingPower`, `ZONE-03.EquipmentPower`, `ZONE-03.AirTemp` |  |
+| `ZONE-03.LightingMode` | SB | presence|schedule | 0 .. 1 | Lighting control, laboratory (constant equipment load): lit while people are present, or through the scheduled hours whoever is there (as found). | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_mode` (IL-08) |
+| `ZONE-03.DaylightHarvesting` | SB | bool | 0 .. 1 | Daylight dimming, laboratory (constant equipment load): electric light only tops up to the lux setpoint. | supervisory (governed) | `ZONE-03.LightingPower` | `set_zone_lighting_mode` (IL-08) |
 | `ZONE-03.EquipmentFactor` | EX | x | 0.5 .. 1.6 | Hourly multiplier on the equipment load, laboratory (constant equipment load) (seeded lognormal; 1.0 without variation). | Scenario.equipment_factor | `ZONE-03.EquipmentPower` |  |
 | `ZONE-03.HeatingSetpoint` | SP | degC | 8 .. 23 | Heating setpoint, laboratory (constant equipment load): the radiator valve's target. | supervisory (governed) | `ZONE-03.RadiatorValve` | `set_zone_setpoint` (IL-01, IL-02, IL-03, IL-11) |
 | `ZONE-03.CoolingSetpoint` | SP | degC | 20 .. 28 | Cooling setpoint, laboratory (constant equipment load): zone cooling starts above it. | supervisory (governed) | `ZONE-03.CoolingPower` | `set_zone_cooling_setpoint` (IL-01, IL-11) |
@@ -169,10 +178,12 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 |---|---|---|---|---|---|---|---|
 | `CABLE-RAMP.Mode` | SB | auto|on|off | 0 .. 2 | Heating cable mode, ramp. | supervisory (governed) | `CABLE-RAMP.Power`, `CABLE-RAMP.IcingRiskUncovered` | `set_heating_cable_mode` (IL-10) |
 | `CABLE-RAMP.Power` | AI | W | 0 .. 10000 | Cable power (rated when on). | plant | `EM-01.ElectricPower` |  |
-| `CABLE-RAMP.IcingRiskUncovered` | BV | bool | 0 .. 1 | HAZARD: icing risk while the circuit is off. | plant |  |  |
+| `CABLE-RAMP.IcingRiskUncovered` | BV | bool | 0 .. 1 | Conservative proxy: the 3 h icing-risk window with the circuit off. | plant |  |  |
+| `CABLE-RAMP.IcingHazardUncovered` | BV | bool | 0 .. 1 | HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off. | plant |  |  |
 | `CABLE-GUTTER.Mode` | SB | auto|on|off | 0 .. 2 | Heating cable mode, gutter. | supervisory (governed) | `CABLE-GUTTER.Power`, `CABLE-GUTTER.IcingRiskUncovered` | `set_heating_cable_mode` (IL-10) |
 | `CABLE-GUTTER.Power` | AI | W | 0 .. 10000 | Cable power (rated when on). | plant | `EM-01.ElectricPower` |  |
-| `CABLE-GUTTER.IcingRiskUncovered` | BV | bool | 0 .. 1 | HAZARD: icing risk while the circuit is off. | plant |  |  |
+| `CABLE-GUTTER.IcingRiskUncovered` | BV | bool | 0 .. 1 | Conservative proxy: the 3 h icing-risk window with the circuit off. | plant |  |  |
+| `CABLE-GUTTER.IcingHazardUncovered` | BV | bool | 0 .. 1 | HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off. | plant |  |  |
 
 ## Interlocks
 
@@ -187,7 +198,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 | IL-07 | CO2Setpoint within 600..1000 ppm | indoor air quality (1000 ppm guideline) | `SPECIFIED` | signed ToolSpec |
 | IL-08 | LuxSetpoint >= 300 while occupied; 0 only when unoccupied | workplace lighting (NS-EN 12464-1: 500 lux offices) | `SPECIFIED` | twin interlock |
 | IL-09 | HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K | a cap that would start the backup heater (COP 1) | `SPECIFIED` | twin interlock |
-| IL-10 | CABLE-*.Mode = off refused while OUT-01.IcingRisk | ice on ramps and gutters | `SPECIFIED` | twin interlock |
+| IL-10 | CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC (the ground sensor reports a freezing wet surface) | ice on ramps and gutters | `SPECIFIED` | twin interlock |
 | IL-11 | rate: at most one change per point per 15 min; setpoints move <= 1.0 K per change | actuator wear and stability | `IMPLEMENTED` | twin interlock (zone heating today) + REMORA cumulative limits |
 
 ## Governed tools
@@ -200,11 +211,12 @@ Each becomes a signed REMORA ToolSpec (argument schema, target, closure digest) 
 | `set_zone_cooling_setpoint` | *.CoolingSetpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `cooling_c`: {"type": "number", "minimum": 20.0, "maximum": 28.0} | medium | <=1.0 K, >=15 min | chilled beam -> chiller electric |  | `SPECIFIED` |
 | `set_zone_co2_setpoint` | *.CO2Setpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `co2_ppm`: {"type": "integer", "minimum": 600, "maximum": 1000} | medium | <=100 ppm per change | airflow -> fan power and coil heat -> tank draw |  | `SPECIFIED` |
 | `set_zone_lighting_setpoint` | *.LuxSetpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `lux`: {"type": "integer", "minimum": 0, "maximum": 750} | low | >=15 min | lighting power -> zone heat gain -> less radiator heat |  | `SPECIFIED` |
+| `set_zone_lighting_mode` | *.LightingMode, *.DaylightHarvesting | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `mode`: {"type": "string", "enum": ["presence", "schedule"]}; `daylight_harvesting`: {"type": "boolean"} | low | >=15 min | lighting power -> zone heat gain -> radiator heat |  | `SPECIFIED` |
 | `set_supply_air_setpoint` | AHU-01.SupplyAirSetpoint | `supply_air_c`: {"type": "number", "minimum": 15.0, "maximum": 21.0} | high | <=1.0 K, >=15 min | coil power -> tank draw; supply air -> every zone's radiator demand |  | `SPECIFIED` |
 | `set_tank_setpoint` | TANK-01.Setpoint | `tank_c`: {"type": "number", "minimum": 35.0, "maximum": 60.0} | high | <=3 K, >=15 min | heat-pump run time and COP; stored heat for load shifting | PR-03 | `SPECIFIED` |
 | `set_heat_pump_limit` | HP-01.MaxFraction | `max_fraction`: {"type": "number", "minimum": 0.0, "maximum": 1.0} | high | >=15 min | heat output -> tank -> possibly the backup heater (expensive) | PR-04 | `SPECIFIED` |
 | `set_ahu_enabled` | AHU-01.Enabled | `enabled`: {"type": "boolean"} | high | >=30 min | all airflow, CO2, fan power, coil heat | PR-02 | `SPECIFIED` |
-| `set_heating_cable_mode` | CABLE-*.Mode | `circuit`: {"type": "string", "enum": ["CABLE-RAMP", "CABLE-GUTTER"]}; `mode`: {"type": "string", "enum": ["auto", "on", "off"]} | high | >=15 min | cable power; off during icing risk is a hazard |  | `SPECIFIED` |
+| `set_heating_cable_mode` | CABLE-*.Mode | `circuit`: {"type": "string", "enum": ["CABLE-RAMP", "CABLE-GUTTER"]}; `mode`: {"type": "string", "enum": ["auto", "thermostat", "sensor", "on", "off"]} | high | >=15 min | cable power; off during icing risk is a hazard |  | `SPECIFIED` |
 
 ## Procedures (multi-step changes)
 

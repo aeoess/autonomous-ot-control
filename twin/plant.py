@@ -158,6 +158,12 @@ class ZoneSetpoints:
     co2_ppm: float
     lux: float                            # 0 = lights off
     ventilation_enabled: bool = True
+    #: "presence": lit while people are present, dimmed by daylight when
+    #: daylight_harvesting is on. "schedule": lit through the building's
+    #: scheduled hours at full output whoever is there (as found in many
+    #: buildings).
+    lighting_mode: str = "presence"
+    daylight_harvesting: bool = True
 
 
 @dataclass(frozen=True)
@@ -184,6 +190,11 @@ class Exogenous:
     #: tank for space heating; domestic hot water is not modelled.
     heating_season: bool = True
     equipment_factor: dict[str, float] = field(default_factory=dict)  # hourly load multiplier
+    #: Ground moisture sensor at the ramp and gutter (the twin's surface model):
+    #: the surface is wet, snowy or iced.
+    surface_wet: bool = False
+    #: The building's scheduled hours (calendar), whatever the actual presence.
+    scheduled_open: bool = False
 
 
 # -- plant state ----------------------------------------------------------------
@@ -312,8 +323,10 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
         occupied = n > 0
         # Lighting: daylight first, electric light tops up to the setpoint.
         daylight = z.daylight_factor * lux_out
-        target_lux = zs.lux if occupied else 0.0
-        dim = max(0.0, min(1.0, (target_lux - daylight) / 500.0)) if target_lux > 0 else 0.0
+        lit = exo.scheduled_open if zs.lighting_mode == "schedule" else occupied
+        target_lux = zs.lux if lit else 0.0
+        credited = daylight if zs.daylight_harvesting else 0.0
+        dim = max(0.0, min(1.0, (target_lux - credited) / 500.0)) if target_lux > 0 else 0.0
         light_w = (0.1 + 0.9 * dim) * z.lighting_w_per_m2 * z.area_m2 if dim > 0 else 0.0
         # Radiator valve: proportional over 1 K below the heating setpoint.
         valve = max(0.0, min(1.0, (zs.heating_c - t) / 1.0 + 0.5)) if t < zs.heating_c + 0.5 else 0.0
@@ -416,14 +429,23 @@ def step(cfg: PlantConfig, state: PlantState, zone_temp_c: dict[str, float],
     pts.update({"TANK-01.Temp": tank_c, "TANK-01.Loss": loss_w,
                 "HYD-01.SupplyTemp": supply_water_c, "HYD-01.HeatDemand": demand_w})
 
-    # ---- heating cables ----
+    # ---- heating cables (snow melting on the ramp, gutter heating) ----
+    # Modes: "auto" (legacy: the icing-risk window), "thermostat" (on whenever
+    # -8..+3 degC, the common cheap controller), "sensor" (on while the ground
+    # sensor reports a wet, snowy or iced surface at -10..+1 degC), "on", "off".
+    # The hazard is physical: a wet surface at -10..+1 degC with the circuit off.
+    freezing_wet = exo.surface_wet and -10.0 <= exo.outdoor_c <= 1.0
     for circuit, rated in cfg.cables:
         mode = sp.cable_modes.get(circuit, "auto")
-        on = mode == "on" or (mode == "auto" and exo.icing_risk)
+        on = (mode == "on" or (mode == "auto" and exo.icing_risk)
+              or (mode == "thermostat" and -8.0 <= exo.outdoor_c <= 3.0)
+              or (mode == "sensor" and freezing_wet))
         w = rated if on else 0.0
         elec_w += w
         pts[f"{circuit}.Power"] = w
         pts[f"{circuit}.IcingRiskUncovered"] = 1.0 if (exo.icing_risk and not on) else 0.0
+        pts[f"{circuit}.IcingHazardUncovered"] = 1.0 if (freezing_wet and not on) else 0.0
+    pts["OUT-01.SurfaceWet"] = 1.0 if exo.surface_wet else 0.0
 
     pts["EM-01.ElectricPower"] = elec_w
     pts["EM-01.DistrictHeatPower"] = dh_w

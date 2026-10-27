@@ -1,0 +1,26 @@
+{
+  "schema": "ot-site/v1",
+  "building_id": "demo-building-no1",
+  "fictitious": true,
+  "name": "Demo Building NO1",
+  "comment": "A fictitious building. The coordinate is a point in Oslo chosen only so that weather and day-ahead prices come from a real Norwegian area; no real building, owner or address is implied.",
+  "location": {
+    "lat": 59.9133,
+    "lon": 10.7389,
+    "datum": "WGS84",
+    "municipality": "Oslo",
+    "county": "Oslo"
+  },
+  "timezone": "Europe/Oslo",
+  "price_area": {
+    "code": "NO1",
+    "name": "Øst-Norge",
+    "basis": "Declared. Oslo lies in bidding zone NO1. runner.exogenous checks the coordinate against the coarse box below so a mistyped coordinate or area fails; the box is a consistency check, not a bidding-zone boundary.",
+    "consistency_box": {
+      "lat_min": 58.8,
+      "lat_max": 61.5,
+      "lon_min": 9.0,
+      "lon_max": 12.5
+    }
+  }
+}

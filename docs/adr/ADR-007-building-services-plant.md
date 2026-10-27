@@ -223,3 +223,57 @@ Setback only reaches the heat pump's share. The large levers are cable control, 
 
 - The demo signs `deploy/ot/ot_limits.demo-accelerated.policy.json`, which uses a 60 s window. Its comment states why.
 - Cumulative limits are demonstrated in real time only, by acceptance case LIM-01 with the production policy.
+
+## Addendum 2, 2026-10-27: devices, the as-found baseline, five price areas
+
+**Seasonal config v2** (`twin/fixtures/three-zone-hvac-seasonal-v2.json`) makes three changes.
+
+- **Cooling setpoint 23.5 degC, inside the comfort band.** At 24.0 the proportional cooling settled just above the band and produced about 990 degree-hours a year in every strategy.
+- **Laboratory base load of 10 W/m2.** At 25 W/m2 it was a constant 2 kW and 56 % of the building's energy, which no tool can steer.
+- **A declared reference grid tariff (ASSUMPTION).** Energy part 0.06 NOK/kWh, plus a power part of 110 NOK/kW/month in November to March and 45 in April to October, charged on the month's highest hourly mean kW. Taxes are excluded. The tariff is generic and is not any grid company's published tariff (D-13).
+
+**New devices and points** are catalogued in `docs/datapoints.md`.
+
+- **Snow-melt ground moisture sensor.**
+  - `OUT-01.SurfaceWet` comes from a stated surface model. Precipitation wets the surface. Above +2 degC it dries in 2 h. At or below +2 degC it stays until the cable has run 1 h without new precipitation.
+  - Cable modes: `thermostat` (-8..+3 degC, the common cheap controller) and `sensor` (wet surface at -10..+1 degC).
+  - The hazard `CABLE-*.IcingHazardUncovered` is physical: a freezing wet surface with the circuit off. IL-10 uses the sensor.
+- **Lighting.**
+  - `ZONE-*.LightingMode`: `presence` or `schedule`. In schedule mode lights run through the scheduled hours, empty rooms included.
+  - `ZONE-*.DaylightHarvesting`: whether daylight counts toward the lux setpoint.
+- **Peak and grid cost.** `EM-01.MonthlyPeakKw` and `EM-01.GridCost`.
+
+**Strategies** (`runner/strategies.py`):
+
+| Strategy | Description |
+|---|---|
+| P0, as found | Fixed heating schedule (21/20 degC); AHU on a weekday schedule that runs on holidays; scheduled lighting without daylight dimming; thermostat cables; a fixed 50 degC tank |
+| P1 | P0 plus night setback with self-tuning optimal start |
+| P2, the caretaker | See the list below |
+
+P2 adds the following to P1:
+- a weekend and holiday setback whose depth follows the 24 h outdoor mean (16, 17 or 18 degC), with an optimal-start lead of up to 12 h;
+- an occupancy-aware AHU;
+- presence lighting with daylight dimming;
+- sensor-controlled cables;
+- a tank that follows the radiator curve, with +5 K in the cheapest hours when the daily spread is at least 0.40 NOK/kWh;
+- a peak limiter that never acts during a recovery and respects IL-09.
+
+Every strategy keeps IL-01, IL-06, IL-09 and IL-10 (`tests/unit/test_devices_and_areas.py`).
+
+Three things the January runs taught:
+- **A fixed low tank starves the radiators in the cold.** In Tromsø the meeting room fell to 16.8 degC, so P2's tank follows the curve.
+- **Deep setback must depend on the weather.** A 16 degC weekend could not be recovered at -15 degC.
+- **Setback can cost money.** In NO4 P1's morning recovery raised the monthly peak from 21.3 to 22.6 kW, and the power charge exceeded the energy saved.
+
+**Five price areas.** One fictitious building per area at a real coordinate:
+
+| Area | City | Coordinate |
+|---|---|---|
+| NO1 | Oslo | 59.9133, 10.7389 |
+| NO2 | Kristiansand | 58.1467, 7.9956 |
+| NO3 | Trondheim | 63.4182, 10.4051 |
+| NO4 | Tromsø | 69.6492, 18.9553 |
+| NO5 | Bergen | 60.3913, 5.3221 |
+
+Each area has its own verified 2025 prices and local ERA5 weather. The building, the occupancy and the seeds are the same in every area, so the areas differ only by climate and price. `python -m runner.areas` runs every area, strategy and seed in parallel.

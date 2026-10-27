@@ -127,6 +127,13 @@ class Scenario:
             self._equipment[key] = min(e["max"], max(e["min"], math.exp(rng.gauss(0.0, e["sigma"]))))
         return self._equipment[key]
 
+    def scheduled_open(self, t_s: int) -> bool:
+        """The building's fixed opening schedule: weekdays in the occupancy hours,
+        holidays included (the as-found schedule many buildings run on)."""
+        start_h, end_h = self.raw["occupancy"]["weekday_hours_utc"]
+        d = datetime.fromtimestamp(parse_utc(self.start_utc).timestamp() + t_s, UTC)
+        return d.weekday() < 5 and start_h <= d.hour < end_h
+
     def mean_outdoor_24h(self, t_s: int) -> float:
         """Mean outdoor temperature over the preceding 24 h (from t=0 at the start)."""
         lo = max(0, t_s - 86400)

@@ -1,0 +1,85 @@
+{
+  "schema": "ot-scenario/v1",
+  "scenario_id": "no1-2025-hvac-v1",
+  "comment": "Fictitious building at its declared Oslo coordinate (NO1) for 2025 (UTC): real NO1 day-ahead spot prices (hvakosterstrommen.no) and local ERA5 outdoor temperature, shortwave radiation, relative humidity and precipitation (Open-Meteo), all verified by runner.exogenous. Same occupancy calendar, holidays and seeded variation as every area, so the areas differ only by climate and price.",
+  "site_ref": "../twin/fixtures/site-demo-building-no1.json",
+  "seed": 177,
+  "start_utc": "2025-01-01T00:00:00Z",
+  "duration_seconds": 31536000,
+  "outdoor": {
+    "series_ref": "data/demo-building-no1/outdoor-temperature-2025-01-01_2025-12-31.json",
+    "sha256": "401b61af745edc72f9b2a8ecdbf7523656a007b601d4e32038b6ccb5777c3406"
+  },
+  "price": {
+    "series_ref": "data/demo-building-no1/price-NO1-2025-01-01_2025-12-31.json",
+    "sha256": "190eaca253595afdd1db9cd6caac179c65ec5563d6ce4902a9b9ca828ba4a19e"
+  },
+  "solar": {
+    "series_ref": "data/demo-building-no1/solar-shortwave-2025-01-01_2025-12-31.json",
+    "sha256": "173d43cdddf67e78e274f1e885f55d39c48f48cbeab105506f5627fcb2ce1a96"
+  },
+  "humidity": {
+    "series_ref": "data/demo-building-no1/humidity-rh-2025-01-01_2025-12-31.json",
+    "sha256": "2390a593bcfa39cc90fb41bd2387d40ed444d3490bfddaaa607a03d99cc8b25d"
+  },
+  "precipitation": {
+    "series_ref": "data/demo-building-no1/precipitation-precip-2025-01-01_2025-12-31.json",
+    "sha256": "fbb78ebece6cbba97a1babd25612cef7c8498e0ce658d1a05302f6be40fb9a3f"
+  },
+  "occupancy": {
+    "weekday_hours_utc": [
+      7,
+      17
+    ],
+    "gain_w_per_m2": 8.0,
+    "unoccupied_gain_w_per_m2": 1.0,
+    "holidays": [
+      "2025-01-01",
+      "2025-04-17",
+      "2025-04-18",
+      "2025-04-21",
+      "2025-05-01",
+      "2025-05-17",
+      "2025-05-29",
+      "2025-06-09",
+      "2025-12-24",
+      "2025-12-25",
+      "2025-12-26",
+      "2025-12-31"
+    ],
+    "holidays_note": "Norwegian public holidays 2025 plus Christmas Eve and New Year's Eve, which most offices close (17 May 2025 is a Saturday)."
+  },
+  "variation": {
+    "presence": {
+      "mean": 0.75,
+      "sd": 0.15,
+      "min": 0.2,
+      "max": 1.0
+    },
+    "reduced_presence": [
+      {
+        "from": "2025-07-07",
+        "to": "2025-07-27",
+        "factor": 0.3,
+        "note": "common summer holiday, weeks 28-30"
+      },
+      {
+        "from": "2025-12-22",
+        "to": "2025-12-30",
+        "factor": 0.4,
+        "note": "between Christmas and New Year"
+      }
+    ],
+    "equipment": {
+      "sigma": 0.2,
+      "min": 0.6,
+      "max": 1.5
+    },
+    "note": "Typical bounds: presence 60-90 % of design on an ordinary workday; plug load +/-20 % hour to hour."
+  },
+  "comfort": {
+    "occupied_min_c": 20.0,
+    "occupied_max_c": 24.0
+  },
+  "disturbances": []
+}

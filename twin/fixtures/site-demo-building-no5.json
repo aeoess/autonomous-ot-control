@@ -1,0 +1,26 @@
+{
+  "schema": "ot-site/v1",
+  "building_id": "demo-building-no5",
+  "fictitious": true,
+  "name": "Demo Building NO5",
+  "comment": "A fictitious building. The coordinate is a point in Bergen chosen only so that weather and day-ahead prices come from a real Norwegian area; no real building, owner or address is implied.",
+  "location": {
+    "lat": 60.3913,
+    "lon": 5.3221,
+    "datum": "WGS84",
+    "municipality": "Bergen",
+    "county": "Vestland"
+  },
+  "timezone": "Europe/Oslo",
+  "price_area": {
+    "code": "NO5",
+    "name": "Vest-Norge",
+    "basis": "Declared. Vestland lies in bidding zone NO5. runner.exogenous checks the coordinate against the coarse box below so a mistyped coordinate or area fails; the box is a consistency check, not a bidding-zone boundary.",
+    "consistency_box": {
+      "lat_min": 59.8,
+      "lat_max": 62.0,
+      "lon_min": 4.5,
+      "lon_max": 7.5
+    }
+  }
+}

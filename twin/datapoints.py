@@ -134,6 +134,12 @@ def build() -> Catalogue:
     P(Point("OUT-01.IcingRisk", "outdoor", "BV", "bool", (0, 1),
             "Outdoor -6..+2 degC with precipitation within 3 h either side.",
             "Scenario.icing_risk", affects=tuple(f"{c_}.Power" for c_ in CIRCUITS)))
+    P(Point("OUT-01.SurfaceWet", "outdoor", "AI", "bool", (0, 1),
+            "Ground moisture sensor at the ramp: the surface is wet, snowy or iced (twin surface model: wet "
+            "after precipitation; above +2 degC dries in 2 h; at or below +2 degC stays until the snow-melt "
+            "cable has run 1 h without new precipitation).",
+            "Twin._surface_wet", affects=tuple(f"{c_}.Power" for c_ in CIRCUITS)
+            + tuple(f"{c_}.IcingHazardUncovered" for c_ in CIRCUITS)))
     P(Point("OUT-01.Temp24hMean", "outdoor", "AV", "degC", (-40, 35),
             "Mean outdoor temperature over the preceding 24 h; drives the summer stop.",
             "Scenario.mean_outdoor_24h", affects=("HYD-01.HeatingSeason",)))
@@ -155,6 +161,15 @@ def build() -> Catalogue:
                 "calendar x design_occupants",
                 affects=(f"{z}.CO2", f"{z}.Airflow", f"{z}.LightingPower", f"{z}.EquipmentPower",
                          f"{z}.AirTemp")))
+        P(Point(f"{z}.LightingMode", z, "SB", "presence|schedule", (0, 1),
+                f"Lighting control, {nm}: lit while people are present, or through the scheduled hours "
+                f"whoever is there (as found).", "supervisory (governed)",
+                affects=(f"{z}.LightingPower",), writable_via="set_zone_lighting_mode",
+                interlocks=("IL-08",)))
+        P(Point(f"{z}.DaylightHarvesting", z, "SB", "bool", (0, 1),
+                f"Daylight dimming, {nm}: electric light only tops up to the lux setpoint.",
+                "supervisory (governed)", affects=(f"{z}.LightingPower",),
+                writable_via="set_zone_lighting_mode", interlocks=("IL-08",)))
         P(Point(f"{z}.EquipmentFactor", z, "EX", "x", (0.5, 1.6),
                 f"Hourly multiplier on the equipment load, {nm} (seeded lognormal; 1.0 without variation).",
                 "Scenario.equipment_factor", affects=(f"{z}.EquipmentPower",)))
@@ -307,12 +322,21 @@ def build() -> Catalogue:
         P(Point(f"{cc}.Power", "heating cables", "AI", "W", (0, 10000), "Cable power (rated when on).",
                 "plant", affects=("EM-01.ElectricPower",)))
         P(Point(f"{cc}.IcingRiskUncovered", "heating cables", "BV", "bool", (0, 1),
-                "HAZARD: icing risk while the circuit is off.", "plant"))
+                "Conservative proxy: the 3 h icing-risk window with the circuit off.", "plant"))
+        P(Point(f"{cc}.IcingHazardUncovered", "heating cables", "BV", "bool", (0, 1),
+                "HAZARD: the ground sensor reports a wet surface at -10..+1 degC and the circuit is off.",
+                "plant"))
     P(Point("EM-01.ElectricPower", "energy", "AI", "W", (0, 200000),
             "Building electricity meter: fans, chiller, heat pump, backup, boiler, lights, equipment, cables.",
             "plant", affects=("EM-01.Cost",)))
     P(Point("EM-01.DistrictHeatPower", "energy", "AI", "W", (0, 100000), "District heat meter.", "plant",
             affects=("EM-01.Cost",)))
+    P(Point("EM-01.MonthlyPeakKw", "energy", "AV", "kW", (0, 500),
+            "The month's highest hourly mean electric power: the basis of the grid tariff's power charge.",
+            "Twin._grid_tariff", affects=("EM-01.GridCost",)))
+    P(Point("EM-01.GridCost", "energy", "AV", "NOK", (0, 1e7),
+            "Declared reference grid tariff (ASSUMPTION): energy part per kWh plus the monthly power part.",
+            "Twin.grid_power_cost"))
 
     # -- interlocks ----------------------------------------------------------------------
     IL = c.interlocks.append
@@ -343,8 +367,9 @@ def build() -> Catalogue:
     IL(Interlock("IL-09", "HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K",
                 "a cap that would start the backup heater (COP 1)", ("HP-01.MaxFraction", "TANK-01.Temp"),
                 "SPECIFIED", "twin interlock"))
-    IL(Interlock("IL-10", "CABLE-*.Mode = off refused while OUT-01.IcingRisk",
-                "ice on ramps and gutters", ("CABLE-*.Mode", "OUT-01.IcingRisk"), "SPECIFIED",
+    IL(Interlock("IL-10", "CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC "
+                "(the ground sensor reports a freezing wet surface)",
+                "ice on ramps and gutters", ("CABLE-*.Mode", "OUT-01.SurfaceWet"), "SPECIFIED",
                 "twin interlock"))
     IL(Interlock("IL-11", "rate: at most one change per point per 15 min; setpoints move <= 1.0 K per change",
                 "actuator wear and stability", ("*",), "IMPLEMENTED",
@@ -366,6 +391,10 @@ def build() -> Catalogue:
     T(Tool("set_zone_lighting_setpoint", ("*.LuxSetpoint",),
            {"zone_id": zone, "lux": {"type": "integer", "minimum": 0, "maximum": 750}},
            "low", ">=15 min", "lighting power -> zone heat gain -> less radiator heat", "SPECIFIED"))
+    T(Tool("set_zone_lighting_mode", ("*.LightingMode", "*.DaylightHarvesting"),
+           {"zone_id": zone, "mode": {"type": "string", "enum": ["presence", "schedule"]},
+            "daylight_harvesting": {"type": "boolean"}},
+           "low", ">=15 min", "lighting power -> zone heat gain -> radiator heat", "SPECIFIED"))
     T(Tool("set_supply_air_setpoint", ("AHU-01.SupplyAirSetpoint",),
            {"supply_air_c": {"type": "number", "minimum": 15.0, "maximum": 21.0}},
            "high", "<=1.0 K, >=15 min", "coil power -> tank draw; supply air -> every zone's radiator demand",
@@ -383,7 +412,7 @@ def build() -> Catalogue:
            requires_procedure="PR-02"))
     T(Tool("set_heating_cable_mode", ("CABLE-*.Mode",),
            {"circuit": {"type": "string", "enum": list(CIRCUITS)},
-            "mode": {"type": "string", "enum": ["auto", "on", "off"]}},
+            "mode": {"type": "string", "enum": ["auto", "thermostat", "sensor", "on", "off"]}},
            "high", ">=15 min", "cable power; off during icing risk is a hazard", "SPECIFIED"))
 
     # -- procedures (multi-step changes) ------------------------------------------------------
