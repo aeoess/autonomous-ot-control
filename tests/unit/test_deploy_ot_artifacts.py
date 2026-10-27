@@ -20,11 +20,13 @@ def test_intent_source_parses_and_has_demo_order():
 
 
 def test_limits_policy_meters_the_write_tool():
+    from adapter.contracts import ALL_WRITE_TOOLS
+
     pol = json.loads((OT / "ot_limits.policy.json").read_text())
     assert pol["schema"] == "remora-cumulative-limits/v1"
     assert pol["coverage"] == "all_writes"
-    assert "set_zone_setpoint" in pol["meters"]
-    zones = {lim["resource"] for lim in pol["limits"]}
+    assert set(ALL_WRITE_TOOLS) <= set(pol["meters"])
+    zones = {lim.get("resource") for lim in pol["limits"] if lim.get("resource")}
     assert {"ZONE-01", "ZONE-02", "ZONE-03"} <= zones
 
 
@@ -72,25 +74,29 @@ def test_adapter_lock_lines_equal_the_project_lock():
 def test_signed_specs_mirror_the_deployment_contract():
     import importlib.util
 
+    from adapter.contracts import ALL_WRITE_TOOLS, READ_TOOLS
+
     spec = importlib.util.spec_from_file_location("sign_deployment", OT / "sign_deployment.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     toolspec = json.loads((ROOT / "contracts" / "ot-toolspec-v1.json").read_text())
-    specs = {s["tool_id"]: s for s in mod.build_specs(toolspec, {
-        "read_zone_state": "closure-sha256:" + "a" * 64,
-        "read_building_energy": "closure-sha256:" + "a" * 64,
-        "set_zone_setpoint": "closure-sha256:" + "a" * 64})}
-    assert set(specs) == {"read_zone_state", "read_building_energy", "set_zone_setpoint"}
+    all_tools = (*READ_TOOLS, *ALL_WRITE_TOOLS)
+    specs = {s["tool_id"]: s for s in mod.build_specs(
+        toolspec, {t: "closure-sha256:" + "a" * 64 for t in all_tools})}
+    assert set(specs) == set(all_tools)
     write = specs["set_zone_setpoint"]
     props = write["argument_schema"]["properties"]
     assert write["argument_schema"]["additionalProperties"] is False
     assert props["zone_id"]["enum"] == ["ZONE-01", "ZONE-02", "ZONE-03"]
     assert (props["setpoint_c"]["minimum"], props["setpoint_c"]["maximum"]) == (19.0, 23.0)
     # REMORA's validator has no multipleOf; signing one would be refused.
-    assert "multipleOf" not in json.dumps(write)
+    assert "multipleOf" not in json.dumps(specs)
     assert write["allowed_targets"] == ["simulated_pilot"]
     assert write["action_type"] == "write" and write["risk_tier"] == "high"
-    assert all(s["action_type"] == "read" for k, s in specs.items() if k != "set_zone_setpoint")
+    for w in ALL_WRITE_TOOLS:
+        assert specs[w]["action_type"] == "write"
+        assert "postcondition" in specs[w]
+    assert all(specs[r]["action_type"] == "read" for r in READ_TOOLS)
 
 
 def test_zone_03_budget_is_tighter_than_the_interlock():

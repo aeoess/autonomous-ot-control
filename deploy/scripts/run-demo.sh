@@ -25,7 +25,7 @@ RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
 mkdir -p artifacts
 
 docker compose up --build -d --wait twin
-trap 'docker compose logs --no-color twin > "artifacts/${RUN_ID}-twin.log" 2>&1 || true' EXIT
+trap 'docker compose logs --no-color twin > "artifacts/${RUN_ID}-twin.log" 2>&1 || true; docker compose down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
 
 docker compose --profile run run --rm runner runner.smoke --run-id "${RUN_ID}-smoke" --out artifacts
 docker compose --profile run run --rm runner runner.baseline --run-id "${RUN_ID}-baseline" \

@@ -25,6 +25,9 @@
     "effect_status": {"enum": ["EFFECT_VERIFIED", "EFFECT_MISMATCH", "EFFECT_UNOBSERVABLE",
                                "EFFECT_VERIFIER_FAILED"]},
     "detail": {"type": ["string", "null"]},
+    "tool_name": {"type": "string"},
+    "expected_arguments": {"type": "object"},
+    "observed_fields": {"type": "object"},
     "observation_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
   },
   "additionalProperties": false

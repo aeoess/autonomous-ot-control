@@ -60,5 +60,18 @@
     "action_spans": [
       "adjust the setpoint"
     ]
+  },
+  "WORK-ORDER-PLANT": {
+    "task_text": "Caretaker P3 supervisory plan for demo-building-001: set and adjust heating, cooling (23.5 and 28.0), CO2 (600, 800, 900, 1000), lux (0, 300, 500) and lighting mode (presence, schedule) on zone ZONE-01, zone ZONE-02 and zone ZONE-03; set supply air temperature (15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0, 20.5, 21.0) and AHU enabled on AHU-01; set buffer tank setpoint (45.0, 48.0, 50.0, 52.0, 55.0) on TANK-01; set heat pump limit (0.6, 0.8, 1.0) on HP-01; set heating cable mode (sensor, thermostat, auto, on, off) on circuit CABLE-RAMP and circuit CABLE-GUTTER.",
+    "operation": "update",
+    "resource_type": "zone",
+    "requested_effect": "update",
+    "target_entities": [],
+    "source_spans": [
+      "demo-building-001"
+    ],
+    "action_spans": [
+      "set and adjust"
+    ]
   }
 }

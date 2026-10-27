@@ -104,6 +104,7 @@ class Twin:
         self.power_w = 0.0
         self.stop_switch = False
         self.operations: dict[str, OperationRecord] = {}
+        self.point_history_s: dict[str, list[int]] = {}
         self.events: list[dict[str, Any]] = []
         self.record_trace = record_trace
         self.trace: list[dict[str, Any]] = []
@@ -342,6 +343,35 @@ class Twin:
                     "power_w": r6(self.power_w), "unit_energy": "kWh", "unit_power": "W",
                     "estimate": True, **self.clock.stamp()}
 
+    def read_plant(self) -> dict[str, Any]:
+        with self._lock:
+            if self.plant is None:
+                return {"building_id": self.config["building_id"], "model": self.model_id,
+                        "plant_configured": False, "state_revision": self.revision, **self.clock.stamp()}
+            sp = self.setpoints
+            return {
+                "building_id": self.config["building_id"],
+                "model": self.model_id,
+                "plant_configured": True,
+                "state_revision": self.revision,
+                "setpoints": {
+                    "zones": {z: {"heating_c": r6(self.zones[z].setpoint_c), "cooling_c": r6(zs.cooling_c),
+                                  "co2_ppm": r6(zs.co2_ppm), "lux": r6(zs.lux),
+                                  "lighting_mode": zs.lighting_mode,
+                                  "daylight_harvesting": zs.daylight_harvesting}
+                              for z, zs in sorted(sp.zones.items())},
+                    "supply_air_c": r6(sp.supply_air_c),
+                    "tank_c": r6(sp.tank_c),
+                    "hp_max_fraction": r6(sp.hp_max_fraction),
+                    "ahu_enabled": sp.ahu_enabled,
+                    "cable_modes": dict(sorted(sp.cable_modes.items())),
+                },
+                "tank_temp_c": r6(self.plant_state.tank_c),
+                "co2_ppm": {z: r6(v) for z, v in sorted(self.plant_state.co2_ppm.items())},
+                "points": {k: r6(v) for k, v in sorted(self.points.items())},
+                **self.clock.stamp(),
+            }
+
     def status(self) -> dict[str, Any]:
         with self._lock:
             return {"building_id": self.config["building_id"], "model": self.model_id,
@@ -404,6 +434,114 @@ class Twin:
                 rec = OperationRecord(op_id, digest, "REJECTED", reason, zone_id, req_sp,
                                       zone.setpoint_c if zone else None, None, before, before,
                                       stamp["sim_time_s"], stamp["sim_utc"])
+            self.operations[op_id] = rec
+            self._persist()
+            return rec, False
+
+    @staticmethod
+    def plant_request_digest(cmd: dict[str, Any]) -> str:
+        def _clean(v: Any) -> Any:
+            if isinstance(v, float) and v != v:
+                return "NaN"
+            if isinstance(v, float) and v in (float("inf"), float("-inf")):
+                return str(v)
+            if isinstance(v, dict):
+                return {k: _clean(val) for k, val in v.items()}
+            return v
+        body = {k: _clean(cmd.get(k)) for k in ("tool_name", "arguments", "expected_state_revision")}
+        return canonical_digest(body)
+
+    def _apply_plant_mutation(self, tool: str, args: dict[str, Any]) -> tuple[str, str, Any, Any, str]:
+        """Apply a validated plant write and return (zone_id, target, prev, new, hist_key)."""
+        sp = self.setpoints
+        if tool == "set_zone_cooling_setpoint":
+            zid, val = str(args["zone_id"]), float(args["cooling_c"])
+            zs = sp.zones[zid]
+            prev = zs.cooling_c
+            self.setpoints = replace(sp, zones={**sp.zones, zid: replace(zs, cooling_c=val)})
+            return zid, zid, prev, val, f"{zid}.CoolingSetpoint"
+        if tool == "set_zone_co2_setpoint":
+            zid, val = str(args["zone_id"]), int(args["co2_ppm"])
+            zs = sp.zones[zid]
+            prev = int(zs.co2_ppm)
+            self.setpoints = replace(sp, zones={**sp.zones, zid: replace(zs, co2_ppm=float(val))})
+            return zid, zid, prev, val, f"{zid}.CO2Setpoint"
+        if tool == "set_zone_lighting_setpoint":
+            zid, val = str(args["zone_id"]), int(args["lux"])
+            zs = sp.zones[zid]
+            prev = int(zs.lux)
+            self.setpoints = replace(sp, zones={**sp.zones, zid: replace(zs, lux=float(val))})
+            return zid, zid, prev, val, f"{zid}.LuxSetpoint"
+        if tool == "set_zone_lighting_mode":
+            zid, mode, dh = str(args["zone_id"]), str(args["mode"]), bool(args["daylight_harvesting"])
+            zs = sp.zones[zid]
+            prev = {"mode": zs.lighting_mode, "daylight_harvesting": zs.daylight_harvesting}
+            new = {"mode": mode, "daylight_harvesting": dh}
+            self.setpoints = replace(sp, zones={**sp.zones, zid: replace(zs, lighting_mode=mode,
+                                                                         daylight_harvesting=dh)})
+            return zid, zid, prev, new, f"{zid}.LightingMode"
+        if tool == "set_supply_air_setpoint":
+            val = float(args["supply_air_c"])
+            prev = sp.supply_air_c
+            self.setpoints = replace(sp, supply_air_c=val)
+            return "AHU-01", "AHU-01", prev, val, "AHU-01.SupplyAirSetpoint"
+        if tool == "set_tank_setpoint":
+            val = float(args["tank_c"])
+            prev = sp.tank_c
+            self.setpoints = replace(sp, tank_c=val)
+            return "TANK-01", "TANK-01", prev, val, "TANK-01.Setpoint"
+        if tool == "set_heat_pump_limit":
+            val = float(args["max_fraction"])
+            prev = sp.hp_max_fraction
+            self.setpoints = replace(sp, hp_max_fraction=val)
+            return "HP-01", "HP-01", prev, val, "HP-01.MaxFraction"
+        if tool == "set_ahu_enabled":
+            val = bool(args["enabled"])
+            prev = sp.ahu_enabled
+            self.setpoints = replace(sp, ahu_enabled=val)
+            return "AHU-01", "AHU-01", prev, val, "AHU-01.Enabled"
+        if tool == "set_heating_cable_mode":
+            circuit, mode = str(args["circuit"]), str(args["mode"])
+            prev = sp.cable_modes.get(circuit, "auto")
+            self.setpoints = replace(sp, cable_modes={**sp.cable_modes, circuit: mode})
+            return circuit, circuit, prev, mode, f"{circuit}.Mode"
+        raise TwinError(f"unsupported plant tool {tool!r}")
+
+    def apply_plant_command(self, cmd: dict[str, Any]) -> tuple[OperationRecord, bool]:
+        """Apply or refuse one plant supervisory command. Returns (record, replayed)."""
+        op_id = cmd.get("operation_id")
+        if not isinstance(op_id, str) or not op_id:
+            raise TwinError("operation_id required")
+        digest = self.plant_request_digest(cmd)
+        with self._lock:
+            prior = self.operations.get(op_id)
+            if prior is not None:
+                if prior.request_digest != digest:
+                    raise OperationConflict(op_id)
+                return prior, True
+            reason = guard_mod.check_plant(self, cmd)
+            tool = str(cmd.get("tool_name") or "")
+            args = cmd.get("arguments") if isinstance(cmd.get("arguments"), dict) else {}
+            stamp = self.clock.stamp()
+            before = self.revision
+            if reason is None:
+                zid, target, prev, new, hist_key = self._apply_plant_mutation(tool, args)
+                self.point_history_s.setdefault(hist_key, []).append(self.clock.now_s)
+                self.revision += 1
+                num_prev = float(prev) if isinstance(prev, (int, float)) and not isinstance(prev, bool) else None
+                num_new = float(new) if isinstance(new, (int, float)) and not isinstance(new, bool) else 0.0
+                rec = OperationRecord(
+                    op_id, digest, "APPLIED", None, zid, num_new, num_prev, num_new,
+                    before, self.revision, stamp["sim_time_s"], stamp["sim_utc"],
+                    tool_name=tool, target=target, requested_value=new,
+                    previous_value=prev, new_value=new)
+            else:
+                zid = str(args.get("zone_id") or args.get("circuit") or tool)
+                rec = OperationRecord(
+                    op_id, digest, "REJECTED", reason, zid, None, None, None,
+                    before, before, stamp["sim_time_s"], stamp["sim_utc"],
+                    tool_name=tool, target=zid, requested_value=args,
+                    previous_value=None, new_value=None)
             self.operations[op_id] = rec
             self._persist()
             return rec, False

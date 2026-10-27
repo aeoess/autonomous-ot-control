@@ -32,8 +32,9 @@ from typing import Any
 
 import httpx
 
-from adapter.actuation import ActuationError, ActuatorClient, EffectUnknown, apply_setpoint
-from adapter.contracts import ToolSpec
+from adapter.actuation import (ActuationError, ActuatorClient, EffectUnknown, apply_plant_command,
+                               apply_setpoint)
+from adapter.contracts import ALL_WRITE_TOOLS, READ_TOOLS, ToolSpec
 
 READ_TIMEOUT_S = 5.0
 # REMORA proposal ids are UUIDs; nothing else goes into a twin operation URL.
@@ -101,7 +102,7 @@ class OtTools:
         return r.json()
 
     def set_zone_setpoint(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Apply one governed setpoint change (the only WRITE tool).
+        """Apply one governed setpoint change (the zone heating WRITE tool).
 
         Fails closed (raises) on any contract or guard refusal so REMORA records
         an error, not a successful effect. The operation id is REMORA's proposal
@@ -121,6 +122,48 @@ class OtTools:
             raise EffectUnknown(f"could not read plant state: {type(e).__name__}") from None
         return apply_setpoint(self._actuator, self._toolspec, operation_id=operation_id,
                               expected_state_revision=revision, arguments=arguments)
+
+    def _dispatch_plant_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        operation_id = self._proposal_id()
+        try:
+            prior = self._prior_effect(operation_id)
+            if prior is not None:
+                if prior.get("status") != "APPLIED":
+                    raise ActuationError(f"prior_outcome:{prior.get('reason') or prior.get('status')}")
+                return {**prior, "replayed": True}
+            revision = self._current_revision()
+        except httpx.HTTPError as e:
+            raise EffectUnknown(f"could not read plant state: {type(e).__name__}") from None
+        return apply_plant_command(self._actuator, self._toolspec, operation_id=operation_id,
+                                   expected_state_revision=revision, tool_name=tool_name,
+                                   arguments=arguments)
+
+    def set_zone_cooling_setpoint(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_zone_cooling_setpoint", arguments)
+
+    def set_zone_co2_setpoint(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_zone_co2_setpoint", arguments)
+
+    def set_zone_lighting_setpoint(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_zone_lighting_setpoint", arguments)
+
+    def set_zone_lighting_mode(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_zone_lighting_mode", arguments)
+
+    def set_supply_air_setpoint(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_supply_air_setpoint", arguments)
+
+    def set_tank_setpoint(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_tank_setpoint", arguments)
+
+    def set_heat_pump_limit(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_heat_pump_limit", arguments)
+
+    def set_ahu_enabled(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_ahu_enabled", arguments)
+
+    def set_heating_cable_mode(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._dispatch_plant_tool("set_heating_cable_mode", arguments)
 
 
 # -- env wiring --------------------------------------------------------------
@@ -152,26 +195,43 @@ def _tools() -> OtTools:
 
 def register_tools(register: Callable[[str, Callable[[Any], Any]], None]) -> None:
     tools = _tools()
-    register("read_zone_state", tools.read_zone_state)
-    register("read_building_energy", tools.read_building_energy)
-    register("set_zone_setpoint", tools.set_zone_setpoint)
+    for name in (*READ_TOOLS, *ALL_WRITE_TOOLS):
+        register(name, getattr(tools, name))
 
 
 # -- cumulative-limits hooks (REMORA_LIMITS_OBSERVER_MODULE / _EVIDENCE_MODULE) --
 
 def observe_limit_value(tenant: str, quantity: str, resource: str) -> float:
-    """The plant's own value for an ``observed`` meter (setpoint movement)."""
-    if quantity != "setpoint_movement":
-        raise KeyError(f"no observation for {quantity!r}")
+    """The plant's own value for an ``observed`` meter."""
     tools = _tools()
-    # REMORA may call this with the agent's own argument (the limit preview at
-    # assess ran before the signed contract until REMORA #1101). Only a zone
-    # in the signed contract is ever put into a twin URL.
-    if resource not in tools._toolspec.zones:
-        raise KeyError(f"no observation for resource {resource!r}")
-    r = tools._read.get(f"/v1/zones/{resource}", headers=tools._read_headers)
-    r.raise_for_status()
-    return float(r.json()["setpoint_c"])
+    if quantity == "setpoint_movement":
+        # REMORA may call this with the agent's own argument (the limit preview at
+        # assess ran before the signed contract until REMORA #1101). Only a zone
+        # in the signed contract is ever put into a twin URL.
+        if resource not in tools._toolspec.zones:
+            raise KeyError(f"no observation for resource {resource!r}")
+        r = tools._read.get(f"/v1/zones/{resource}", headers=tools._read_headers)
+        r.raise_for_status()
+        return float(r.json()["setpoint_c"])
+    if quantity == "cooling_movement":
+        if resource not in tools._toolspec.zones:
+            raise KeyError(f"no observation for resource {resource!r}")
+        r = tools._read.get("/v1/plant", headers=tools._read_headers)
+        r.raise_for_status()
+        return float(r.json()["setpoints"]["zones"][resource]["cooling_c"])
+    if quantity == "co2_movement":
+        if resource not in tools._toolspec.zones:
+            raise KeyError(f"no observation for resource {resource!r}")
+        r = tools._read.get("/v1/plant", headers=tools._read_headers)
+        r.raise_for_status()
+        return float(r.json()["setpoints"]["zones"][resource]["co2_ppm"])
+    if quantity == "lux_movement":
+        if resource not in tools._toolspec.zones:
+            raise KeyError(f"no observation for resource {resource!r}")
+        r = tools._read.get("/v1/plant", headers=tools._read_headers)
+        r.raise_for_status()
+        return float(r.json()["setpoints"]["zones"][resource]["lux"])
+    raise KeyError(f"no observation for {quantity!r}")
 
 
 def check_limit_evidence(tenant: str, operation: Any, evidence_ref: str) -> dict[str, Any]:

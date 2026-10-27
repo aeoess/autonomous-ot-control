@@ -36,6 +36,124 @@
         "max_changes_per_hour": 2,
         "max_observation_age_seconds": 600
       }
+    },
+    {
+      "tool_name": "set_zone_cooling_setpoint",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+        "cooling_c": {"minimum": 20.0, "maximum": 28.0, "multiple_of": 0.1}
+      },
+      "limits": {
+        "max_delta_c": 4.5,
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
+    },
+    {
+      "tool_name": "set_zone_co2_setpoint",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+        "co2_ppm": {"minimum": 600, "maximum": 1000, "multiple_of": 10}
+      },
+      "limits": {
+        "max_delta_ppm": 100,
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
+    },
+    {
+      "tool_name": "set_zone_lighting_setpoint",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+        "lux": {"minimum": 0, "maximum": 750, "multiple_of": 10}
+      },
+      "limits": {
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
+    },
+    {
+      "tool_name": "set_zone_lighting_mode",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+        "mode": {"enum": ["presence", "schedule"]},
+        "daylight_harvesting": {"type": "boolean"}
+      },
+      "limits": {
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
+    },
+    {
+      "tool_name": "set_supply_air_setpoint",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "supply_air_c": {"minimum": 15.0, "maximum": 21.0, "multiple_of": 0.5}
+      },
+      "limits": {
+        "max_delta_c": 1.0,
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
+    },
+    {
+      "tool_name": "set_tank_setpoint",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "tank_c": {"minimum": 35.0, "maximum": 60.0, "multiple_of": 0.5}
+      },
+      "limits": {
+        "max_delta_c": 3.0,
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
+    },
+    {
+      "tool_name": "set_heat_pump_limit",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "max_fraction": {"minimum": 0.0, "maximum": 1.0, "multiple_of": 0.05}
+      },
+      "limits": {
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
+    },
+    {
+      "tool_name": "set_ahu_enabled",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "enabled": {"type": "boolean"}
+      },
+      "limits": {
+        "min_interval_seconds": 1800,
+        "max_changes_per_hour": 2
+      }
+    },
+    {
+      "tool_name": "set_heating_cable_mode",
+      "effect": "WRITE",
+      "credential_holder": "protected_remora_dispatcher",
+      "arguments": {
+        "circuit": {"enum": ["CABLE-RAMP", "CABLE-GUTTER"]},
+        "mode": {"enum": ["auto", "thermostat", "sensor", "on", "off"]}
+      },
+      "limits": {
+        "min_interval_seconds": 900,
+        "max_changes_per_hour": 4
+      }
     }
   ],
   "signature": {

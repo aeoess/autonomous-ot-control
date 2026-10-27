@@ -37,6 +37,139 @@
           }
         }
       }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_zone_cooling_setpoint"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["zone_id", "cooling_c"],
+          "properties": {
+            "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+            "cooling_c": {"type": "number", "minimum": 20.0, "maximum": 28.0, "multipleOf": 0.1}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_zone_co2_setpoint"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["zone_id", "co2_ppm"],
+          "properties": {
+            "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+            "co2_ppm": {"type": "integer", "minimum": 600, "maximum": 1000, "multipleOf": 10}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_zone_lighting_setpoint"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["zone_id", "lux"],
+          "properties": {
+            "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+            "lux": {"type": "integer", "minimum": 0, "maximum": 750, "multipleOf": 10}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_zone_lighting_mode"},
+        "arguments": {
+          "type": "object", "additionalProperties": false,
+          "required": ["zone_id", "mode", "daylight_harvesting"],
+          "properties": {
+            "zone_id": {"enum": ["ZONE-01", "ZONE-02", "ZONE-03"]},
+            "mode": {"enum": ["presence", "schedule"]},
+            "daylight_harvesting": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_supply_air_setpoint"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["supply_air_c"],
+          "properties": {
+            "supply_air_c": {"type": "number", "minimum": 15.0, "maximum": 21.0, "multipleOf": 0.5}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_tank_setpoint"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["tank_c"],
+          "properties": {
+            "tank_c": {"type": "number", "minimum": 35.0, "maximum": 60.0, "multipleOf": 0.5}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_heat_pump_limit"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["max_fraction"],
+          "properties": {
+            "max_fraction": {"type": "number", "minimum": 0.0, "maximum": 1.0, "multipleOf": 0.05}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_ahu_enabled"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["enabled"],
+          "properties": {
+            "enabled": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "arguments"],
+      "properties": {
+        "tool_name": {"const": "set_heating_cable_mode"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["circuit", "mode"],
+          "properties": {
+            "circuit": {"enum": ["CABLE-RAMP", "CABLE-GUTTER"]},
+            "mode": {"enum": ["auto", "thermostat", "sensor", "on", "off"]}
+          }
+        }
+      }
     }
   ]
 }

@@ -1,4 +1,5 @@
 {
+  "caretaker_decision": null,
   "envelope": {
     "assessment": {
       "evidence_quality": {},
@@ -11,8 +12,8 @@
     "audit": {
       "actor_identity": "ot-agent",
       "data_classification": null,
-      "hash": "0b002fc75697b430037a70fd66d4bc0c1e3d3c37a45ea13e354973660ba77268",
-      "intent_authority_hash": "a887374bc38568c9c6a7acb5fedf2466b7780e00dccb3157200b8449c7376e35",
+      "hash": "1f2e7b09ab0fbb7553ca27850aba0b630542f09f639e18b3879603708c8f9f20",
+      "intent_authority_hash": "06c875331df6ba2eef724c37a2a9e00dfb3203f1fd2ed93683ccd949bc16a972",
       "policy_bundle_hash": null,
       "policy_version": "RemoraDecisionEngine-v6",
       "previous_hash": null,
@@ -21,26 +22,26 @@
       "signature": null,
       "tenant_id": "ot-pilot",
       "timestamp_utc": null,
-      "tool_args_hash": "1cbd034f64b560abada2bbb847346a86804d59e60a7e844351947c64316d59e4",
-      "tool_contract_bundle_hash": "31fa78528025d93725c2853c05474bdea34c31ac9b5b9b23f7cf6607930e471b"
+      "tool_args_hash": "c20fc2fca7b63cf4ad7c7b9de3480f2c59df8e5eb3bfd1ebe8a263b70eed83dc",
+      "tool_contract_bundle_hash": "550bea540798921a88de3e3fecce61994c6f908600b7cca2d79e8a8d435bff7c"
     },
     "causal_explanation": null,
     "effect": {
-      "effect_outcome": "EFFECT_CLAIMED",
+      "effect_outcome": "EFFECT_VERIFIED",
       "executed": true,
       "ledger_entry": {
         "effect_scope": "declared_delta_only",
         "effect_status": "EFFECT_VERIFIED",
         "effect_vantage": "same_deployment",
-        "effect_verdict_source": "claimed",
+        "effect_verdict_source": "computed",
         "effect_verifier_identity": "ot-effect-observer/v1",
-        "entry_hash": "4fb6f4dafa1d53a047a0d8d8fbcfc9eb6ee7ad9f62d593890ed4649adaabb30e",
-        "grant_jti": "9fc97d51-0b9e-4a4a-a886-b1b5b456195c",
-        "outbox_id": "567ee20e-2540-47a9-9a61-872dcd4282ef",
+        "entry_hash": "5fbe2cc21185b189b8daba393ecbb6f8259d02fe9d3d622faa021e92589c10cb",
+        "grant_jti": "0b3578a5-1d1b-4ccf-9109-c2a77ee29cef",
+        "outbox_id": "3ee6e677-8951-40ab-87fa-157a42978cea",
         "outbox_state": "SUCCEEDED",
-        "sequence_no": 690
+        "sequence_no": 311
       },
-      "tool_call_hash": "1cbd034f64b560abada2bbb847346a86804d59e60a7e844351947c64316d59e4"
+      "tool_call_hash": "c20fc2fca7b63cf4ad7c7b9de3480f2c59df8e5eb3bfd1ebe8a263b70eed83dc"
     },
     "follow_up": {
       "requested_evidence": [],
@@ -67,7 +68,7 @@
       "action_type": "",
       "domain": "",
       "proposed_action": "set_zone_setpoint",
-      "request_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "request_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
       "risk_tier": "",
       "target_environment": "simulated_pilot"
     },
@@ -80,7 +81,7 @@
   "evidence": {
     "audit_verification": {
       "problems": [],
-      "records_checked": 692,
+      "records_checked": 313,
       "valid": true
     },
     "capability_decision": {
@@ -88,46 +89,52 @@
       "latest": null
     },
     "effect_verification": {
-      "effect_state": "EFFECT_CLAIMED",
-      "expected_sha256": "353d63169a963f4dd08a0794299b2ab640614bacae27a03dd11b81ce58b30c5d",
+      "effect_state": "EFFECT_VERIFIED",
+      "expected_sha256": "983340c8e5e7e7d575db49a8795f6f1a4d671acf772b64d9e301464392accadd",
       "history": [
         {
           "actor": "ot-effect-observer",
           "detail": "",
-          "dispatch_id": "9fc97d51-0b9e-4a4a-a886-b1b5b456195c",
+          "dispatch_id": "0b3578a5-1d1b-4ccf-9109-c2a77ee29cef",
           "event": "effect_verified",
           "evidence_refs": [
-            "verdict:claimed"
+            "verdict:computed",
+            "receipt:unsigned",
+            "claimed_status:EFFECT_VERIFIED"
           ],
-          "execution_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
-          "expected": {},
-          "expected_sha256": "353d63169a963f4dd08a0794299b2ab640614bacae27a03dd11b81ce58b30c5d",
-          "observed": {},
-          "observed_sha256": "353d63169a963f4dd08a0794299b2ab640614bacae27a03dd11b81ce58b30c5d",
+          "execution_id": "0b3578a5-1d1b-4ccf-9109-c2a77ee29cef",
+          "expected": {
+            "setpoint_c": 20.0
+          },
+          "expected_sha256": "983340c8e5e7e7d575db49a8795f6f1a4d671acf772b64d9e301464392accadd",
+          "observed": {
+            "setpoint_c": 20.0
+          },
+          "observed_sha256": "983340c8e5e7e7d575db49a8795f6f1a4d671acf772b64d9e301464392accadd",
           "observed_state_hash": "",
-          "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+          "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
           "reason_code": "postcondition_verified",
           "scope": "declared_delta_only",
           "status": "EFFECT_VERIFIED",
           "submitted_by": "ot-effect-observer",
-          "tool_call_hash": "1cbd034f64b560abada2bbb847346a86804d59e60a7e844351947c64316d59e4",
+          "tool_call_hash": "c20fc2fca7b63cf4ad7c7b9de3480f2c59df8e5eb3bfd1ebe8a263b70eed83dc",
           "tool_id": "set_zone_setpoint",
-          "toolspec_hash": "7bfb06fc75189e6dd0cf6448300bab12acd83ff681395803d945784c62e1a9f3",
+          "toolspec_hash": "d617c4ca85ade51aeb9c89cd3c55192a87b48638fac49f4f447f9a3f8d640f89",
           "vantage": "same_deployment",
-          "verified_at": "2026-10-27T11:02:59.426281+00:00",
+          "verified_at": "2026-10-27T14:20:03.722803+00:00",
           "verifier_identity": "ot-effect-observer/v1",
           "verifier_version": ""
         }
       ],
-      "observed_sha256": "353d63169a963f4dd08a0794299b2ab640614bacae27a03dd11b81ce58b30c5d",
+      "observed_sha256": "983340c8e5e7e7d575db49a8795f6f1a4d671acf772b64d9e301464392accadd",
       "reason_code": "postcondition_verified",
       "scope": "declared_delta_only",
       "self_attested": false,
       "status": "EFFECT_VERIFIED",
       "vantage": "same_deployment",
       "vantage_recorded": true,
-      "verdict_source": "claimed",
-      "verified_at": "2026-10-27T11:02:59.426281+00:00",
+      "verdict_source": "computed",
+      "verified_at": "2026-10-27T14:20:03.722803+00:00",
       "verifier_identity": "ot-effect-observer/v1"
     },
     "evidence_coverage": {
@@ -189,7 +196,7 @@
       "dispatch": {
         "attempt_no": 1,
         "detail": null,
-        "outbox_id": "567ee20e-2540-47a9-9a61-872dcd4282ef",
+        "outbox_id": "3ee6e677-8951-40ab-87fa-157a42978cea",
         "state": "SUCCEEDED",
         "terminal": true,
         "worker_id": "api:1"
@@ -197,15 +204,15 @@
       "events": [
         {
           "actor": "ot-agent",
-          "entry_hash": "b7d310f7f244d1ccf75c5e262823235eda5b710e1f1c00ce55724a0a541fff50",
+          "entry_hash": "3169049500aa3b7554b1ec46d42351a5c9e493cca637478fa8d913470fbf1326",
           "event": "assessed",
           "payload": {
             "actor": "ot-agent",
             "decision": "verify",
             "event": "assessed",
-            "intent_authority_hash": "a887374bc38568c9c6a7acb5fedf2466b7780e00dccb3157200b8449c7376e35",
+            "intent_authority_hash": "06c875331df6ba2eef724c37a2a9e00dfb3203f1fd2ed93683ccd949bc16a972",
             "intent_resolution_status": "resolved",
-            "limits_policy_hash": "sha256:8141cf4b73571fefd132d7fa90a904fbe1445a8f8c28c17be40e92cdaa8887d2",
+            "limits_policy_hash": "sha256:a2020c82022f7831e29e9ff72c0e1bd1cbcbbd1166e88cfc9777d8dfd3708be5",
             "lineage": {
               "escalation_eligible": false,
               "lineage_key_basis": "semantic_target",
@@ -217,27 +224,27 @@
             },
             "lineage_resource": "ZONE-01",
             "policy_version": "RemoraDecisionEngine-v6",
-            "proposal_envelope_hash": "8942713e164f272b2ac4797dabc50d7ca852d1219bb238082ca39be7e46b6654",
-            "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+            "proposal_envelope_hash": "39f0ac0df7b9cba27cbc782d2b8248a9fa57a526528e723af747a9aa1e8e7269",
+            "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
             "reasons": [
               "authority_resolved_review"
             ],
-            "review_item_id": "8403ffc6-0690-4fe9-9637-3752e142b62d",
-            "state_hash": "e99afb3173b0d0fdcf8c3b085b225b1dab56eea5d84e45b6bae5a7c7f9ef7769",
+            "review_item_id": "4942c0f6-e930-44dc-afc4-f3da5b8be425",
+            "state_hash": "7e3de7eb85e4df4768ce894ad0a123a89cdafb45b3d94da4d6c568fb098035de",
             "superseded_proposal_id": "",
             "target_environment": "simulated_pilot",
-            "tool_call_hash": "1cbd034f64b560abada2bbb847346a86804d59e60a7e844351947c64316d59e4",
-            "tool_contract_bundle_hash": "31fa78528025d93725c2853c05474bdea34c31ac9b5b9b23f7cf6607930e471b",
+            "tool_call_hash": "c20fc2fca7b63cf4ad7c7b9de3480f2c59df8e5eb3bfd1ebe8a263b70eed83dc",
+            "tool_contract_bundle_hash": "550bea540798921a88de3e3fecce61994c6f908600b7cca2d79e8a8d435bff7c",
             "tool_name": "set_zone_setpoint",
-            "toolspec_hash": "7bfb06fc75189e6dd0cf6448300bab12acd83ff681395803d945784c62e1a9f3",
+            "toolspec_hash": "d617c4ca85ade51aeb9c89cd3c55192a87b48638fac49f4f447f9a3f8d640f89",
             "toolspec_version": 1
           },
-          "sequence_no": 687,
-          "timestamp": "2026-10-27T11:02:56.739219+00:00"
+          "sequence_no": 308,
+          "timestamp": "2026-10-27T14:20:01.370172+00:00"
         },
         {
           "actor": "ot-approver",
-          "entry_hash": "5f8145bd1dd5a5d12dbe1678bbce501ba157e3203654b84501fc8a10dca98744",
+          "entry_hash": "0828e009e6c42abbf341945e9d7e5b334bbfdef1bdbf1ceb798f865c9e932258",
           "event": "approved",
           "payload": {
             "actor": "ot-approver",
@@ -247,59 +254,59 @@
             ],
             "approver_role": "admin",
             "event": "approved",
-            "expires_at": "2026-10-27T11:17:57.444964+00:00",
-            "item_id": "8403ffc6-0690-4fe9-9637-3752e142b62d",
+            "expires_at": "2026-10-27T14:35:02.027951+00:00",
+            "item_id": "4942c0f6-e930-44dc-afc4-f3da5b8be425",
             "on_behalf_of": null,
-            "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+            "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
             "proposer": "ot-agent",
             "required_role": null
           },
-          "sequence_no": 688,
-          "timestamp": "2026-10-27T11:02:58.026840+00:00"
+          "sequence_no": 309,
+          "timestamp": "2026-10-27T14:20:02.637966+00:00"
         },
         {
           "actor": "ot-agent",
-          "entry_hash": "3077becdb3b73491af52855136792dc7225703d30d1fbf958b389f56f197a6e9",
+          "entry_hash": "263471ea472522651a85bb9716ac47bd9a85ca8da4915095c610e44c4f790350",
           "event": "execution_authorized",
           "payload": {
             "actor": "ot-agent",
             "event": "execution_authorized",
-            "grant_jti": "9fc97d51-0b9e-4a4a-a886-b1b5b456195c",
-            "intent_authority_hash": "a887374bc38568c9c6a7acb5fedf2466b7780e00dccb3157200b8449c7376e35",
-            "item_id": "8403ffc6-0690-4fe9-9637-3752e142b62d",
+            "grant_jti": "0b3578a5-1d1b-4ccf-9109-c2a77ee29cef",
+            "intent_authority_hash": "06c875331df6ba2eef724c37a2a9e00dfb3203f1fd2ed93683ccd949bc16a972",
+            "item_id": "4942c0f6-e930-44dc-afc4-f3da5b8be425",
             "pep_allowed": true,
             "policy_components": {
               "covers": {
-                "cumulative_limits": "sha256:8141cf4b73571fefd132d7fa90a904fbe1445a8f8c28c17be40e92cdaa8887d2",
+                "cumulative_limits": "sha256:a2020c82022f7831e29e9ff72c0e1bd1cbcbbd1166e88cfc9777d8dfd3708be5",
                 "engine_mode": "sha256:00fc76a7cf52499a8fb579b59e6ce838f9ba5e0f10358f67ee47e9e4c04df7c2",
                 "envelope_schema": "sha256:299c2deb548681cd7eed6bbef9e88ede6fc73f927e2889d9d3e3bb6852dcaf99",
                 "opa_policy": null,
                 "policy_engine": "sha256:ad3d87e180c377da27f8848e07fd727d64a5f8ec8c12cc5227a21fc570037a84",
                 "risk_profile": "sha256:8f4d81fdddbe0b988960fcf37364e9bb47413a81bf1bb3255ca92b4f8d7e328a",
-                "tool_registry": "sha256:63a0bcc6e56b49013cd516b33349382b46af0e27d29ccc03565285e227301930"
+                "tool_registry": "sha256:ac8d31bc6f906f9e9ec51dea1aa62a6ccc88449ab85f5f3168376ac597f203c0"
               },
               "not_covered": [
                 "adapter_state",
                 "delegation_state"
               ]
             },
-            "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
-            "tool_call_hash": "1cbd034f64b560abada2bbb847346a86804d59e60a7e844351947c64316d59e4",
-            "tool_contract_bundle_hash": "31fa78528025d93725c2853c05474bdea34c31ac9b5b9b23f7cf6607930e471b"
+            "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
+            "tool_call_hash": "c20fc2fca7b63cf4ad7c7b9de3480f2c59df8e5eb3bfd1ebe8a263b70eed83dc",
+            "tool_contract_bundle_hash": "550bea540798921a88de3e3fecce61994c6f908600b7cca2d79e8a8d435bff7c"
           },
-          "sequence_no": 689,
-          "timestamp": "2026-10-27T11:02:58.511475+00:00"
+          "sequence_no": 310,
+          "timestamp": "2026-10-27T14:20:02.950595+00:00"
         },
         {
           "actor": "ot-agent",
-          "entry_hash": "4fb6f4dafa1d53a047a0d8d8fbcfc9eb6ee7ad9f62d593890ed4649adaabb30e",
+          "entry_hash": "5fbe2cc21185b189b8daba393ecbb6f8259d02fe9d3d622faa021e92589c10cb",
           "event": "execution_result",
           "payload": {
             "actor": "ot-agent",
             "event": "execution_result",
-            "grant_jti": "9fc97d51-0b9e-4a4a-a886-b1b5b456195c",
-            "intent_sequence_no": 689,
-            "item_id": "8403ffc6-0690-4fe9-9637-3752e142b62d",
+            "grant_jti": "0b3578a5-1d1b-4ccf-9109-c2a77ee29cef",
+            "intent_sequence_no": 310,
+            "item_id": "4942c0f6-e930-44dc-afc4-f3da5b8be425",
             "nested_effects": {
               "count": 0,
               "mediated": false,
@@ -307,105 +314,116 @@
             },
             "policy_components": {
               "covers": {
-                "cumulative_limits": "sha256:8141cf4b73571fefd132d7fa90a904fbe1445a8f8c28c17be40e92cdaa8887d2",
+                "cumulative_limits": "sha256:a2020c82022f7831e29e9ff72c0e1bd1cbcbbd1166e88cfc9777d8dfd3708be5",
                 "engine_mode": "sha256:00fc76a7cf52499a8fb579b59e6ce838f9ba5e0f10358f67ee47e9e4c04df7c2",
                 "envelope_schema": "sha256:299c2deb548681cd7eed6bbef9e88ede6fc73f927e2889d9d3e3bb6852dcaf99",
                 "opa_policy": null,
                 "policy_engine": "sha256:ad3d87e180c377da27f8848e07fd727d64a5f8ec8c12cc5227a21fc570037a84",
                 "risk_profile": "sha256:8f4d81fdddbe0b988960fcf37364e9bb47413a81bf1bb3255ca92b4f8d7e328a",
-                "tool_registry": "sha256:63a0bcc6e56b49013cd516b33349382b46af0e27d29ccc03565285e227301930"
+                "tool_registry": "sha256:ac8d31bc6f906f9e9ec51dea1aa62a6ccc88449ab85f5f3168376ac597f203c0"
               },
               "not_covered": [
                 "adapter_state",
                 "delegation_state"
               ]
             },
-            "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
-            "result_sha256": "0a56355066a51571b197ffa9701694389b8d2c8871dae73c5d812472827ed39b",
-            "result_size_bytes": 399,
+            "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
+            "result_sha256": "5a6d432e72c875d0763946f3f792e19df03d504b763d87ad85bc37ba28f484c5",
+            "result_size_bytes": 511,
             "result_truncated": false,
             "state_unknown": false,
-            "tool_call_hash": "1cbd034f64b560abada2bbb847346a86804d59e60a7e844351947c64316d59e4",
+            "tool_call_hash": "c20fc2fca7b63cf4ad7c7b9de3480f2c59df8e5eb3bfd1ebe8a263b70eed83dc",
             "tool_executed": true
           },
-          "sequence_no": 690,
-          "timestamp": "2026-10-27T11:02:58.671858+00:00"
+          "sequence_no": 311,
+          "timestamp": "2026-10-27T14:20:03.103039+00:00"
         },
         {
           "actor": "ot-effect-observer",
-          "entry_hash": "0b002fc75697b430037a70fd66d4bc0c1e3d3c37a45ea13e354973660ba77268",
+          "entry_hash": "1f2e7b09ab0fbb7553ca27850aba0b630542f09f639e18b3879603708c8f9f20",
           "event": "effect_verified",
           "payload": {
             "actor": "ot-effect-observer",
             "detail": "",
-            "dispatch_id": "9fc97d51-0b9e-4a4a-a886-b1b5b456195c",
+            "dispatch_id": "0b3578a5-1d1b-4ccf-9109-c2a77ee29cef",
             "event": "effect_verified",
             "evidence_refs": [
-              "verdict:claimed"
+              "verdict:computed",
+              "receipt:unsigned",
+              "claimed_status:EFFECT_VERIFIED"
             ],
-            "execution_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
-            "expected": {},
-            "expected_sha256": "353d63169a963f4dd08a0794299b2ab640614bacae27a03dd11b81ce58b30c5d",
-            "observed": {},
-            "observed_sha256": "353d63169a963f4dd08a0794299b2ab640614bacae27a03dd11b81ce58b30c5d",
+            "execution_id": "0b3578a5-1d1b-4ccf-9109-c2a77ee29cef",
+            "expected": {
+              "setpoint_c": 20.0
+            },
+            "expected_sha256": "983340c8e5e7e7d575db49a8795f6f1a4d671acf772b64d9e301464392accadd",
+            "observed": {
+              "setpoint_c": 20.0
+            },
+            "observed_sha256": "983340c8e5e7e7d575db49a8795f6f1a4d671acf772b64d9e301464392accadd",
             "observed_state_hash": "",
-            "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+            "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
             "reason_code": "postcondition_verified",
             "scope": "declared_delta_only",
             "status": "EFFECT_VERIFIED",
             "submitted_by": "ot-effect-observer",
-            "tool_call_hash": "1cbd034f64b560abada2bbb847346a86804d59e60a7e844351947c64316d59e4",
+            "tool_call_hash": "c20fc2fca7b63cf4ad7c7b9de3480f2c59df8e5eb3bfd1ebe8a263b70eed83dc",
             "tool_id": "set_zone_setpoint",
-            "toolspec_hash": "7bfb06fc75189e6dd0cf6448300bab12acd83ff681395803d945784c62e1a9f3",
+            "toolspec_hash": "d617c4ca85ade51aeb9c89cd3c55192a87b48638fac49f4f447f9a3f8d640f89",
             "vantage": "same_deployment",
-            "verified_at": "2026-10-27T11:02:59.426281+00:00",
+            "verified_at": "2026-10-27T14:20:03.722803+00:00",
             "verifier_identity": "ot-effect-observer/v1",
             "verifier_version": ""
           },
-          "sequence_no": 691,
-          "timestamp": "2026-10-27T11:02:59.569511+00:00"
+          "sequence_no": 312,
+          "timestamp": "2026-10-27T14:20:03.802434+00:00"
         }
       ]
     },
     "manifest": {
       "event_count": 5,
-      "exported_at": "2026-10-27T11:03:00.943463+00:00",
-      "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "exported_at": "2026-10-27T14:20:04.997241+00:00",
+      "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
       "remora_version": "0.12.0",
       "section_sha256": {
-        "audit_verification": "10864c682ec16824b2428e11d35765f4abab6dbaeef4cfce777c023158904571",
+        "audit_verification": "c56ed83772fb935d8f404895fd72db984ac33a5720918f9e0cfe7fe69c8a2f68",
         "capability_decision": "e8b815ada02ff325aea97744d35935b8d3c736ec5425ec2a8c30bb5d4ac23785",
-        "effect_verification": "fe3d71d646f5067b5a97dc81c1d378d9c7388ae340935c55fc56f330329e0bcb",
+        "effect_verification": "bd835a784f1c5d77d4631b1b117a4e3ed42e47027398c809a38b666eed2d3e7d",
         "evidence_coverage": "703a684538bb49c74326ad69bd3c50ec5a7f4fc21b812f19c12074080370b163",
-        "lifecycle": "50a213745fdf6842a90d018ce613ed6abf75a77be25fd9f2c24b256123197d05",
-        "policy_identity": "8f0fa1428a53af4efe5f4a54eb0068dbf47f251b14d883b785d16b6f937628f1",
-        "proposal": "7e48a2564323ffd2e261aff45f4d1a23e0baf7d9922835536fdb5e4722e173dc"
+        "lifecycle": "567a57a7901188fd3f9b135f58e7342edf1096dcbd5f607b9820d6a85b369965",
+        "policy_identity": "a555208089f8457dc830e4955b9447b42da3000c83b4502bc625876fe1564171",
+        "proposal": "a728243b65fec45cb0d8f92b5937588e74e6b34612000922132ba1898e787502"
       },
       "tenant": "ot-pilot"
     },
     "policy_identity": {
       "engine_mode_hash": "sha256:00fc76a7cf52499a8fb579b59e6ce838f9ba5e0f10358f67ee47e9e4c04df7c2",
-      "limits_policy_hash": "sha256:8141cf4b73571fefd132d7fa90a904fbe1445a8f8c28c17be40e92cdaa8887d2",
+      "limits_policy_hash": "sha256:a2020c82022f7831e29e9ff72c0e1bd1cbcbbd1166e88cfc9777d8dfd3708be5",
       "opa_policy_hash": null,
       "policy_engine_hash": "sha256:ad3d87e180c377da27f8848e07fd727d64a5f8ec8c12cc5227a21fc570037a84",
-      "policy_hash": "sha256:49c199bf7107aa9cb9d10403dadb4071fc5348b89a139bc2c6235230469178f9",
+      "policy_hash": "sha256:ac1cc374e0055345b9751e7d35ae52ee5fd8dac18c40ad6b3efa4a7e91f812f3",
       "risk_profile_hash": "sha256:8f4d81fdddbe0b988960fcf37364e9bb47413a81bf1bb3255ca92b4f8d7e328a",
       "schema_hash": "sha256:299c2deb548681cd7eed6bbef9e88ede6fc73f927e2889d9d3e3bb6852dcaf99",
-      "tool_registry_hash": "sha256:63a0bcc6e56b49013cd516b33349382b46af0e27d29ccc03565285e227301930"
+      "tool_registry_hash": "sha256:ac8d31bc6f906f9e9ec51dea1aa62a6ccc88449ab85f5f3168376ac597f203c0"
     },
     "proposal": {
-      "current_state": "EFFECT_CLAIMED",
-      "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "current_state": "EFFECT_VERIFIED",
+      "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
       "tenant": "ot-pilot"
     }
   },
   "evidence_status": 200,
   "ledger_row": {
     "applied": true,
+    "arguments": {
+      "setpoint_c": 20.0,
+      "zone_id": "ZONE-01"
+    },
     "decision": "verify",
     "effect": {
       "recorded": true,
-      "status": "EFFECT_VERIFIED"
+      "status": "EFFECT_VERIFIED",
+      "verdict_source": "computed"
     },
     "execute": {
       "detail": "fresh decision is equal or safer; approval stands",
@@ -414,29 +432,30 @@
       "toolspec_enforced": true,
       "twin_status": "APPLIED"
     },
-    "from_c": 20.0,
+    "from_c": 21.0,
     "grounded": true,
-    "intent_ref": "PLAN-2026-01-21",
-    "item_id": "8403ffc6-0690-4fe9-9637-3752e142b62d",
-    "origin": "strategy:P1",
-    "outdoor_c": 0.1,
-    "price_nok_per_kwh": 1.38654,
-    "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+    "intent_ref": "PLAN-2026-01-16",
+    "item_id": "4942c0f6-e930-44dc-afc4-f3da5b8be425",
+    "origin": "strategy:P3",
+    "outdoor_c": 2.8,
+    "price_nok_per_kwh": 0.93359,
+    "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7",
     "reasons": [
       "authority_resolved_review"
     ],
     "required_role": "reviewer",
     "reviewer": {
       "approved": true,
-      "model": "careful",
-      "reason": "matches today's plan and the strategy's step"
+      "model": "careful-p3",
+      "reason": "validated by caretaker P3 independent validator and matches today's plan"
     },
-    "room_c": 21.06,
-    "sim_time_s": 580500,
-    "sim_utc": "2026-01-21T17:15:00Z",
-    "strategy_reason": "setback",
-    "to_c": 19.0,
+    "sim_time_s": 90900,
+    "sim_utc": "2026-01-16T01:15:00Z",
+    "strategy_reason": "P3:preconditioning",
+    "target": "ZONE-01",
+    "to_c": 20.0,
+    "tool_name": "set_zone_setpoint",
     "zone_id": "ZONE-01"
   },
-  "proposal_id": "0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63"
+  "proposal_id": "097e8b96-1369-45d4-84f1-5bf4ba0a19a7"
 }

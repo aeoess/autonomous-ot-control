@@ -22,7 +22,7 @@ export OT_UID="$(id -u)" OT_GID="$(id -g)"
 export OT_GIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo UNKNOWN)$(git diff --quiet 2>/dev/null || echo +dirty)"
 
 "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
-trap '"${COMPOSE[@]}" logs --no-color remora twin > "artifacts/${RUN_ID}-stack.log" 2>&1 || true' EXIT
+trap '"${COMPOSE[@]}" logs --no-color remora twin > "artifacts/${RUN_ID}-stack.log" 2>&1 || true; "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
 "${COMPOSE[@]}" up --build -d --wait postgres remora twin harness
 
-"$PY" -m runner.demo --run-id "$RUN_ID" --out artifacts --project "$COMPOSE_PROJECT_NAME" --days "${DAYS:-7}"
+"$PY" -m runner.demo --run-id "$RUN_ID" --out artifacts --project "$COMPOSE_PROJECT_NAME" --days "${DAYS:-7}" --strategy "${STRATEGY:-P1}"

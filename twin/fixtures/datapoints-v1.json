@@ -2470,8 +2470,8 @@
         "*.HeatingSetpoint",
         "*.CoolingSetpoint"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + caretaker validator"
     },
     {
       "id": "IL-02",
@@ -2481,8 +2481,8 @@
         "*.HeatingSetpoint",
         "*.Occupants"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock"
+      "status": "IMPLEMENTED",
+      "enforced_by": "caretaker validator + site policy"
     },
     {
       "id": "IL-03",
@@ -2501,8 +2501,8 @@
       "points": [
         "TANK-01.Setpoint"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock + signed ToolSpec"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + signed ToolSpec + caretaker validator"
     },
     {
       "id": "IL-05",
@@ -2511,8 +2511,8 @@
       "points": [
         "AHU-01.SupplyAirSetpoint"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock + signed ToolSpec"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + signed ToolSpec + caretaker validator"
     },
     {
       "id": "IL-06",
@@ -2522,8 +2522,8 @@
         "AHU-01.Enabled",
         "*.Occupants"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + caretaker validator"
     },
     {
       "id": "IL-07",
@@ -2532,8 +2532,8 @@
       "points": [
         "*.CO2Setpoint"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "signed ToolSpec"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + signed ToolSpec + caretaker validator"
     },
     {
       "id": "IL-08",
@@ -2543,8 +2543,8 @@
         "*.LuxSetpoint",
         "*.Occupants"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + caretaker validator"
     },
     {
       "id": "IL-09",
@@ -2554,8 +2554,8 @@
         "HP-01.MaxFraction",
         "TANK-01.Temp"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + caretaker validator"
     },
     {
       "id": "IL-10",
@@ -2565,8 +2565,8 @@
         "CABLE-*.Mode",
         "OUT-01.SurfaceWet"
       ],
-      "status": "SPECIFIED",
-      "enforced_by": "twin interlock"
+      "status": "IMPLEMENTED",
+      "enforced_by": "twin interlock + caretaker validator"
     },
     {
       "id": "IL-11",
@@ -2576,7 +2576,7 @@
         "*"
       ],
       "status": "IMPLEMENTED",
-      "enforced_by": "twin interlock (zone heating today) + REMORA cumulative limits"
+      "enforced_by": "twin interlock + REMORA cumulative limits"
     }
   ],
   "tools": [
@@ -2627,9 +2627,9 @@
         }
       },
       "risk_tier": "medium",
-      "rate": "<=1.0 K, >=15 min",
+      "rate": "<=4.5 K, >=15 min",
       "cascade": "chilled beam -> chiller electric",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": null
     },
     {
@@ -2655,7 +2655,7 @@
       "risk_tier": "medium",
       "rate": "<=100 ppm per change",
       "cascade": "airflow -> fan power and coil heat -> tank draw",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": null
     },
     {
@@ -2681,7 +2681,7 @@
       "risk_tier": "low",
       "rate": ">=15 min",
       "cascade": "lighting power -> zone heat gain -> less radiator heat",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": null
     },
     {
@@ -2713,7 +2713,7 @@
       "risk_tier": "low",
       "rate": ">=15 min",
       "cascade": "lighting power -> zone heat gain -> radiator heat",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": null
     },
     {
@@ -2731,7 +2731,7 @@
       "risk_tier": "high",
       "rate": "<=1.0 K, >=15 min",
       "cascade": "coil power -> tank draw; supply air -> every zone's radiator demand",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": null
     },
     {
@@ -2749,7 +2749,7 @@
       "risk_tier": "high",
       "rate": "<=3 K, >=15 min",
       "cascade": "heat-pump run time and COP; stored heat for load shifting",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": "PR-03"
     },
     {
@@ -2767,7 +2767,7 @@
       "risk_tier": "high",
       "rate": ">=15 min",
       "cascade": "heat output -> tank -> possibly the backup heater (expensive)",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": "PR-04"
     },
     {
@@ -2783,7 +2783,7 @@
       "risk_tier": "high",
       "rate": ">=30 min",
       "cascade": "all airflow, CO2, fan power, coil heat",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": "PR-02"
     },
     {
@@ -2813,7 +2813,7 @@
       "risk_tier": "high",
       "rate": ">=15 min",
       "cascade": "cable power; off during icing risk is a hazard",
-      "status": "SPECIFIED",
+      "status": "IMPLEMENTED",
       "requires_procedure": null
     }
   ],
@@ -2828,7 +2828,7 @@
         "lowering: move HeatingSetpoint down in steps; CoolingSetpoint may follow afterwards",
         "verify AirTemp reaches the band before occupancy (optimal start computes the lead)"
       ],
-      "status": "SPECIFIED"
+      "status": "IMPLEMENTED"
     },
     {
       "id": "PR-02",
@@ -2840,7 +2840,7 @@
         "morning: set_supply_air_setpoint(>= 18) before set_ahu_enabled(true)",
         "set_ahu_enabled(true) >= 30 min before occupancy; verify CO2 < 800 ppm at start"
       ],
-      "status": "SPECIFIED"
+      "status": "IMPLEMENTED"
     },
     {
       "id": "PR-03",
@@ -2852,7 +2852,7 @@
         "lower TANK-01.Setpoint back to the curve requirement before the expensive block ends",
         "verify HP-01.HighPressureCutout stayed 0 and HP-01.Starts rose by <= 3 per hour"
       ],
-      "status": "SPECIFIED"
+      "status": "IMPLEMENTED"
     },
     {
       "id": "PR-04",
@@ -2864,7 +2864,7 @@
         "release (1.0) as soon as TANK-01.Temp < Setpoint - 3 or the cap window ends",
         "verify HP-01.BackupHeaterPower stayed 0 during the cap"
       ],
-      "status": "SPECIFIED"
+      "status": "IMPLEMENTED"
     },
     {
       "id": "PR-05",

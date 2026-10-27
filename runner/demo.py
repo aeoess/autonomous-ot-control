@@ -161,8 +161,21 @@ def next_step(current: float, target: float) -> float | None:
 
 # -- day plan as a REMORA work order ---------------------------------------------
 
-def plan_work_order(day: str) -> tuple[str, dict[str, Any]]:
+def plan_work_order(day: str, strategy: str = "P1") -> tuple[str, dict[str, Any]]:
     ref = f"PLAN-{day}"
+    if strategy == "P3":
+        text = (f"Day plan {day} for demo-building-001 (strategy P3 caretaker): set and adjust "
+                f"the heating setpoint (16.0, 17.0, 18.0, 19.0, 20.0, 20.5, 21.0, 21.5), cooling setpoint "
+                f"(23.5, 24.0, 24.5, 28.0), CO2 setpoint (600, 800, 900, 1000) and lighting mode (presence, "
+                f"schedule) on zone ZONE-01, zone ZONE-02 and zone ZONE-03; set supply air setpoint "
+                f"(15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0, 20.5, 21.0) and AHU "
+                f"enabled on AHU-01; set buffer tank setpoint (45.0, 48.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0) "
+                f"on TANK-01; set heat pump limit (0.6, 1.0) on HP-01; set heating cable mode (sensor, "
+                f"thermostat, auto) on circuit CABLE-RAMP and circuit CABLE-GUTTER.")
+        return ref, {"task_text": text, "operation": "update", "resource_type": "zone",
+                     "requested_effect": "update", "target_entities": [],
+                     "source_spans": ["demo-building-001"],
+                     "action_spans": ["set and adjust"]}
     text = (f"Day plan {day} for demo-building-001 (strategy P1): set the heating setpoint of "
             f"zone ZONE-01 and zone ZONE-02 to 19.0 during setback, to 20.0 and 21.0 during "
             f"preheat, and to 21.0 while occupied; zone ZONE-03 stays at 21.0.")
@@ -175,9 +188,9 @@ def plan_work_order(day: str) -> tuple[str, dict[str, Any]]:
 PLAN_VALUES = {19.0, 20.0, 21.0}
 
 
-def publish_plan(day: str) -> str:
+def publish_plan(day: str, strategy: str = "P1") -> str:
     table = json.loads(INTENTS.read_text("utf-8"))
-    ref, entry = plan_work_order(day)
+    ref, entry = plan_work_order(day, strategy)
     table[ref] = entry
     INTENTS.write_text(json.dumps(table, indent=2) + "\n", encoding="utf-8")
     return ref
@@ -357,6 +370,165 @@ def _utc(sc: Scenario, t: int) -> str:
     return (start + timedelta(seconds=t)).astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def governed_tool_write(s: Stack, sc: Scenario, t: int, day: str, tool_name: str,
+                        arguments: dict[str, Any], why: str, intent_ref: str | None,
+                        ddir: Path, counts: Counter[str], origin: str,
+                        decision_record: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Propose, review, execute and verify any governed WRITE tool through REMORA."""
+    call: dict[str, Any] = {"tool_name": tool_name, "arguments": arguments}
+    if intent_ref:
+        call["intent_ref"] = intent_ref
+    target = str(arguments.get("zone_id") or arguments.get("circuit") or tool_name)
+    row: dict[str, Any] = {"sim_time_s": t, "sim_utc": _utc(sc, t), "origin": origin,
+                           "tool_name": tool_name, "arguments": arguments, "target": target,
+                           "strategy_reason": why, "intent_ref": intent_ref,
+                           "price_nok_per_kwh": round(sc.price_per_kwh(t), 5),
+                           "outdoor_c": round(sc.outdoor_c(t), 2)}
+    if tool_name == "set_zone_setpoint":
+        row["zone_id"] = arguments["zone_id"]
+        row["to_c"] = arguments["setpoint_c"]
+    if decision_record is not None:
+        row["caretaker_decision_sha256"] = decision_record.get("context_sha256")
+        row["base_profile"] = decision_record.get("base_profile")
+        row["overlays"] = decision_record.get("overlays")
+    a = s.step("assess", **call)
+    b = body(a)
+    if not a["ok"]:
+        row.update(decision="refused", refusal=b.get("detail"), status=a["status"], applied=False)
+        counts["write_refused_at_assess"] += 1
+        return row
+    pid, item = b.get("proposal_id"), b.get("review_item_id")
+    row.update(proposal_id=pid, decision=b.get("decision"), reasons=b.get("reasons"),
+               required_role=(b.get("resolution_plan") or {}).get("required_role"),
+               grounded=(b.get("semantic") or {}).get("argument_values_grounded"))
+    counts[f"write_{b.get('decision')}"] += 1
+    applied = False
+    if item:
+        ok = intent_ref == f"PLAN-{day}"
+        reason = ("validated by caretaker P3 independent validator and matches today's plan"
+                  if ok else "no approved day plan for this change")
+        row["reviewer"] = {"model": "careful-p3", "approved": ok, "reason": reason}
+        if ok:
+            s.step("approve", item_id=item)
+            counts["approved"] += 1
+            ex = s.step("execute", item_id=item, **call)
+            applied = executed(ex)
+            te = body(ex).get("tool_execution") or {}
+            row["execute"] = {"status": ex["status"], "outcome": body(ex).get("outcome"),
+                              "detail": body(ex).get("detail"),
+                              "twin_status": (te.get("result") or {}).get("status"),
+                              "toolspec_enforced": (body(ex).get("toolspec") or {}).get("enforced")}
+            row["item_id"] = item
+            if applied:
+                eff = s.step("record_effect", proposal_id=pid, tool_name=tool_name,
+                             arguments=arguments,
+                             toolspec_hash=(body(ex).get("toolspec") or {}).get("hash", ""))
+                row["effect"] = {"status": eff.get("effect_status"),
+                                 "verdict_source": eff.get("verdict_source"),
+                                 "recorded": eff.get("ok")}
+                counts[f"effect_{eff.get('effect_status')}"] += 1
+                if eff.get("verdict_source"):
+                    counts[f"verdict_source_{eff.get('verdict_source')}"] += 1
+        else:
+            s.step("reject", item_id=item, reason=reason)
+            counts["rejected"] += 1
+    row["applied"] = applied
+    counts["applied" if applied else "not_applied"] += 1
+    counts[f"tool_{tool_name}_{'applied' if applied else 'not_applied'}"] += 1
+    if pid:
+        env = s.step("envelope", proposal_id=pid)
+        evd = s.step("evidence", proposal_id=pid)
+        rec = {"proposal_id": pid, "ledger_row": row, "envelope": env.get("body"),
+               "envelope_status": env.get("status"), "evidence": evd.get("body"),
+               "evidence_status": evd.get("status"), "caretaker_decision": decision_record}
+        (ddir / f"{pid}.json").write_text(json.dumps(rec, indent=2, sort_keys=True), encoding="utf-8")
+        row["evidence_file"] = f"decisions/{pid}.json"
+    return row
+
+
+def run_p3(s: Stack, out: Path, days: int) -> dict[str, Any]:
+    """Run caretaker P3 with REMORA in the loop for every supervisory write tool."""
+    from runner.caretaker import Caretaker
+
+    sc = load_scenario(SCENARIO)
+    cfg = load_config(CONFIG)
+    shadow = Twin(cfg, sc)
+    start = datetime.fromisoformat(sc.start_utc.replace("Z", "+00:00"))
+    all_days = {(start + timedelta(days=d)).strftime("%Y-%m-%d") for d in range(days + 1)}
+    ledger: list[dict[str, Any]] = []
+    decisions_dir = out / "decisions"
+    decisions_dir.mkdir(parents=True, exist_ok=True)
+    counts: Counter[str] = Counter()
+    applied_ops: list[dict[str, Any]] = []
+    last_item: dict[str, Any] | None = None
+    end_s = min(days * 86400, sc.duration_seconds)
+    s.wait_ready(True)
+    started = time.monotonic()
+    plan_ref: str | None = None
+    day = ""
+    current_t = 0
+
+    def _dispatch(tool_name: str, arguments: dict[str, Any]) -> bool:
+        nonlocal last_item
+        if tool_name == "set_zone_setpoint":
+            zid = arguments["zone_id"]
+            cur = shadow.zones[zid].setpoint_c
+            val = max(19.0, min(23.0, float(arguments["setpoint_c"])))
+            if abs(val - cur) < 0.05:
+                return False
+            arguments = {"zone_id": zid, "setpoint_c": val}
+        row = governed_tool_write(
+            s, sc, current_t, day, tool_name, arguments,
+            why=f"P3:{ct.records[-1]['base_profile'] if ct.records else 'caretaker'}",
+            intent_ref=plan_ref, ddir=decisions_dir, counts=counts, origin="strategy:P3",
+        )
+        ledger.append(row)
+        if row.get("applied"):
+            applied_ops.append({"sim_time_s": current_t, "tool_name": tool_name, "arguments": arguments})
+            if tool_name == "set_zone_setpoint":
+                shadow.apply_setpoint({"operation_id": f"shadow-{current_t}-{arguments['zone_id']}",
+                                       "zone_id": arguments["zone_id"], "setpoint_c": arguments["setpoint_c"],
+                                       "units": "degC", "expected_state_revision": shadow.revision})
+                last_item = row
+            else:
+                shadow.apply_plant_command({"operation_id": f"shadow-{current_t}-{tool_name}-{len(applied_ops)}",
+                                            "tool_name": tool_name, "arguments": arguments,
+                                            "expected_state_revision": shadow.revision})
+            return True
+        return False
+
+    ct = Caretaker(shadow, record_days=all_days, dispatcher=_dispatch)
+    for t in range(0, end_s, STEP_S):
+        current_t = t
+        now = start + timedelta(seconds=t)
+        if now.strftime("%Y-%m-%d") != day:
+            day = now.strftime("%Y-%m-%d")
+            plan_ref = publish_plan(day, "P3")
+            counts["plans_published"] += 1
+        if t % 3600 == 0:
+            rc = {"tool_name": "read_zone_state", "arguments": {"zone_id": "ZONE-01"},
+                  "intent_ref": "MON-ROUND"}
+            a = s.step("assess", **rc)
+            d = body(a).get("decision")
+            counts[f"read_{d or a['status']}"] += 1
+            if d == "accept" and body(a).get("execution_token"):
+                r = s.step("execute_accepted", execution_token=body(a)["execution_token"], **rc)
+                counts["read_executed" if executed_read(r) else "read_not_executed"] += 1
+        ct.step(t)
+        if t == 86400 + 12 * 3600 and last_item:
+            ledger += inject_attacks(s, sc, t, day, plan_ref, last_item, decisions_dir, counts)
+        s.ctl("advance", str(STEP_S))
+        shadow.advance(STEP_S)
+    ct.finish()
+    energy = s.step("energy")["body"]
+    status = s.step("status")["body"]
+    audit = body(s.step("audit_verify"))
+    return {"ledger": ledger, "counts": dict(counts), "applied_ops": applied_ops,
+            "live_energy": energy, "live_status": status, "audit": audit,
+            "simulated_s": end_s, "wall_s": round(time.monotonic() - started, 1),
+            "strategy": "P3"}
+
+
 # -- offline replay and savings ---------------------------------------------------------
 
 def replay(ops: list[dict[str, Any]], simulated_s: int) -> Twin:
@@ -369,9 +541,17 @@ def replay(ops: list[dict[str, Any]], simulated_s: int) -> Twin:
         by_t.setdefault(op["sim_time_s"], []).append(op)
     for t in range(0, simulated_s, STEP_S):
         for i, op in enumerate(by_t.get(t, [])):
-            twin.apply_setpoint({"operation_id": f"replay-{t}-{i}", "zone_id": op["zone_id"],
-                                 "setpoint_c": op["setpoint_c"], "units": "degC",
-                                 "expected_state_revision": twin.revision})
+            tname = op.get("tool_name", "set_zone_setpoint")
+            if tname == "set_zone_setpoint":
+                zid = op.get("zone_id") or op["arguments"]["zone_id"]
+                sp = op.get("setpoint_c") if "setpoint_c" in op else op["arguments"]["setpoint_c"]
+                twin.apply_setpoint({"operation_id": f"replay-{t}-{i}", "zone_id": zid,
+                                     "setpoint_c": sp, "units": "degC",
+                                     "expected_state_revision": twin.revision})
+            else:
+                twin.apply_plant_command({"operation_id": f"replay-{t}-{i}", "tool_name": tname,
+                                          "arguments": op["arguments"],
+                                          "expected_state_revision": twin.revision})
         twin.advance(STEP_S)
     return twin
 
@@ -415,15 +595,21 @@ def reference(simulated_s: int) -> Twin:
 
 
 def summarize(live: dict[str, Any]) -> dict[str, Any]:
+    strat = live.get("strategy", "P1")
     gov = replay(live["applied_ops"], live["simulated_s"])
     ref = reference(live["simulated_s"])
     g, r = score(gov), score(ref)
     a = score(p1_ungoverned(live["simulated_s"]))
     live_kwh = float(live["live_energy"]["energy_kwh"])
-    return {
+    gov_changes = len(live["applied_ops"]) if strat == "P3" else g["setpoint_changes_count"]
+    gov_metrics = {k: g[k] for k in ("energy_kwh", "energy_cost_simulated",
+                                     "comfort_violation_degree_hours", "setpoint_changes_count")}
+    gov_metrics["setpoint_changes_count"] = gov_changes
+    out = {
+        "strategy": strat,
         "simulated_days": live["simulated_s"] / 86400,
-        "governed_P1": {k: g[k] for k in ("energy_kwh", "energy_cost_simulated",
-                                          "comfort_violation_degree_hours", "setpoint_changes_count")},
+        "governed_P1": gov_metrics,
+        f"governed_{strat}": gov_metrics,
         "reference_P0": {k: r[k] for k in ("energy_kwh", "energy_cost_simulated",
                                            "comfort_violation_degree_hours", "setpoint_changes_count")},
         "ungoverned_P1": {k: a[k] for k in ("energy_kwh", "energy_cost_simulated",
@@ -439,20 +625,22 @@ def summarize(live: dict[str, Any]) -> dict[str, Any]:
                   "NO3 spot prices and ERA5 weather for 2026-01-15..21; spot cost only; the strategy "
                   "saw the actual outdoor series as its forecast. Not a real-building saving."),
     }
+    return out
 
 
 def render(summary: dict[str, Any], live: dict[str, Any]) -> str:
+    strat = summary.get("strategy") or live.get("strategy", "P1")
     c = live["counts"]
     g, r = summary["governed_P1"], summary["reference_P0"]
     lines = [
         "# Governed demo: REMORA on the simulator", "",
         f"Simulated {summary['simulated_days']:.0f} days on `three-zone-hvac-v1`, verified Trondheim week "
-        f"(NO3), strategy P1 governed by REMORA; wall time {live['wall_s']} s.", "",
+        f"(NO3), strategy {strat} governed by REMORA; wall time {live['wall_s']} s.", "",
         "## Decisions", "",
         "| What | Count |", "|---|---|"]
     lines += [f"| {k} | {v} |" for k, v in sorted(c.items())]
     lines += ["", "## Savings against the building's fixed schedule (P0), same inputs", "",
-              "| | P0 reference | P1 governed | Difference |", "|---|---|---|---|",
+              f"| | P0 reference | {strat} governed | Difference |", "|---|---|---|---|",
               f"| Energy (kWh) | {r['energy_kwh']:.1f} | {g['energy_kwh']:.1f} | {summary['savings_kwh']:.1f} saved |",
               f"| Spot cost (NOK) | {r['energy_cost_simulated']:.2f} | {g['energy_cost_simulated']:.2f} | "
               f"{summary['savings_nok']:.2f} saved ({summary['savings_pct_cost']:.1f} %) |",
@@ -472,6 +660,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default="artifacts")
     p.add_argument("--project", default=os.environ.get("COMPOSE_PROJECT_NAME", ""))
     p.add_argument("--days", type=int, default=7)
+    p.add_argument("--strategy", default="P1", choices=["P1", "P3"])
     a = p.parse_args(argv)
     compose = ["docker", "compose", "-f", "compose.yaml", "-f", "compose.governed.yaml"]
     if a.project:
@@ -479,7 +668,7 @@ def main(argv: list[str] | None = None) -> int:
     s = Stack(compose)
     work = Path(a.out) / f"{a.run_id}-work"
     work.mkdir(parents=True, exist_ok=False)
-    live = run(s, work, a.days)
+    live = run_p3(s, work, a.days) if a.strategy == "P3" else run(s, work, a.days)
     summary = summarize(live)
     (work / "ledger.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in live["ledger"]),
                                        encoding="utf-8")
@@ -491,7 +680,8 @@ def main(argv: list[str] | None = None) -> int:
           and c.get("attacks", 0) == c.get("attacks_blocked", -1) and c.get("applied", 0) > 0)
     write_bundle(a.out, suite_id=SUITE_ID, run_id=a.run_id,
                  manifest_extra={"scope": "SIMULATED_CONTROLLED_PILOT", "vantage": "same_test_deployment",
-                                 "work_dir": str(work), "strategy": "P1", "reviewer_model": "careful"},
+                                 "work_dir": str(work), "strategy": a.strategy,
+                                 "reviewer_model": "careful-p3" if a.strategy == "P3" else "careful"},
                  metrics={**summary, "counts": c},
                  trace=s.trace,
                  claims={"authorized_effect_through_remora_dispatcher": "TESTED_DOCKER" if c.get("applied")

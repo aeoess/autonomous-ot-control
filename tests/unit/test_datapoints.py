@@ -86,8 +86,8 @@ def test_statuses_are_honest():
     for item in (*CAT.interlocks, *CAT.tools, *CAT.procedures):
         assert item.status in ("IMPLEMENTED", "SPECIFIED"), item
     implemented_tools = {t.id for t in CAT.tools if t.status == "IMPLEMENTED"}
-    # Today the twin's actuator route serves exactly the zone heating setpoint.
-    assert implemented_tools == {"set_zone_setpoint"}
+    # Every supervisory write tool is implemented on the twin actuator and REMORA registry.
+    assert implemented_tools == {t.id for t in CAT.tools}
     for t in CAT.tools:
         if t.requires_procedure:
             assert t.requires_procedure in {r.id for r in CAT.procedures}

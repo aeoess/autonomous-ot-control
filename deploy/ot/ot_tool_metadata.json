@@ -22,6 +22,78 @@
       "target_environment": "simulated_pilot",
       "schema_valid": true,
       "rollback_available": true
+    },
+    "set_zone_cooling_setpoint": {
+      "risk_tier": "medium",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_zone_co2_setpoint": {
+      "risk_tier": "medium",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_zone_lighting_setpoint": {
+      "risk_tier": "low",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_zone_lighting_mode": {
+      "risk_tier": "low",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_supply_air_setpoint": {
+      "risk_tier": "high",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_tank_setpoint": {
+      "risk_tier": "high",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_heat_pump_limit": {
+      "risk_tier": "high",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_ahu_enabled": {
+      "risk_tier": "high",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    },
+    "set_heating_cable_mode": {
+      "risk_tier": "high",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
     }
   }
 }

@@ -62,6 +62,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -128,8 +129,10 @@ class Caretaker:
     """Drive the twin's supervisory layer every 15 simulated minutes."""
 
     def __init__(self, tw: Twin, *, validated: bool = True, record_days: set[str] | None = None,
-                 adaptive_deadband: bool = False, proposal_fault_rate: float = 0.0, seed: int = 0) -> None:
+                 adaptive_deadband: bool = False, proposal_fault_rate: float = 0.0, seed: int = 0,
+                 dispatcher: Callable[[str, dict[str, Any]], bool] | None = None) -> None:
         self.tw, self.validated, self.adaptive_deadband = tw, validated, adaptive_deadband
+        self.dispatcher = dispatcher
         self.proposal_fault_rate = proposal_fault_rate
         self._fault_rng = random.Random(f"{seed}:optimizer-faults")
         self.policy = load_policy()
@@ -542,7 +545,100 @@ class Caretaker:
         return v
 
     # -- apply ------------------------------------------------------------------------
+    def tool_calls(self, p: Proposal) -> list[dict[str, Any]]:
+        """Decompose a validated proposal into governed tool calls (PR-01..PR-05 ordering).
+
+        Each returned item has ``tool_name``, ``arguments``, ``label`` and ``algorithm``.
+        When raising a zone's heating setpoint toward its cooling setpoint, the cooling
+        setpoint moves first so the IL-01 deadband holds at every intermediate step.
+        """
+        tw = self.tw
+        sp = tw.setpoints
+        calls: list[dict[str, Any]] = []
+        algos = p.algorithms or {}
+        for z in ZONES:
+            cur_h = tw.zones[z].setpoint_c
+            nv = next_step(cur_h, p.heating[z])
+            zs = sp.zones[z]
+            eff_h = nv if nv is not None else cur_h
+            cooling = round(max(p.cooling[z], eff_h + 2.5), 1)
+            cool_changed = abs(cooling - zs.cooling_c) > 1e-6
+            # PR-01: if heating rises and would narrow the current deadband, raise cooling first.
+            if cool_changed and nv is not None and nv > cur_h and cooling > zs.cooling_c:
+                calls.append({"tool_name": "set_zone_cooling_setpoint",
+                              "arguments": {"zone_id": z, "cooling_c": cooling},
+                              "label": f"{z}.CoolingSetpoint={cooling}",
+                              "algorithm": algos.get("cooling", "cooling")})
+            if nv is not None:
+                calls.append({"tool_name": "set_zone_setpoint",
+                              "arguments": {"zone_id": z, "setpoint_c": nv},
+                              "label": f"{z}.HeatingSetpoint={nv}",
+                              "algorithm": algos.get(f"{z}.heating", "heating")})
+            if cool_changed and not (nv is not None and nv > cur_h and cooling > zs.cooling_c):
+                calls.append({"tool_name": "set_zone_cooling_setpoint",
+                              "arguments": {"zone_id": z, "cooling_c": cooling},
+                              "label": f"{z}.CoolingSetpoint={cooling}",
+                              "algorithm": algos.get("cooling", "cooling")})
+            if zs.lighting_mode != p.lighting_mode or zs.daylight_harvesting is not p.daylight_harvesting:
+                calls.append({"tool_name": "set_zone_lighting_mode",
+                              "arguments": {"zone_id": z, "mode": p.lighting_mode,
+                                            "daylight_harvesting": p.daylight_harvesting},
+                              "label": f"{z}.Lighting",
+                              "algorithm": algos.get("lighting", "presence_daylight")})
+            co2_tgt = int(round(p.co2_ppm.get(z, zs.co2_ppm)))
+            if abs(co2_tgt - zs.co2_ppm) > 1e-6:
+                calls.append({"tool_name": "set_zone_co2_setpoint",
+                              "arguments": {"zone_id": z, "co2_ppm": co2_tgt},
+                              "label": f"{z}.CO2Setpoint={co2_tgt}",
+                              "algorithm": algos.get("co2", "dcv")})
+        # PR-02: morning start sets supply air before enabling AHU when warming up.
+        sat = round(round(p.supply_air_c / 0.5) * 0.5, 1)
+        if abs(sat - sp.supply_air_c) > 1e-6:
+            calls.append({"tool_name": "set_supply_air_setpoint",
+                          "arguments": {"supply_air_c": sat},
+                          "label": f"supply_air_c={sat}",
+                          "algorithm": algos.get("supply_air", "supply_air")})
+        if p.ahu_enabled != sp.ahu_enabled:
+            calls.append({"tool_name": "set_ahu_enabled",
+                          "arguments": {"enabled": p.ahu_enabled},
+                          "label": f"ahu_enabled={p.ahu_enabled}",
+                          "algorithm": algos.get("ahu", "occupancy_schedule")})
+        # PR-03 / PR-04: release HP cap before raising tank, or raise tank before capping HP.
+        tank_sp = round(round(p.tank_c / 0.5) * 0.5, 1)
+        hp_cap = round(round(p.hp_max_fraction / 0.05) * 0.05, 2)
+        if hp_cap > sp.hp_max_fraction + 1e-6:
+            calls.append({"tool_name": "set_heat_pump_limit",
+                          "arguments": {"max_fraction": hp_cap},
+                          "label": f"hp_max_fraction={hp_cap}",
+                          "algorithm": algos.get("heat_pump", "uncapped")})
+        if abs(tank_sp - sp.tank_c) > 1e-6:
+            calls.append({"tool_name": "set_tank_setpoint",
+                          "arguments": {"tank_c": tank_sp},
+                          "label": f"tank_c={tank_sp}",
+                          "algorithm": algos.get("tank", "weather_reset")})
+        if hp_cap < sp.hp_max_fraction - 1e-6:
+            calls.append({"tool_name": "set_heat_pump_limit",
+                          "arguments": {"max_fraction": hp_cap},
+                          "label": f"hp_max_fraction={hp_cap}",
+                          "algorithm": algos.get("heat_pump", "peak_limiter")})
+        for circuit in ("CABLE-RAMP", "CABLE-GUTTER"):
+            if sp.cable_modes.get(circuit, "auto") != p.cables:
+                calls.append({"tool_name": "set_heating_cable_mode",
+                              "arguments": {"circuit": circuit, "mode": p.cables},
+                              "label": f"{circuit}.Mode={p.cables}",
+                              "algorithm": algos.get("cables", "ground_sensor")})
+        return calls
+
     def _apply(self, t: int, p: Proposal) -> list[str]:
+        if self.dispatcher is not None:
+            changed = []
+            for c in self.tool_calls(p):
+                if self.dispatcher(c["tool_name"], c["arguments"]):
+                    if c["tool_name"] == "set_zone_setpoint":
+                        self.changes += 1
+                    changed.append(c["label"])
+            self._sat = self.tw.setpoints.supply_air_c
+            return changed
         tw = self.tw
         changed = []
         for z in ZONES:

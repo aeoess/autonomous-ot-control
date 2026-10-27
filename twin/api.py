@@ -83,6 +83,16 @@ class SetpointCommand(BaseModel):
     expected_state_revision: Annotated[int, Strict()] = Field(ge=0)
 
 
+class PlantCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=True)
+
+    schema_: str = Field(alias="schema", pattern=r"^ot-plant-command/v1$")
+    operation_id: str = Field(pattern=_OP_ID_PATTERN)
+    tool_name: str = Field(min_length=1, max_length=64)
+    arguments: dict[str, Any]
+    expected_state_revision: Annotated[int, Strict()] = Field(ge=0)
+
+
 class AdvanceRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     seconds: int = Field(gt=0)
@@ -125,6 +135,10 @@ def build_read_app(twin: Twin, tokens: Tokens) -> FastAPI:
     def energy() -> dict[str, Any]:
         return twin.read_energy()
 
+    @app.get("/v1/plant", dependencies=[auth])
+    def plant() -> dict[str, Any]:
+        return twin.read_plant()
+
     @app.get("/v1/operations/{operation_id}", dependencies=[auth])
     def operation(operation_id: str) -> dict[str, Any]:
         rec = twin.operation(operation_id)
@@ -148,6 +162,20 @@ def build_actuator_app(twin: Twin, tokens: Tokens) -> FastAPI:
         body = cmd.model_dump(by_alias=True)
         try:
             rec, replayed = twin.apply_setpoint(body)
+        except OperationConflict:
+            return JSONResponse(status_code=409, content={
+                "status": "REJECTED", "reason": "operation_id_reused", "replayed": False,
+                "operation_id": cmd.operation_id})
+        except TwinError as e:
+            return JSONResponse(status_code=409, content={"status": "REJECTED", "reason": str(e)})
+        out = {**rec.to_dict(), "replayed": replayed}
+        return JSONResponse(status_code=200 if rec.status == "APPLIED" else 409, content=out)
+
+    @app.post("/internal/v1/actuate/plant", dependencies=[auth])
+    def actuate_plant(cmd: PlantCommand) -> JSONResponse:
+        body = cmd.model_dump(by_alias=True)
+        try:
+            rec, replayed = twin.apply_plant_command(body)
         except OperationConflict:
             return JSONResponse(status_code=409, content={
                 "status": "REJECTED", "reason": "operation_id_reused", "replayed": False,

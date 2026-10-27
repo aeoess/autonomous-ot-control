@@ -102,5 +102,24 @@ def test_the_template_manifest_has_what_the_guide_requires():
     assert edge["mode"] in schema["properties"]["mode"]["enum"]
     assert edge["boundary"] in schema["properties"]["boundary"]["enum"]
     guide = (ROOT / "docs" / "federation" / "README.md").read_text("utf-8")
-    for must in ("run-edge.sh", "consent_ref", "claim ceiling", "negative control"):
+    for must in ("run-edge.sh", "consent_ref", "claim ceiling", "negative control", "--init"):
         assert must in guide
+
+
+def test_edge_scaffolder_and_validator(tmp_path):
+    (tmp_path / "federation" / "edges").mkdir(parents=True)
+    import shutil
+    shutil.copytree(TEMPLATE, tmp_path / "federation" / "edges" / "_template")
+    dst = edge_check.init_edge("demo-edge-01", project="Demo Edge", maintainer="alice", root=tmp_path)
+    assert edge_check.validate_edge_manifest(dst) == []
+    assert edge_check.main(["--validate", str(dst)]) == 0
+    # Running the scaffolded adapter against the frozen v1 fixtures must pass 100%.
+    v1 = ROOT / "federation" / "fixtures" / "v1"
+    out = tmp_path / "res.json"
+    spec = importlib.util.spec_from_file_location("demo_adapter", dst / "adapter.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.main(["run", "--fixtures", str(v1), "--out", str(out)]) == 0
+    assert edge_check.main(["--edge", str(dst), "--fixtures", str(v1),
+                            "--result", str(out), "--out", str(tmp_path / "rep")]) == 0
+
