@@ -191,17 +191,17 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 
 | Id | Rule | Protects | Status | Enforced by |
 |---|---|---|---|---|
-| IL-01 | CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone | no simultaneous heating and cooling | `SPECIFIED` | twin interlock |
-| IL-02 | HeatingSetpoint >= 20.0 while the zone is occupied or within its recovery lead | comfort during occupancy (D-15) | `SPECIFIED` | twin interlock |
+| IL-01 | CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone | no simultaneous heating and cooling | `IMPLEMENTED` | twin interlock + caretaker validator |
+| IL-02 | HeatingSetpoint >= 20.0 while the zone is occupied or within its recovery lead | comfort during occupancy (D-15) | `IMPLEMENTED` | caretaker validator + site policy |
 | IL-03 | HeatingSetpoint >= 8.0 degC always; today the interlock floor is 19.0 (D-15 pending) | frost protection of the building | `IMPLEMENTED` | twin interlock + signed ToolSpec |
-| IL-04 | TANK-01.Setpoint within 35..max supply (60); at most +3 K per 15 min | heat-pump high-pressure margin and radiator supply | `SPECIFIED` | twin interlock + signed ToolSpec |
-| IL-05 | AHU-01.SupplyAirSetpoint within 15..21 degC | draught and coil freezing | `SPECIFIED` | twin interlock + signed ToolSpec |
-| IL-06 | AHU-01.Enabled = false refused while any zone is occupied | statutory ventilation during occupancy | `SPECIFIED` | twin interlock |
-| IL-07 | CO2Setpoint within 600..1000 ppm | indoor air quality (1000 ppm guideline) | `SPECIFIED` | signed ToolSpec |
-| IL-08 | LuxSetpoint >= 300 while occupied; 0 only when unoccupied | workplace lighting (NS-EN 12464-1: 500 lux offices) | `SPECIFIED` | twin interlock |
-| IL-09 | HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K | a cap that would start the backup heater (COP 1) | `SPECIFIED` | twin interlock |
-| IL-10 | CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC (the ground sensor reports a freezing wet surface) | ice on ramps and gutters | `SPECIFIED` | twin interlock |
-| IL-11 | rate: at most one change per point per 15 min; setpoints move <= 1.0 K per change | actuator wear and stability | `IMPLEMENTED` | twin interlock (zone heating today) + REMORA cumulative limits |
+| IL-04 | TANK-01.Setpoint within 35..max supply (60); at most +3 K per 15 min | heat-pump high-pressure margin and radiator supply | `IMPLEMENTED` | twin interlock + signed ToolSpec + caretaker validator |
+| IL-05 | AHU-01.SupplyAirSetpoint within 15..21 degC | draught and coil freezing | `IMPLEMENTED` | twin interlock + signed ToolSpec + caretaker validator |
+| IL-06 | AHU-01.Enabled = false refused while any zone is occupied | statutory ventilation during occupancy | `IMPLEMENTED` | twin interlock + caretaker validator |
+| IL-07 | CO2Setpoint within 600..1000 ppm | indoor air quality (1000 ppm guideline) | `IMPLEMENTED` | twin interlock + signed ToolSpec + caretaker validator |
+| IL-08 | LuxSetpoint >= 300 while occupied; 0 only when unoccupied | workplace lighting (NS-EN 12464-1: 500 lux offices) | `IMPLEMENTED` | twin interlock + caretaker validator |
+| IL-09 | HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K | a cap that would start the backup heater (COP 1) | `IMPLEMENTED` | twin interlock + caretaker validator |
+| IL-10 | CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC (the ground sensor reports a freezing wet surface) | ice on ramps and gutters | `IMPLEMENTED` | twin interlock + caretaker validator |
+| IL-11 | rate: at most one change per point per 15 min; setpoints move <= 1.0 K per change | actuator wear and stability | `IMPLEMENTED` | twin interlock + REMORA cumulative limits |
 
 ## Governed tools
 
@@ -210,19 +210,19 @@ Each becomes a signed REMORA ToolSpec (argument schema, target, closure digest) 
 | Tool | Writes | Arguments | Risk | Rate | Cascade | Requires | Status |
 |---|---|---|---|---|---|---|---|
 | `set_zone_setpoint` | *.HeatingSetpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `setpoint_c`: {"type": "number", "minimum": 19.0, "maximum": 23.0} | high | <=1.0 K, >=15 min, <=2/h per zone | valve -> radiator power -> tank draw -> heat-pump start (or backup heater) |  | `IMPLEMENTED` |
-| `set_zone_cooling_setpoint` | *.CoolingSetpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `cooling_c`: {"type": "number", "minimum": 20.0, "maximum": 28.0} | medium | <=1.0 K, >=15 min | chilled beam -> chiller electric |  | `SPECIFIED` |
-| `set_zone_co2_setpoint` | *.CO2Setpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `co2_ppm`: {"type": "integer", "minimum": 600, "maximum": 1000} | medium | <=100 ppm per change | airflow -> fan power and coil heat -> tank draw |  | `SPECIFIED` |
-| `set_zone_lighting_setpoint` | *.LuxSetpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `lux`: {"type": "integer", "minimum": 0, "maximum": 750} | low | >=15 min | lighting power -> zone heat gain -> less radiator heat |  | `SPECIFIED` |
-| `set_zone_lighting_mode` | *.LightingMode, *.DaylightHarvesting | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `mode`: {"type": "string", "enum": ["presence", "schedule"]}; `daylight_harvesting`: {"type": "boolean"} | low | >=15 min | lighting power -> zone heat gain -> radiator heat |  | `SPECIFIED` |
-| `set_supply_air_setpoint` | AHU-01.SupplyAirSetpoint | `supply_air_c`: {"type": "number", "minimum": 15.0, "maximum": 21.0} | high | <=1.0 K, >=15 min | coil power -> tank draw; supply air -> every zone's radiator demand |  | `SPECIFIED` |
-| `set_tank_setpoint` | TANK-01.Setpoint | `tank_c`: {"type": "number", "minimum": 35.0, "maximum": 60.0} | high | <=3 K, >=15 min | heat-pump run time and COP; stored heat for load shifting | PR-03 | `SPECIFIED` |
-| `set_heat_pump_limit` | HP-01.MaxFraction | `max_fraction`: {"type": "number", "minimum": 0.0, "maximum": 1.0} | high | >=15 min | heat output -> tank -> possibly the backup heater (expensive) | PR-04 | `SPECIFIED` |
-| `set_ahu_enabled` | AHU-01.Enabled | `enabled`: {"type": "boolean"} | high | >=30 min | all airflow, CO2, fan power, coil heat | PR-02 | `SPECIFIED` |
-| `set_heating_cable_mode` | CABLE-*.Mode | `circuit`: {"type": "string", "enum": ["CABLE-RAMP", "CABLE-GUTTER"]}; `mode`: {"type": "string", "enum": ["auto", "thermostat", "sensor", "on", "off"]} | high | >=15 min | cable power; off during icing risk is a hazard |  | `SPECIFIED` |
+| `set_zone_cooling_setpoint` | *.CoolingSetpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `cooling_c`: {"type": "number", "minimum": 20.0, "maximum": 28.0} | medium | <=4.5 K, >=15 min | chilled beam -> chiller electric |  | `IMPLEMENTED` |
+| `set_zone_co2_setpoint` | *.CO2Setpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `co2_ppm`: {"type": "integer", "minimum": 600, "maximum": 1000} | medium | <=100 ppm per change | airflow -> fan power and coil heat -> tank draw |  | `IMPLEMENTED` |
+| `set_zone_lighting_setpoint` | *.LuxSetpoint | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `lux`: {"type": "integer", "minimum": 0, "maximum": 750} | low | >=15 min | lighting power -> zone heat gain -> less radiator heat |  | `IMPLEMENTED` |
+| `set_zone_lighting_mode` | *.LightingMode, *.DaylightHarvesting | `zone_id`: {"type": "string", "enum": ["ZONE-01", "ZONE-02", "ZONE-03"]}; `mode`: {"type": "string", "enum": ["presence", "schedule"]}; `daylight_harvesting`: {"type": "boolean"} | low | >=15 min | lighting power -> zone heat gain -> radiator heat |  | `IMPLEMENTED` |
+| `set_supply_air_setpoint` | AHU-01.SupplyAirSetpoint | `supply_air_c`: {"type": "number", "minimum": 15.0, "maximum": 21.0} | high | <=1.0 K, >=15 min | coil power -> tank draw; supply air -> every zone's radiator demand |  | `IMPLEMENTED` |
+| `set_tank_setpoint` | TANK-01.Setpoint | `tank_c`: {"type": "number", "minimum": 35.0, "maximum": 60.0} | high | <=3 K, >=15 min | heat-pump run time and COP; stored heat for load shifting | PR-03 | `IMPLEMENTED` |
+| `set_heat_pump_limit` | HP-01.MaxFraction | `max_fraction`: {"type": "number", "minimum": 0.0, "maximum": 1.0} | high | >=15 min | heat output -> tank -> possibly the backup heater (expensive) | PR-04 | `IMPLEMENTED` |
+| `set_ahu_enabled` | AHU-01.Enabled | `enabled`: {"type": "boolean"} | high | >=30 min | all airflow, CO2, fan power, coil heat | PR-02 | `IMPLEMENTED` |
+| `set_heating_cable_mode` | CABLE-*.Mode | `circuit`: {"type": "string", "enum": ["CABLE-RAMP", "CABLE-GUTTER"]}; `mode`: {"type": "string", "enum": ["auto", "thermostat", "sensor", "on", "off"]} | high | >=15 min | cable power; off during icing risk is a hazard |  | `IMPLEMENTED` |
 
 ## Procedures (multi-step changes)
 
-### PR-01 — Zone setback and recovery (`SPECIFIED`)
+### PR-01 — Zone setback and recovery (`IMPLEMENTED`)
 
 Why: the interlock moves at most 1 K per change and twice per hour, and the deadband (IL-01) means the cooling setpoint must move first when heating rises toward it.
 
@@ -231,7 +231,7 @@ Why: the interlock moves at most 1 K per change and twice per hour, and the dead
 3. lowering: move HeatingSetpoint down in steps; CoolingSetpoint may follow afterwards
 4. verify AirTemp reaches the band before occupancy (optimal start computes the lead)
 
-### PR-02 — AHU night shutdown and morning start (`SPECIFIED`)
+### PR-02 — AHU night shutdown and morning start (`IMPLEMENTED`)
 
 Why: stopping ventilation while people are present is not allowed (IL-06), and a cold start blows cold air if the supply setpoint is low.
 
@@ -240,7 +240,7 @@ Why: stopping ventilation while people are present is not allowed (IL-06), and a
 3. morning: set_supply_air_setpoint(>= 18) before set_ahu_enabled(true)
 4. set_ahu_enabled(true) >= 30 min before occupancy; verify CO2 < 800 ppm at start
 
-### PR-03 — Load shift by tank pre-charge (`SPECIFIED`)
+### PR-03 — Load shift by tank pre-charge (`IMPLEMENTED`)
 
 Why: stored heat moves consumption to cheap hours, but a hotter tank lowers COP and nears the high-pressure limit.
 
@@ -249,7 +249,7 @@ Why: stored heat moves consumption to cheap hours, but a hotter tank lowers COP 
 3. lower TANK-01.Setpoint back to the curve requirement before the expensive block ends
 4. verify HP-01.HighPressureCutout stayed 0 and HP-01.Starts rose by <= 3 per hour
 
-### PR-04 — Demand-response cap (`SPECIFIED`)
+### PR-04 — Demand-response cap (`IMPLEMENTED`)
 
 Why: capping the compressor while the tank is short starts the backup heater, which costs about COP times more than the heat it replaces.
 

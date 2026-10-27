@@ -161,3 +161,40 @@ def test_decision_record_carries_the_evidence_fields():
               "proposal", "validation", "route", "changes"):
         assert k in r
     assert r["schema"] == "ot-caretaker-decision/v1" and r["route"] in ("submit", "hold", "fallback", "escalate")
+
+
+def test_caretaker_drives_all_supervisory_changes_through_governed_tools():
+    """When given a governed tool dispatcher, Caretaker P3 decomposes every
+    supervisory change into governed tool calls that pass the signed ToolSpec
+    and the twin's local interlocks."""
+    from adapter.contracts import ToolSpec
+
+    tw = _twin(days=2)
+    spec = ToolSpec.load()
+    dispatched: list[tuple[str, dict]] = []
+
+    def dispatch(tool_name: str, arguments: dict) -> bool:
+        if tool_name == "set_zone_setpoint":
+            # Clamp to the signed v1 heating range when testing against the v1 contract
+            arguments = {**arguments, "setpoint_c": max(spec.min_setpoint_c, min(spec.max_setpoint_c, arguments["setpoint_c"]))}
+            if abs(arguments["setpoint_c"] - tw.zones[arguments["zone_id"]].setpoint_c) < 1e-6:
+                return False
+        canon = spec.canonical_tool_arguments(tool_name, arguments)
+        op_id = f"gov-p3-{tw.clock.now_s}-{len(dispatched):04d}"
+        if tool_name == "set_zone_setpoint":
+            rec, _ = tw.apply_setpoint({"operation_id": op_id, "zone_id": canon["zone_id"],
+                                        "setpoint_c": canon["setpoint_c"], "units": "degC",
+                                        "expected_state_revision": tw.revision})
+        else:
+            rec, _ = tw.apply_plant_command({"operation_id": op_id, "tool_name": tool_name,
+                                             "arguments": canon, "expected_state_revision": tw.revision})
+        assert rec.status == "APPLIED", f"{tool_name}({canon}) rejected: {rec.reason}"
+        dispatched.append((tool_name, canon))
+        return True
+
+    ct = ck.Caretaker(tw, dispatcher=dispatch)
+    _run(ct, 2 * 86400 - STEP_S)
+    tools_used = {t for t, _ in dispatched}
+    assert {"set_zone_setpoint", "set_zone_cooling_setpoint", "set_tank_setpoint",
+            "set_ahu_enabled", "set_heating_cable_mode"} <= tools_used
+

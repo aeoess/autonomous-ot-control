@@ -14,6 +14,92 @@
         "observed": true,
         "previous_field": "previous_setpoint_c"
       }
+    ],
+    "set_zone_cooling_setpoint": [
+      {
+        "quantity": "cooling_movement",
+        "kind": "change",
+        "argument": "cooling_c",
+        "scale": 10,
+        "unit": "decidegrees",
+        "resource_argument": "zone_id",
+        "observed": true,
+        "previous_field": "previous_setpoint_c"
+      }
+    ],
+    "set_zone_co2_setpoint": [
+      {
+        "quantity": "co2_movement",
+        "kind": "change",
+        "argument": "co2_ppm",
+        "scale": 1,
+        "unit": "ppm",
+        "resource_argument": "zone_id",
+        "observed": true,
+        "previous_field": "previous_setpoint_c"
+      }
+    ],
+    "set_zone_lighting_setpoint": [
+      {
+        "quantity": "lux_movement",
+        "kind": "change",
+        "argument": "lux",
+        "scale": 1,
+        "unit": "lux",
+        "resource_argument": "zone_id",
+        "observed": true,
+        "previous_field": "previous_setpoint_c"
+      }
+    ],
+    "set_zone_lighting_mode": [
+      {
+        "quantity": "lighting_mode_changes",
+        "kind": "count",
+        "per_call": 1,
+        "unit": "changes",
+        "resource_argument": "zone_id"
+      }
+    ],
+    "set_supply_air_setpoint": [
+      {
+        "quantity": "supply_air_changes",
+        "kind": "count",
+        "per_call": 1,
+        "unit": "changes"
+      }
+    ],
+    "set_tank_setpoint": [
+      {
+        "quantity": "tank_changes",
+        "kind": "count",
+        "per_call": 1,
+        "unit": "changes"
+      }
+    ],
+    "set_heat_pump_limit": [
+      {
+        "quantity": "hp_limit_changes",
+        "kind": "count",
+        "per_call": 1,
+        "unit": "changes"
+      }
+    ],
+    "set_ahu_enabled": [
+      {
+        "quantity": "ahu_changes",
+        "kind": "count",
+        "per_call": 1,
+        "unit": "changes"
+      }
+    ],
+    "set_heating_cable_mode": [
+      {
+        "quantity": "cable_mode_changes",
+        "kind": "count",
+        "per_call": 1,
+        "unit": "changes",
+        "resource_argument": "circuit"
+      }
     ]
   },
   "limits": [
@@ -46,6 +132,92 @@
       "principal": "*",
       "max": 5,
       "window_seconds": 3600
+    },
+    {
+      "limit_id": "zone-cooling-movement",
+      "tenant": "ot-pilot",
+      "quantity": "cooling_movement",
+      "unit": "decidegrees",
+      "resource": "*",
+      "principal": "*",
+      "max": 90,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "zone-co2-movement",
+      "tenant": "ot-pilot",
+      "quantity": "co2_movement",
+      "unit": "ppm",
+      "resource": "*",
+      "principal": "*",
+      "max": 200,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "zone-lux-movement",
+      "tenant": "ot-pilot",
+      "quantity": "lux_movement",
+      "unit": "lux",
+      "resource": "*",
+      "principal": "*",
+      "max": 750,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "zone-lighting-mode-changes",
+      "tenant": "ot-pilot",
+      "quantity": "lighting_mode_changes",
+      "unit": "changes",
+      "resource": "*",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "supply-air-changes",
+      "tenant": "ot-pilot",
+      "quantity": "supply_air_changes",
+      "unit": "changes",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "tank-changes",
+      "tenant": "ot-pilot",
+      "quantity": "tank_changes",
+      "unit": "changes",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "hp-limit-changes",
+      "tenant": "ot-pilot",
+      "quantity": "hp_limit_changes",
+      "unit": "changes",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "ahu-changes",
+      "tenant": "ot-pilot",
+      "quantity": "ahu_changes",
+      "unit": "changes",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "cable-mode-changes",
+      "tenant": "ot-pilot",
+      "quantity": "cable_mode_changes",
+      "unit": "changes",
+      "resource": "*",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
     }
   ]
 }

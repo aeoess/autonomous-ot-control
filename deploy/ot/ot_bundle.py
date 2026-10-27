@@ -25,6 +25,7 @@ from remora.toolcall.routing.tool_registry import ToolRegistry, ToolSignature
 from remora.toolcall.semantic_bundle import ResolvedIntent, SemanticBundle
 
 ZONES = ("ZONE-01", "ZONE-02", "ZONE-03")
+CIRCUITS = ("CABLE-RAMP", "CABLE-GUTTER")
 
 
 def build_semantic_bundle() -> SemanticBundle:
@@ -35,6 +36,29 @@ def build_semantic_bundle() -> SemanticBundle:
                                               required_params=()),
         "set_zone_setpoint": ToolSignature(name="set_zone_setpoint", effect="write",
                                            required_params=("zone_id", "setpoint_c")),
+        "set_zone_cooling_setpoint": ToolSignature(name="set_zone_cooling_setpoint", effect="write",
+                                                   required_params=("zone_id", "cooling_c")),
+        "set_zone_co2_setpoint": ToolSignature(name="set_zone_co2_setpoint", effect="write",
+                                               required_params=("zone_id", "co2_ppm")),
+        "set_zone_lighting_setpoint": ToolSignature(name="set_zone_lighting_setpoint", effect="write",
+                                                    required_params=("zone_id", "lux")),
+        "set_zone_lighting_mode": ToolSignature(
+            name="set_zone_lighting_mode", effect="write",
+            required_params=("zone_id", "mode", "daylight_harvesting"),
+            param_values={"mode": ("presence", "schedule")}),
+        "set_supply_air_setpoint": ToolSignature(name="set_supply_air_setpoint", effect="write",
+                                                 required_params=("supply_air_c",)),
+        "set_tank_setpoint": ToolSignature(name="set_tank_setpoint", effect="write",
+                                           required_params=("tank_c",)),
+        "set_heat_pump_limit": ToolSignature(name="set_heat_pump_limit", effect="write",
+                                             required_params=("max_fraction",)),
+        "set_ahu_enabled": ToolSignature(name="set_ahu_enabled", effect="write",
+                                         required_params=("enabled",)),
+        "set_heating_cable_mode": ToolSignature(
+            name="set_heating_cable_mode", effect="write",
+            required_params=("circuit", "mode"),
+            param_values={"circuit": CIRCUITS,
+                          "mode": ("auto", "thermostat", "sensor", "on", "off")}),
     })
     contracts = ToolContractRegistry([
         ToolContract(tool="read_zone_state", capability="process_monitoring",
@@ -47,14 +71,56 @@ def build_semantic_bundle() -> SemanticBundle:
                      effect="update", resource_type="zone", mutation=True,
                      argument_roles={"zone_id": "target_resource"},
                      state_delta={"zone.setpoint": "changed"}),
+        ToolContract(tool="set_zone_cooling_setpoint", capability="process_control",
+                     effect="update", resource_type="zone", mutation=True,
+                     argument_roles={"zone_id": "target_resource"},
+                     state_delta={"zone.cooling_setpoint": "changed"}),
+        ToolContract(tool="set_zone_co2_setpoint", capability="process_control",
+                     effect="update", resource_type="zone", mutation=True,
+                     argument_roles={"zone_id": "target_resource"},
+                     state_delta={"zone.co2_setpoint": "changed"}),
+        ToolContract(tool="set_zone_lighting_setpoint", capability="process_control",
+                     effect="update", resource_type="zone", mutation=True,
+                     argument_roles={"zone_id": "target_resource"},
+                     state_delta={"zone.lighting_setpoint": "changed"}),
+        ToolContract(tool="set_zone_lighting_mode", capability="process_control",
+                     effect="update", resource_type="zone", mutation=True,
+                     argument_roles={"zone_id": "target_resource"},
+                     state_delta={"zone.lighting_mode": "changed"}),
+        ToolContract(tool="set_supply_air_setpoint", capability="process_control",
+                     effect="update", resource_type="ahu",
+                     resource_aliases=("zone", "plant", "building"), mutation=True,
+                     argument_roles={},
+                     state_delta={"ahu.supply_air_setpoint": "changed"}),
+        ToolContract(tool="set_tank_setpoint", capability="process_control",
+                     effect="update", resource_type="tank",
+                     resource_aliases=("zone", "plant", "building"), mutation=True,
+                     argument_roles={},
+                     state_delta={"tank.setpoint": "changed"}),
+        ToolContract(tool="set_heat_pump_limit", capability="process_control",
+                     effect="update", resource_type="heat_pump",
+                     resource_aliases=("zone", "plant", "building"), mutation=True,
+                     argument_roles={},
+                     state_delta={"heat_pump.max_fraction": "changed"}),
+        ToolContract(tool="set_ahu_enabled", capability="process_control",
+                     effect="update", resource_type="ahu",
+                     resource_aliases=("zone", "plant", "building"), mutation=True,
+                     argument_roles={},
+                     state_delta={"ahu.enabled": "changed"}),
+        ToolContract(tool="set_heating_cable_mode", capability="process_control",
+                     effect="update", resource_type="heating_cable",
+                     resource_aliases=("zone", "plant", "building"), mutation=True,
+                     argument_roles={"circuit": "target_resource"},
+                     state_delta={"heating_cable.mode": "changed"}),
     ])
     state = StateIndex.from_values(
-        set(ZONES) | {"demo-building-001"},
+        set(ZONES) | set(CIRCUITS) | {"demo-building-001", "presence", "schedule",
+                                      "auto", "thermostat", "sensor", "on", "off"},
         # The coverage domain must be the tool metadata's domain
         # (deploy/ot/ot_tool_metadata.json): REMORA looks a value up in the
         # index under the tool's domain, and a mismatch reads as UNKNOWN, which
         # never supports an ACCEPT.
-        (CoverageScope("building_automation", frozenset({"zone_id"}), closed_world=True),),
+        (CoverageScope("building_automation", frozenset({"zone_id", "circuit", "mode"}), closed_world=True),),
     )
     return SemanticBundle.build(registry=registry, contracts=contracts,
                                 validators=None, state=state)

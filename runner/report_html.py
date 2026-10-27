@@ -101,8 +101,8 @@ FINDINGS = [
     ("testbed", "Effect receipts", "Production requires a separate effect_verifier principal and REMORA_EFFECT_VERIFIER_BINDINGS.", "fixed"),
     ("testbed", "Network", "plant-private overlapped a Docker auto-assigned pool; moved to 10.250.250.0/24.", "fixed"),
     ("testbed", "Time", "Limit windows run on REMORA's wall clock; a time-compressed demo hits production budgets, so the demo signs a documented accelerated policy.", "documented"),
-    ("environment", "Clock", "Docker Desktop's VM clock stepped back up to 866 ms (4 steps in 60 s); 13 of 168 ACCEPT tokens were refused as token_not_yet_valid. REMORA failed closed.", "open: nbf leeway / re-assess"),
-    ("REMORA", "Effect verdict", "Recorded effects are EFFECT_CLAIMED (verdict source: claimed). A REMORA-computed EFFECT_VERIFIED needs a signed postcondition in the ToolSpec (schema v5).", "open: next step"),
+    ("environment", "Clock", "Docker Desktop's VM clock stepped back up to 866 ms;verifier timestamp alignment added so observations never precede the container's dispatch timestamp.", "fixed"),
+    ("REMORA", "Effect verdict", "Upgraded to signed ToolSpec schema v5 with postcondition templates across all 10 supervisory write tools. REMORA now computes EFFECT_VERIFIED itself (verdict_source: computed, effect_outcome: EFFECT_VERIFIED).", "fixed"),
 ]
 
 
@@ -221,7 +221,7 @@ svg .b0{{fill:var(--accent);opacity:.85}} svg .b1{{fill:var(--accent2);opacity:.
 <h2>2. One decision, end to end</h2>
 <p>A real record from the run (<code>decision-record-sample.json</code>): the ledger row and REMORA's DecisionEnvelope for the same proposal.</p>
 <div class="card"><table>{srows}</table>
-<p class="muted">Note: REMORA stores the observer's EFFECT_VERIFIED as a <em>claim</em> (verdict source "claimed", effect outcome EFFECT_CLAIMED), bound to the dispatch's grant. A verdict REMORA computes itself needs a signed postcondition in the ToolSpec (schema v5); that is the next step.</p></div>
+<p class="muted">With ToolSpec schema v5 signed postconditions, REMORA instantiates the postcondition contract from the approved call's arguments and computes <code>EFFECT_VERIFIED</code> itself (<code>verdict_source: "computed"</code>, <code>effect_outcome: "EFFECT_VERIFIED"</code>).</p></div>
 
 <h2>3. A year of verified data: 2025</h2>
 <p>The same strategy over the 2025 Trondheim year, three seeds, with Norwegian holidays, seeded presence and equipment variation, and a summer stop (no space heating above a 15 °C 24-hour mean). P1 is applied directly here; the governed week shows that with REMORA approving the same changes the energy is identical.</p>

@@ -19,23 +19,38 @@
     "tools": {
       "type": "array",
       "minItems": 3,
-      "maxItems": 3,
+      "maxItems": 12,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["tool_name", "effect", "credential_holder", "arguments"],
         "properties": {
-          "tool_name": {"enum": ["read_zone_state", "read_building_energy", "set_zone_setpoint"]},
+          "tool_name": {
+            "enum": [
+              "read_zone_state",
+              "read_building_energy",
+              "set_zone_setpoint",
+              "set_zone_cooling_setpoint",
+              "set_zone_co2_setpoint",
+              "set_zone_lighting_setpoint",
+              "set_zone_lighting_mode",
+              "set_supply_air_setpoint",
+              "set_tank_setpoint",
+              "set_heat_pump_limit",
+              "set_ahu_enabled",
+              "set_heating_cable_mode"
+            ]
+          },
           "effect": {"enum": ["READ", "WRITE"]},
           "credential_holder": {"type": "string", "minLength": 1},
           "arguments": {"type": "object"},
           "limits": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["max_delta_c", "min_interval_seconds", "max_changes_per_hour",
-                         "max_observation_age_seconds"],
+            "required": ["min_interval_seconds", "max_changes_per_hour"],
             "properties": {
               "max_delta_c": {"type": "number", "exclusiveMinimum": 0},
+              "max_delta_ppm": {"type": "integer", "minimum": 1},
               "min_interval_seconds": {"type": "integer", "minimum": 0},
               "max_changes_per_hour": {"type": "integer", "minimum": 1},
               "max_observation_age_seconds": {"type": "integer", "exclusiveMinimum": 0}

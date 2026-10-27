@@ -7,7 +7,7 @@
   "assumptions": {
     "building": "the fictitious three-zone twin (three-zone-hvac-seasonal-v2); every limit comes from the site policy, never from an algorithm",
     "autonomous_physical_control": false,
-    "governed_today": "Only set_zone_setpoint is a governed write tool (signed ToolSpec, REMORA VERIFY, dispatcher, observer). Every other setpoint below is written directly in the offline runs; its governed tool is specified in docs/datapoints.md and not built.",
+    "governed_today": "All 10 supervisory write tools (set_zone_setpoint, set_zone_cooling_setpoint, set_zone_co2_setpoint, set_zone_lighting_setpoint, set_zone_lighting_mode, set_supply_air_setpoint, set_tank_setpoint, set_heat_pump_limit, set_ahu_enabled, set_heating_cable_mode) are governed write tools with signed ToolSpecs (schema v5 with signed postconditions), REMORA cumulative limits, protected dispatcher, local twin interlocks (IL-01..IL-11), and independent effect observer. Offline runs apply proposals directly for speed; Caretaker(..., dispatcher=...) drives the exact same proposal engine through governed tool calls.",
     "expected_effects": "No profile carries a planning prior. The measured effect of each strategy is in docs/results and applies to the twin only."
   },
   "selection": {

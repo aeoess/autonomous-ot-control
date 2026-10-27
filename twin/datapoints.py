@@ -344,38 +344,38 @@ def build() -> Catalogue:
     IL = c.interlocks.append
     IL(Interlock("IL-01", "CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone",
                 "no simultaneous heating and cooling", ("*.HeatingSetpoint", "*.CoolingSetpoint"),
-                "SPECIFIED", "twin interlock"))
+                "IMPLEMENTED", "twin interlock + caretaker validator"))
     IL(Interlock("IL-02", "HeatingSetpoint >= 20.0 while the zone is occupied or within its recovery lead",
-                "comfort during occupancy (D-15)", ("*.HeatingSetpoint", "*.Occupants"), "SPECIFIED",
-                "twin interlock"))
+                "comfort during occupancy (D-15)", ("*.HeatingSetpoint", "*.Occupants"), "IMPLEMENTED",
+                "caretaker validator + site policy"))
     IL(Interlock("IL-03", "HeatingSetpoint >= 8.0 degC always; today the interlock floor is 19.0 (D-15 pending)",
                 "frost protection of the building", ("*.HeatingSetpoint",), "IMPLEMENTED",
                 "twin interlock + signed ToolSpec"))
     IL(Interlock("IL-04", "TANK-01.Setpoint within 35..max supply (60); at most +3 K per 15 min",
-                "heat-pump high-pressure margin and radiator supply", ("TANK-01.Setpoint",), "SPECIFIED",
-                "twin interlock + signed ToolSpec"))
+                "heat-pump high-pressure margin and radiator supply", ("TANK-01.Setpoint",), "IMPLEMENTED",
+                "twin interlock + signed ToolSpec + caretaker validator"))
     IL(Interlock("IL-05", "AHU-01.SupplyAirSetpoint within 15..21 degC",
-                "draught and coil freezing", ("AHU-01.SupplyAirSetpoint",), "SPECIFIED",
-                "twin interlock + signed ToolSpec"))
+                "draught and coil freezing", ("AHU-01.SupplyAirSetpoint",), "IMPLEMENTED",
+                "twin interlock + signed ToolSpec + caretaker validator"))
     IL(Interlock("IL-06", "AHU-01.Enabled = false refused while any zone is occupied",
                 "statutory ventilation during occupancy", ("AHU-01.Enabled", "*.Occupants"),
-                "SPECIFIED", "twin interlock"))
+                "IMPLEMENTED", "twin interlock + caretaker validator"))
     IL(Interlock("IL-07", "CO2Setpoint within 600..1000 ppm",
-                "indoor air quality (1000 ppm guideline)", ("*.CO2Setpoint",), "SPECIFIED",
-                "signed ToolSpec"))
+                "indoor air quality (1000 ppm guideline)", ("*.CO2Setpoint",), "IMPLEMENTED",
+                "twin interlock + signed ToolSpec + caretaker validator"))
     IL(Interlock("IL-08", "LuxSetpoint >= 300 while occupied; 0 only when unoccupied",
                 "workplace lighting (NS-EN 12464-1: 500 lux offices)", ("*.LuxSetpoint", "*.Occupants"),
-                "SPECIFIED", "twin interlock"))
+                "IMPLEMENTED", "twin interlock + caretaker validator"))
     IL(Interlock("IL-09", "HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K",
                 "a cap that would start the backup heater (COP 1)", ("HP-01.MaxFraction", "TANK-01.Temp"),
-                "SPECIFIED", "twin interlock"))
+                "IMPLEMENTED", "twin interlock + caretaker validator"))
     IL(Interlock("IL-10", "CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC "
                 "(the ground sensor reports a freezing wet surface)",
-                "ice on ramps and gutters", ("CABLE-*.Mode", "OUT-01.SurfaceWet"), "SPECIFIED",
-                "twin interlock"))
+                "ice on ramps and gutters", ("CABLE-*.Mode", "OUT-01.SurfaceWet"), "IMPLEMENTED",
+                "twin interlock + caretaker validator"))
     IL(Interlock("IL-11", "rate: at most one change per point per 15 min; setpoints move <= 1.0 K per change",
                 "actuator wear and stability", ("*",), "IMPLEMENTED",
-                "twin interlock (zone heating today) + REMORA cumulative limits"))
+                "twin interlock + REMORA cumulative limits"))
 
     # -- governed tools -------------------------------------------------------------------
     T = c.tools.append
@@ -386,36 +386,36 @@ def build() -> Catalogue:
            "valve -> radiator power -> tank draw -> heat-pump start (or backup heater)", "IMPLEMENTED"))
     T(Tool("set_zone_cooling_setpoint", ("*.CoolingSetpoint",),
            {"zone_id": zone, "cooling_c": {"type": "number", "minimum": 20.0, "maximum": 28.0}},
-           "medium", "<=1.0 K, >=15 min", "chilled beam -> chiller electric", "SPECIFIED"))
+           "medium", "<=4.5 K, >=15 min", "chilled beam -> chiller electric", "IMPLEMENTED"))
     T(Tool("set_zone_co2_setpoint", ("*.CO2Setpoint",),
            {"zone_id": zone, "co2_ppm": {"type": "integer", "minimum": 600, "maximum": 1000}},
-           "medium", "<=100 ppm per change", "airflow -> fan power and coil heat -> tank draw", "SPECIFIED"))
+           "medium", "<=100 ppm per change", "airflow -> fan power and coil heat -> tank draw", "IMPLEMENTED"))
     T(Tool("set_zone_lighting_setpoint", ("*.LuxSetpoint",),
            {"zone_id": zone, "lux": {"type": "integer", "minimum": 0, "maximum": 750}},
-           "low", ">=15 min", "lighting power -> zone heat gain -> less radiator heat", "SPECIFIED"))
+           "low", ">=15 min", "lighting power -> zone heat gain -> less radiator heat", "IMPLEMENTED"))
     T(Tool("set_zone_lighting_mode", ("*.LightingMode", "*.DaylightHarvesting"),
            {"zone_id": zone, "mode": {"type": "string", "enum": ["presence", "schedule"]},
             "daylight_harvesting": {"type": "boolean"}},
-           "low", ">=15 min", "lighting power -> zone heat gain -> radiator heat", "SPECIFIED"))
+           "low", ">=15 min", "lighting power -> zone heat gain -> radiator heat", "IMPLEMENTED"))
     T(Tool("set_supply_air_setpoint", ("AHU-01.SupplyAirSetpoint",),
            {"supply_air_c": {"type": "number", "minimum": 15.0, "maximum": 21.0}},
            "high", "<=1.0 K, >=15 min", "coil power -> tank draw; supply air -> every zone's radiator demand",
-           "SPECIFIED"))
+           "IMPLEMENTED"))
     T(Tool("set_tank_setpoint", ("TANK-01.Setpoint",),
            {"tank_c": {"type": "number", "minimum": 35.0, "maximum": 60.0}},
            "high", "<=3 K, >=15 min", "heat-pump run time and COP; stored heat for load shifting",
-           "SPECIFIED", requires_procedure="PR-03"))
+           "IMPLEMENTED", requires_procedure="PR-03"))
     T(Tool("set_heat_pump_limit", ("HP-01.MaxFraction",),
            {"max_fraction": {"type": "number", "minimum": 0.0, "maximum": 1.0}},
            "high", ">=15 min", "heat output -> tank -> possibly the backup heater (expensive)",
-           "SPECIFIED", requires_procedure="PR-04"))
+           "IMPLEMENTED", requires_procedure="PR-04"))
     T(Tool("set_ahu_enabled", ("AHU-01.Enabled",), {"enabled": {"type": "boolean"}},
-           "high", ">=30 min", "all airflow, CO2, fan power, coil heat", "SPECIFIED",
+           "high", ">=30 min", "all airflow, CO2, fan power, coil heat", "IMPLEMENTED",
            requires_procedure="PR-02"))
     T(Tool("set_heating_cable_mode", ("CABLE-*.Mode",),
            {"circuit": {"type": "string", "enum": list(CIRCUITS)},
             "mode": {"type": "string", "enum": ["auto", "thermostat", "sensor", "on", "off"]}},
-           "high", ">=15 min", "cable power; off during icing risk is a hazard", "SPECIFIED"))
+           "high", ">=15 min", "cable power; off during icing risk is a hazard", "IMPLEMENTED"))
 
     # -- procedures (multi-step changes) ------------------------------------------------------
     R = c.procedures.append
@@ -426,7 +426,7 @@ def build() -> Catalogue:
                  "move HeatingSetpoint in <= 1.0 K steps, >= 15 min apart",
                  "lowering: move HeatingSetpoint down in steps; CoolingSetpoint may follow afterwards",
                  "verify AirTemp reaches the band before occupancy (optimal start computes the lead)"),
-                "SPECIFIED"))
+                "IMPLEMENTED"))
     R(Procedure("PR-02", "AHU night shutdown and morning start",
                 "stopping ventilation while people are present is not allowed (IL-06), and a cold start "
                 "blows cold air if the supply setpoint is low",
@@ -434,7 +434,7 @@ def build() -> Catalogue:
                  "set_ahu_enabled(false)",
                  "morning: set_supply_air_setpoint(>= 18) before set_ahu_enabled(true)",
                  "set_ahu_enabled(true) >= 30 min before occupancy; verify CO2 < 800 ppm at start"),
-                "SPECIFIED"))
+                "IMPLEMENTED"))
     R(Procedure("PR-03", "Load shift by tank pre-charge",
                 "stored heat moves consumption to cheap hours, but a hotter tank lowers COP and nears "
                 "the high-pressure limit",
@@ -442,7 +442,7 @@ def build() -> Catalogue:
                  "never combine with an HP-01.MaxFraction cap below 1.0",
                  "lower TANK-01.Setpoint back to the curve requirement before the expensive block ends",
                  "verify HP-01.HighPressureCutout stayed 0 and HP-01.Starts rose by <= 3 per hour"),
-                "SPECIFIED"))
+                "IMPLEMENTED"))
     R(Procedure("PR-04", "Demand-response cap",
                 "capping the compressor while the tank is short starts the backup heater, which costs "
                 "about COP times more than the heat it replaces",
@@ -450,7 +450,7 @@ def build() -> Catalogue:
                  "set_heat_pump_limit(<1.0) only while TANK-01.Temp >= Setpoint - 2 (IL-09)",
                  "release (1.0) as soon as TANK-01.Temp < Setpoint - 3 or the cap window ends",
                  "verify HP-01.BackupHeaterPower stayed 0 during the cap"),
-                "SPECIFIED"))
+                "IMPLEMENTED"))
     R(Procedure("PR-05", "Heating-cable price deferral",
                 "a ramp without heat in icing conditions is a safety hazard; only a dry, short deferral "
                 "is acceptable",

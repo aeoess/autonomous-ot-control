@@ -109,16 +109,28 @@ def op_record_effect(a: dict[str, Any]) -> dict[str, Any]:
 
     observer = EffectObserver(os.environ["TWIN_READ_URL"], os.environ["TWIN_READ_TOKEN"],
                               tenant_id="ot-pilot", run_id=a.get("run_id", "demo"))
+    tool_id = a.get("tool_name") or "set_zone_setpoint"
     with sdk.RemoraClient(base_url=os.environ["REMORA_URL"], token=_token("verifier")) as c:
         try:
-            out = EffectAttestor(observer, sdk=sdk).attest(
-                proposal_id=a["proposal_id"], execution_id=a.get("execution_id") or a["proposal_id"],
-                toolspec_hash=a.get("toolspec_hash", ""), zone_id=a["zone_id"],
-                expected_setpoint_c=float(a["setpoint_c"]), operation_id=a["proposal_id"], client=c)
+            if tool_id == "set_zone_setpoint" and "arguments" not in a:
+                out = EffectAttestor(observer, sdk=sdk).attest(
+                    proposal_id=a["proposal_id"], execution_id=a.get("execution_id") or a["proposal_id"],
+                    toolspec_hash=a.get("toolspec_hash", ""), zone_id=a["zone_id"],
+                    expected_setpoint_c=float(a["setpoint_c"]), operation_id=a["proposal_id"], client=c)
+            else:
+                out = EffectAttestor(observer, sdk=sdk).attest_tool(
+                    proposal_id=a["proposal_id"], execution_id=a.get("execution_id") or a["proposal_id"],
+                    toolspec_hash=a.get("toolspec_hash", ""), tool_id=tool_id,
+                    arguments=a["arguments"], operation_id=a["proposal_id"], client=c)
         except Exception as e:  # reported as data
             return {"ok": False, "error": type(e).__name__, "detail": str(e)[:300]}
     v = out.get("verification") or {}
+    rec = out.get("recorded") or {}
+    vsrc = rec.get("verdict_source") if isinstance(rec, dict) else None
+    if not vsrc and isinstance(rec, dict):
+        vsrc = (rec.get("raw") or {}).get("verdict_source")
     return {"ok": bool(out.get("remora_recorded")), "effect_status": v.get("status"),
+            "verdict_source": vsrc,
             "observation": out.get("observation"), "record_error": out.get("remora_record_error")}
 
 
@@ -157,6 +169,10 @@ def _twin(path: str) -> dict[str, Any]:
 
 def op_energy(a: dict[str, Any]) -> dict[str, Any]:
     return _twin("/v1/energy")
+
+
+def op_plant(a: dict[str, Any]) -> dict[str, Any]:
+    return _twin("/v1/plant")
 
 
 def op_zone(a: dict[str, Any]) -> dict[str, Any]:

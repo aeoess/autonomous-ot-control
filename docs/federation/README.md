@@ -22,7 +22,15 @@ request is your consent record, and you can leave the same way.
 | `tool_definition` | inline | the served tool definition (after the MCP gateway exists) | does it match the approved one? |
 | `authority_fixture` | inline | a synthetic signed work order | what does it authorize? |
 
-**2. Copy the template.**
+**2. Scaffold or copy the template.**
+
+With the one-command scaffolder (fills `edge.json` and `adapter.py` with your `edge_id`):
+
+```bash
+python -m runner.edge_check --init <your-edge-id> --project "<project name>" --maintainer <github-handle>
+```
+
+Or by hand:
 
 ```bash
 cp -r federation/edges/_template federation/edges/<your-edge-id>
@@ -31,7 +39,11 @@ cp -r federation/edges/_template federation/edges/<your-edge-id>
 Edit `edge.json` in the new directory. It is your manifest
 (`contracts/edge-manifest-v1.schema.json`): who you are, a pinned commit or
 image digest, your licence, the boundary and mode, and the **claim ceiling**,
-meaning what a green result does and does not show.
+meaning what a green result does and does not show. Validate it at any time with:
+
+```bash
+python -m runner.edge_check --validate federation/edges/<your-edge-id>
+```
 
 **3. Implement one entry point.**
 
@@ -51,7 +63,8 @@ whose entry point behaves the same way.
 **4. Run it locally, exactly as CI will.**
 
 ```bash
-./deploy/scripts/run-edge.sh <your-edge-id>
+./deploy/scripts/run-edge.sh <your-edge-id>           # sandboxed Docker (CI mode)
+./deploy/scripts/run-edge.sh <your-edge-id> --local   # fast local iteration without Docker
 ```
 
 This runs your adapter in a container with no network, a read-only root

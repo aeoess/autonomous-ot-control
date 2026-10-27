@@ -96,19 +96,13 @@ def _require_sdk() -> Any:
     return sdk
 
 
-def propose_setpoint(client: Any, *, zone_id: str, setpoint_c: float, intent_ref: str,
-                     sdk: Any | None = None) -> dict[str, Any]:
-    """Propose one setpoint change to REMORA and act on its decision.
-
-    ``client`` is a ``remora.sdk`` client (or a compatible object in tests). On
-    ACCEPT, dispatch is delegated to ``client.execute_accepted`` with REMORA's
-    execution token and the exact proposed call. Returns a projection dict; an
-    exception from execution is reported as UNKNOWN and is **not** retried.
-    """
+def propose_call(client: Any, *, tool_name: str, arguments: dict[str, Any], intent_ref: str,
+                 sdk: Any | None = None) -> dict[str, Any]:
+    """Propose one governed tool call to REMORA and act on its decision."""
     sdk = sdk if sdk is not None else _require_sdk()
     call = sdk.ToolCall(
-        tool_name=WRITE_TOOL,
-        arguments={"zone_id": zone_id, "setpoint_c": setpoint_c},
+        tool_name=tool_name,
+        arguments=arguments,
         target_environment=TARGET_ENVIRONMENT,
         intent_ref=intent_ref,
     )
@@ -116,7 +110,10 @@ def propose_setpoint(client: Any, *, zone_id: str, setpoint_c: float, intent_ref
     decision = decide(assessment)
     out: dict[str, Any] = {"state": decision.state, "action": decision.action,
                            "detail": decision.detail, "intent_ref": intent_ref,
-                           "zone_id": zone_id, "requested_setpoint_c": setpoint_c}
+                           "tool_name": tool_name, "arguments": arguments}
+    if tool_name == WRITE_TOOL:
+        out["zone_id"] = arguments.get("zone_id")
+        out["requested_setpoint_c"] = arguments.get("setpoint_c")
     if not decision.dispatch:
         return out
     token = getattr(assessment, "execution_token", None)
@@ -129,6 +126,20 @@ def propose_setpoint(client: Any, *, zone_id: str, setpoint_c: float, intent_ref
         return {**out, "state": STATE_UNKNOWN,
                 "detail": f"execution outcome unknown: {type(e).__name__}: {e}"}
     return {**out, "state": STATE_DISPATCHED, "receipt": receipt}
+
+
+def propose_setpoint(client: Any, *, zone_id: str, setpoint_c: float, intent_ref: str,
+                     sdk: Any | None = None) -> dict[str, Any]:
+    """Propose one setpoint change to REMORA and act on its decision.
+
+    ``client`` is a ``remora.sdk`` client (or a compatible object in tests). On
+    ACCEPT, dispatch is delegated to ``client.execute_accepted`` with REMORA's
+    execution token and the exact proposed call. Returns a projection dict; an
+    exception from execution is reported as UNKNOWN and is **not** retried.
+    """
+    return propose_call(client, tool_name=WRITE_TOOL,
+                        arguments={"zone_id": zone_id, "setpoint_c": setpoint_c},
+                        intent_ref=intent_ref, sdk=sdk)
 
 
 def main(argv: list[str] | None = None,

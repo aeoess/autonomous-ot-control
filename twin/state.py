@@ -62,6 +62,21 @@ class OperationRecord:
     state_revision_after: int
     sim_time_s: int
     sim_utc: str
+    tool_name: str = "set_zone_setpoint"
+    target: str = ""
+    requested_value: Any = None
+    previous_value: Any = None
+    new_value: Any = None
+
+    def __post_init__(self) -> None:
+        if not self.target:
+            self.target = self.zone_id
+        if self.requested_value is None and self.requested_setpoint_c is not None:
+            self.requested_value = self.requested_setpoint_c
+        if self.previous_value is None and self.previous_setpoint_c is not None:
+            self.previous_value = self.previous_setpoint_c
+        if self.new_value is None and self.new_setpoint_c is not None:
+            self.new_value = self.new_setpoint_c
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

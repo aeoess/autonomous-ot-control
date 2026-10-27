@@ -19,7 +19,12 @@
     "state_revision_after": {"type": "integer", "minimum": 0},
     "sim_time_s": {"type": "integer", "minimum": 0},
     "sim_utc": {"type": "string", "pattern": "Z$"},
-    "replayed": {"type": "boolean"}
+    "replayed": {"type": "boolean"},
+    "tool_name": {"type": "string"},
+    "target": {"type": "string"},
+    "requested_value": {},
+    "previous_value": {},
+    "new_value": {}
   },
   "allOf": [
     {"if": {"properties": {"status": {"const": "APPLIED"}}},

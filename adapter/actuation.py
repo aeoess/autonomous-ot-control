@@ -14,6 +14,7 @@ import httpx
 from adapter.contracts import ToolSpec, ToolSpecError
 
 ACTUATION_SCHEMA = "ot-actuation-command/v1"
+PLANT_COMMAND_SCHEMA = "ot-plant-command/v1"
 UNIT = "degC"
 
 
@@ -42,6 +43,10 @@ class ActuatorClient:
 
     def post_setpoint(self, command: dict[str, Any]) -> httpx.Response:
         return self._client.post("/internal/v1/actuate/setpoint", json=command,
+                                 headers=self._headers)
+
+    def post_plant(self, command: dict[str, Any]) -> httpx.Response:
+        return self._client.post("/internal/v1/actuate/plant", json=command,
                                  headers=self._headers)
 
 
@@ -99,3 +104,45 @@ def apply_setpoint(actuator: ActuatorClient, toolspec: ToolSpec, *, operation_id
         # Local guard refusal: zero plant change. Surface as a refusal.
         raise ActuationError(f"guard_refused:{reason}")
     raise EffectUnknown(f"actuator returned HTTP {resp.status_code}")
+
+
+def build_plant_command(operation_id: str, expected_state_revision: int,
+                        tool_name: str, canonical_args: dict[str, Any]) -> dict[str, Any]:
+    """Assemble an ``ot-plant-command/v1`` body bound to REMORA's proposal id."""
+    return {
+        "schema": PLANT_COMMAND_SCHEMA,
+        "operation_id": operation_id,
+        "tool_name": tool_name,
+        "arguments": canonical_args,
+        "expected_state_revision": expected_state_revision,
+    }
+
+
+def apply_plant_command(actuator: ActuatorClient, toolspec: ToolSpec, *, operation_id: str,
+                        expected_state_revision: int, tool_name: str,
+                        arguments: dict[str, Any]) -> dict[str, Any]:
+    """Validate against the signed contract and apply one governed plant command."""
+    try:
+        canonical_args = toolspec.canonical_tool_arguments(tool_name, arguments)
+    except ToolSpecError as e:
+        raise ActuationError(f"argument refused by signed contract: {e}") from None
+    command = build_plant_command(operation_id, expected_state_revision, tool_name, canonical_args)
+    try:
+        resp = actuator.post_plant(command)
+    except httpx.HTTPError as e:
+        raise EffectUnknown(f"actuator unreachable: {type(e).__name__}") from None
+    if resp.status_code == 401:
+        raise ActuationError("actuator rejected adapter credential")
+    try:
+        body = resp.json()
+    except ValueError:
+        raise EffectUnknown(f"actuator returned non-JSON HTTP {resp.status_code}") from None
+    if resp.status_code == 200 and body.get("status") == "APPLIED":
+        return body
+    if resp.status_code == 409:
+        reason = body.get("reason", "rejected")
+        if reason == "operation_id_reused":
+            raise ActuationError(f"operation_id_reused:{operation_id}")
+        raise ActuationError(f"guard_refused:{reason}")
+    raise EffectUnknown(f"actuator returned HTTP {resp.status_code}")
+

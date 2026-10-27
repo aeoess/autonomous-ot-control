@@ -208,12 +208,22 @@ def at02_approved_effect_once(c: Ctx) -> tuple[bool, str]:
 
 def at02b_effect_recorded(c: Ctx) -> tuple[bool, str]:
     pid = c.notes.get("at02_proposal_id")
-    if not pid:
+    cl = c.notes.get("at02_call")
+    if not pid or not cl:
         return False, "AT-02 produced no proposal"
+    eff = c.s.step("record_effect", proposal_id=pid, tool_name=cl["tool_name"],
+                   arguments=cl["arguments"])
+    env = c.s.step("envelope", proposal_id=pid)
     lc = c.s.step("lifecycle", proposal_id=pid)
     events = [e.get("event") or e.get("type") for e in body(lc).get("events", [])]
-    ok = lc["ok"] and bool(events)
-    return ok, f"lifecycle={lc['status']} events={events}"
+    eb = body(env).get("effect") or {}
+    outcome = eb.get("effect_outcome")
+    source = (eb.get("ledger_entry") or {}).get("effect_verdict_source") or eff.get("verdict_source")
+    ok = (lc["ok"] and bool(events) and eff.get("ok") is True
+          and eff.get("effect_status") == "EFFECT_VERIFIED"
+          and source == "computed")
+    return ok, (f"lifecycle={lc['status']} events={events}; "
+                f"effect_status={eff.get('effect_status')} verdict_source={source} outcome={outcome}")
 
 
 def at04_replay_refused(c: Ctx) -> tuple[bool, str]:
