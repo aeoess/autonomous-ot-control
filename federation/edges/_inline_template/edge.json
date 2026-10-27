@@ -1,0 +1,39 @@
+{
+  "schema": "ot-edge-manifest/v1",
+  "edge_id": "inline-template-admission",
+  "project": "autonomous-ot-control reference inline admission check (template)",
+  "maintainer": "darklordVirtual",
+  "repository": "https://github.com/darklordVirtual/autonomous-ot-control",
+  "boundary": "admission_runtime",
+  "mode": "inline",
+  "pin": {
+    "kind": "git_commit",
+    "value": "in-tree"
+  },
+  "licence": "same as this repository",
+  "claim_ceiling": "Refuses, before dispatch, a call whose zone or value is not in the day plan's work order or whose step exceeds the declared maximum, from the call and the plan alone. It does not show the plan is right, that REMORA's policy is right, or anything about the plant. A permit changes nothing.",
+  "claims": [
+    {
+      "claim_id": "admission_within_work_order",
+      "claim_ceiling": "ESTABLISHED means only that every call this edge permitted named a zone and a value the work order permits, and every call outside it was refused; it does not establish that the work order itself was authorized."
+    }
+  ],
+  "evaluator": {
+    "kind": "reference",
+    "imports_reference_verifier": false,
+    "imports_testbed_code": false,
+    "language": "python"
+  },
+  "entrypoint": {
+    "http": "http://127.0.0.1:8765/decide",
+    "command": [
+      "python",
+      "/edge/server.py",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "8765"
+    ],
+    "image": "python:3.12-slim"
+  }
+}

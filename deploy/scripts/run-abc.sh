@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# The federation A/B/C on one episode (ADR-004): arm A offline, arms B and C
+# on the governed stack, then the comparison and the report.
+#
+#   DAYS=7 ./deploy/scripts/run-abc.sh
+#
+# Arms run, in order:
+#   A              runner.arm_a (ungoverned, known-negative), offline, no Docker
+#   B-careful      runner.demo, REMORA in the loop, careful reviewer
+#   B-rubber_stamp runner.demo, rubber-stamp reviewer (what REMORA enforces without a human)
+#   C-rubber_stamp runner.demo, rubber-stamp reviewer plus the reference inline edge
+#                  (federation/edges/_inline_template, served on this host), so the
+#                  edge's contribution is visible
+#
+# Every governed arm is a fresh stack on the same twin and inputs. The episode
+# must match DAYS (scenarios/episodes/<scenario>-p1-<DAYS>d-v1.json). Output:
+# artifacts/abc-<run>/abc-report.md|html, abc-summary.json, one work dir per arm.
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+PY="${PYTHON:-python3}"
+DAYS="${DAYS:-7}"
+RUN_ID="${RUN_ID:-abc-$(date -u +%Y%m%dT%H%M%SZ)}"
+EPISODE="scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-${DAYS}d-v1.json"
+OUT="artifacts/${RUN_ID}"
+EDGE_PORT="${EDGE_PORT:-8765}"
+[[ -f "$EPISODE" ]] || { echo "run-abc: no episode for DAYS=${DAYS}: ${EPISODE} (python -m runner.episode build --days ${DAYS} --out ${EPISODE})" >&2; exit 2; }
+"$PY" -m runner.episode check "$EPISODE"
+mkdir -p "$OUT"
+
+echo "== arm A (offline)"
+"$PY" -m runner.arm_a --episode "$EPISODE" --out "${OUT}/arm-a"
+
+run_governed() {  # label, extra demo args...
+  local label="$1"; shift
+  echo "== arm ${label}"
+  RUN_ID="${RUN_ID}-${label}" STRATEGY=P1 DAYS="$DAYS" DEMO_ARGS="$*" ./deploy/scripts/run-demo-governed.sh
+  mv "artifacts/${RUN_ID}-${label}-work" "${OUT}/${label}"
+}
+run_governed B-careful --reviewer careful
+run_governed B-rubber_stamp --reviewer rubber_stamp
+
+echo "== reference inline edge on this host, port ${EDGE_PORT}"
+"$PY" federation/edges/_inline_template/server.py --port "$EDGE_PORT" &
+EDGE_PID=$!
+trap 'kill "$EDGE_PID" 2>/dev/null || true' EXIT
+sleep 1
+run_governed C-rubber_stamp --reviewer rubber_stamp --inline-edge federation/edges/_inline_template \
+  --inline-edge-url "http://127.0.0.1:${EDGE_PORT}/decide"
+
+echo "== compare"
+"$PY" -m runner.ab_compare --episode "$EPISODE" --out "$OUT" \
+  --arm "A=${OUT}/arm-a" --arm "B-careful=${OUT}/B-careful" --arm "B-rubber_stamp=${OUT}/B-rubber_stamp" \
+  --arm "C-rubber_stamp=${OUT}/C-rubber_stamp"
+echo "report: ${OUT}/abc-report.md"

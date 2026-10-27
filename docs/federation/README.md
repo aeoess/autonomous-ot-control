@@ -54,7 +54,7 @@ PR #21 with a merge commit, so the named ancestors remain on `main`.
 | `effect_evidence` | offline | one decision trail per case: the proposal, REMORA's decision, its envelope and evidence manifest, the twin's operation record, the observed effect | is each claimed effect backed by the evidence, per claim? | open, auto-scored |
 | `corpus_adequacy` | offline | the sealed set and the reference verifier as the checker to mutate | which seeded faults would a checker miss? | open, report reviewed |
 | `runner_validity` | offline | the sealed set and the scorer `runner.edge_check`; you supply the deliberately broken verifiers | does the scorer report a failure as a failure, never a pass? | open, report reviewed |
-| `admission_runtime` | inline | the exact call and its context, before dispatch | `permit` or `refuse`, with a reason | specified, no harness yet |
+| `admission_runtime` | inline | the exact call and a context (the day plan as what it permits, the current setpoint, the declared step limit), after REMORA and the reviewer approved | `permit` or `refuse`, with a reason, within 2 s | open: harness in `runner.demo --inline-edge`, reference edge `_inline_template`, scored in the A/B/C report ([ABC-ROADMAP.md](ABC-ROADMAP.md)) |
 | `tool_definition` | inline | the served tool definition | does it match the approved one? | blocked on the MCP gateway |
 | `authority_fixture` | inline | a synthetic signed work order | what does it authorize? | specified, no harness yet |
 
@@ -162,9 +162,15 @@ python -m runner.edge_check --list-fixture-sets federation/edges/<your-edge-id>
   (`claim_id` optional). Any language works if you ship a Dockerfile whose
   entry point behaves the same way; `entrypoint.image` names it.
 - **Inline:** an HTTP endpoint `POST /decide` that takes `{call, context}` and
-  answers `{verdict: "permit" | "refuse", reason}` within 2 s. A timeout or an
-  error counts as `refuse` and is reported as `edge_unavailable`, never as a
-  catch. No harness runs this yet.
+  answers `{verdict: "permit" | "refuse", reason}` within 2 s. A timeout, an
+  error or a malformed answer counts as `refuse` and is reported as
+  `edge_unavailable`, never as a catch. The governed demo consults it only
+  after REMORA and the reviewer approved (`runner.demo --inline-edge
+  federation/edges/<id>`, `runner.admission`), so it can only add refusals;
+  its contribution is scored in the A/B/C report as refusals of forbidden
+  proposals, false refusals of permitted ones, misses and unavailable answers.
+  Start from `federation/edges/_inline_template/` (a stdlib server that
+  re-checks the call against the day plan).
 
 **Keep external implementations external.** Instead of copying a verifier or
 library here, publish the checker in its own repository/image. Remove the

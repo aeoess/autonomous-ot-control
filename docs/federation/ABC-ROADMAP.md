@@ -1,72 +1,72 @@
 # From edges to an A/B/C report
 
-What the final report is, what exists for it today, and what is still
-missing, in the order it will be built. Nothing here is a status claim; the
-evidence levels live in [`docs/status.md`](../status.md).
+What the A/B/C report is, what exists for it, how to run it, and what it does
+not establish. Evidence levels live in [`docs/status.md`](../status.md).
 
 ## Two A/B/Cs, kept apart
 
-| | Strategy A/B/C (exists) | Federation A/B/C (ADR-004, the goal) |
+| | Strategy A/B/C | Federation A/B/C (ADR-004) |
 |---|---|---|
-| Question | What is the caretaker's validator worth when sensors lie? | What does REMORA add beyond the plant's interlock, and what does an external edge add beyond REMORA? |
-| Arms | A = P0 as found, B = P3raw (no validator), C = P3 | A = ungoverned (interlock only, known-negative), B = REMORA, C = REMORA + one edge at one declared boundary |
-| Workload | one year, five price areas, seeded sensor faults | one episode: seeded scenario + fixed proposal stream with injected attack classes |
-| Oracle | the site policy | written into the episode before any run, from the work orders and the plant's limits table; never read by REMORA or an edge |
-| Report | [`abc-2025.md`](../results/2026-10-27/abc-2025.md) | `forbidden_effects / forbidden_proposals` by oracle rule, `permitted_effects / permitted_proposals`, refusals by layer (`interlock`, `remora:<reason>`, `edge:<id>:<reason>`, `reviewer`), per arm × reviewer model |
+| Question | What is the caretaker's validator worth when sensors lie? | What does REMORA add beyond the plant's interlock, and what does an edge add beyond REMORA? |
+| Arms | A = P0 as found, B = P3raw (no validator), C = P3 | A = ungoverned (interlock only, known-negative), B = REMORA, C = REMORA + one inline edge |
+| Workload | one year, five price areas, seeded sensor faults | one episode: the demo week's proposal stream plus injected attacks, oracle written before any run |
+| Oracle | the site policy | `runner.oracle`, from the work orders and the plant's limits; never from REMORA, the reviewer or an edge |
+| Report | [`abc-2025.md`](../results/2026-10-27/abc-2025.md) | `abc-report.md` / `.html` from `runner.ab_compare` |
 
-The strategy report is finished and explains itself. The federation report
-is the one the edges are for.
-
-## What exists today
+## What exists
 
 | Piece | Where | State |
 |---|---|---|
-| Arm B: REMORA governs the plant; every applied write leaves a decision trail with REMORA's envelope and evidence | `runner.demo`, `runner.acceptance` | `TESTED_DOCKER` (governed-e2e) |
-| Decision trails export the twin's own operation record, so an offline pass needs no live stack | `runner.demo` (`twin_operation` in `decisions/<id>.json`) | in `main` |
-| Offline edges: contracts, sealed sets `v1` and `v2`, scorer, run records with derived independence level, reviewed reports | `federation/`, `runner.edge_check` | `TESTED_DOCKER`; one external `L4` record, one reviewed `runner_validity` report |
-| Edges beside the run: every offline `effect_evidence` edge over a governed run's trails, findings reported, outcome untouched | `runner.edge_pass`, wired into `run-demo-governed.sh` | `TESTED_LOCALLY` (synthetic trails); not yet run on a Docker demo |
-| Attack injection in the governed demo (day 2: off-plan, out of contract, replay, no work order) | `runner.demo.inject_attacks` | `TESTED_DOCKER` |
-| **Episodes and the oracle** (`ot-episode/v1`): the P1 proposal stream for the demo's week, generated offline on the same twin, plus the four injected attacks, each proposal with `permitted` or `forbidden:<rule>` judged from the work orders and the limits alone; pinned inputs by digest; `check` rebuilds and compares | `runner.episode`, `runner.oracle`, `scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-7d-v1.json` (48 proposals: 44 permitted, 4 forbidden) | `TESTED_LOCALLY`; a test fails if the oracle imports anything of REMORA's or reads a decision, reason or refusal field |
-| **Per-layer refusal accounting** in the governed demo: every ledger proposal carries `refused_by` (`interlock`, `remora:<reason>`, `reviewer`; `edge:<id>` reserved) and the episode's oracle verdict, or `not_in_episode`; arm B's metrics with exact denominators, refusals by layer and by rule, and the twin's revision delta checked against counted effects, written to `arm-b-metrics.json` and the summary | `runner.ledger_metrics`, `runner.demo.account_arm_b` | `TESTED_LOCALLY` on synthetic ledgers and the committed episode; not yet run on a Docker demo |
+| Episodes and the oracle (`ot-episode/v1`): the P1 stream for the demo week, four injected attacks, every proposal `permitted` or `forbidden:<rule>`, inputs pinned by digest, `check` rebuilds and re-judges | `runner.episode`, `runner.oracle`, `scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-7d-v1.json` (48 proposals: 44 permitted, 4 forbidden) | `TESTED_LOCALLY`; a test fails if the oracle imports anything of REMORA's or reads a decision, reason or refusal field |
+| Per-layer refusal accounting: `refused_by` (`interlock` / `remora:<reason>` / `reviewer` / `edge:<id>:<reason>`) and the oracle verdict on every ledger proposal; forbidden and permitted effects over their denominators; refusals by layer and rule; twin revision delta against counted effects | `runner.ledger_metrics`, `runner.demo.account_arm_b` (`arm-b-metrics.json`) | `TESTED_LOCALLY` |
+| **Arm A**, the ungoverned known-negative: the agent applies every proposal of the episode directly, attacks included, own operation ids, only the interlock in between; labelled `KNOWN_NEGATIVE`; nothing in the default compose files or images refers to it (D-10) | `runner.arm_a`, offline | `TESTED_LOCALLY` on the committed episode |
+| **Arm B**: REMORA in the loop, declared reviewer model `careful` or `rubber_stamp` (`runner.demo --reviewer`) | `runner.demo` | `TESTED_DOCKER` (careful); rubber_stamp not yet run on Docker |
+| **Arm C**: the inline admission harness. After REMORA and the reviewer approved, the demo asks the edge `POST /decide` with the exact call and a context (the day plan as what it permits, the current setpoint, the declared step limit) within 2 s; `refuse` rejects the approval with the edge's reason, `permit` changes nothing, timeout, error or a malformed answer is `refuse` reported as `edge_unavailable`. The composition rule is a pure function a test pins: no answer of an edge can turn a refusal into an effect (FED-OT-001) | `runner.admission`, `runner.demo --inline-edge` | `TESTED_LOCALLY` (harness, composition rule, demo wiring); not yet run on Docker |
+| Reference inline edge: a second, independently written admission check from the call and the plan alone (zone in the work order, value the work order permits, step within the declared maximum); stdlib HTTP server | `federation/edges/_inline_template/` | `TESTED_LOCALLY` over HTTP |
+| Offline edges beside every arm that exported trails | `runner.edge_pass` | `TESTED_LOCALLY` |
+| **The comparison and the report**: every arm accounted against the oracle, per-rule table, refusals by layer, plant outcome per arm, inline edges by what they added (refused forbidden, refused permitted, missed, unavailable), offline edges by findings beside each arm and by their record on the sealed sets, Markdown and HTML, a how-to-read section, the non-claims | `runner.ab_compare` | `TESTED_LOCALLY`: arm A real, arms B and C synthetic ledgers in the demo's shape |
+| One command for the whole thing on a Docker host | `deploy/scripts/run-abc.sh` (A offline; B-careful, B-rubber_stamp, C-rubber_stamp with the reference inline edge served on the host; compare) | written, not yet run |
 
-## What is missing, in build order
+## Run it
 
-Each step is one pull request with its own acceptance test, and each is
-usable on its own. Steps 1 and 2 of the original list (episodes and the
-oracle, per-layer accounting) are done and listed above.
+```bash
+DAYS=7 ./deploy/scripts/run-abc.sh            # Docker host; ~4 governed runs plus the comparison
+python -m runner.ab_compare --episode scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-7d-v1.json \
+    --out artifacts/abc-local --run-arm-a     # no Docker: arm A alone, report says B and C did not run
+```
 
-3. **Arm A, the ungoverned known-negative.** `compose.arm-a.yaml` under its
-   own project, its own twin and volumes, agent holds the actuator token and
-   picks its own operation ids, evidence labelled `architecture:
-   KNOWN_NEGATIVE`. Acceptance: a structural test pins that the default
-   compose files never reference it (D-10).
-4. **Arm C, inline admission harness.** The `admission_runtime` boundary:
-   after REMORA decides, the harness asks the edge's `POST /decide`; `refuse`
-   rejects the approval or leaves the ACCEPT token unredeemed, `permit`
-   changes nothing, timeout or error counts as `refuse` and is reported as
-   `edge_unavailable`. Acceptance: a test that an edge can never turn a REMORA
-   refusal into an effect (FED-OT-001).
-5. **`runner.ab_compare` and the report.** Same episode through A, B-careful,
-   B-rubber_stamp, C; counts and denominators per arm, refusals by layer with
-   `edge:<id>:<reason>`, plus the offline edge pass beside every arm;
-   rendered as Markdown and HTML like the strategy reports, with a how-to-read
-   section. Acceptance: AT-16 (exact metrics and delta, no unqualified
-   savings claim); no arm is called "safer" in prose.
+The report lists the arms that actually ran; absent arms are absent rows, not
+assumptions.
 
-Steps 3 and 5 need no external participant. Step 4 is where an inline edge
-first changes a number; until then every external contribution is offline,
-which is also the only kind the registry has so far. With steps 1 and 2 in
-place, arm B's numbers already come out of every governed demo run
-(`artifacts/<run>-work/arm-b-metrics.json`), judged against an oracle that
-was written before the run.
+## Deviations from ADR-004, stated
 
-## What an edge owner needs to know
+- Arm A runs offline on the same twin rather than as its own compose project
+  with an agent holding the actuator token. The numbers are the same, since
+  the interlock is the twin's; the compose form would add a container and no
+  information. D-10 is kept: nothing default refers to arm A.
+- Arm C is run with the testbed's own reference inline edge until an external
+  inline edge joins. Its contribution is therefore a demonstration of the
+  harness and the accounting, not an external result.
+- Of the eight oracle rules, four are exercised by the episode's injected
+  attacks (`outside_work_order`, `outside_contract`, `duplicate_effect`,
+  `unauthorized`). `over_authority_budget`, `not_the_approved_call`,
+  `stale_basis` and `basis_not_verified_data` have rules and tests but no
+  injected proposals yet (the last two need the AT-09 and ADR-005 hooks).
 
-- An offline edge already appears in the final report: the edge pass runs it
-  over every arm's trails and lists its findings beside the arm's numbers.
-- An inline edge will be asked one question per proposal, with a 2 s budget,
-  and can only add refusals. Its refusals are counted under `edge:<id>` with
-  the reason it gave, and its false refusals of permitted proposals are
-  counted too.
-- Nothing in either report promotes a status: the plant is synthetic, the
-  vantage is one deployment, and verification is not endorsement.
+## What an edge owner gets from the report
+
+- An offline edge appears beside every arm with its findings, and with its
+  record on the sealed sets (highest independence level, claims established,
+  negatives caught).
+- An inline edge appears in arm C with exactly what it added: refusals of
+  forbidden proposals that REMORA and the reviewer let through, false refusals
+  of permitted ones, misses, and unavailable answers.
+- Comparing edges is comparing those rows on the same episode. It is a
+  statement about this episode and these sealed sets, not about an edge in
+  general, and no row is an endorsement.
+
+## What it does not establish
+
+A synthetic, uncalibrated plant seen from inside one deployment. No arm is
+called safer in prose; the counts and denominators are the result. Physical
+OT safety and real-building savings stay `NOT_ESTABLISHED`.

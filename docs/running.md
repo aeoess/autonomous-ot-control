@@ -60,6 +60,23 @@ python -m runner.edge_check --init <edge-id> --project "<name>" --maintainer <gi
 
 Guide: [federation/README.md](federation/README.md).
 
+## Federation A/B/C on one episode (ADR-004)
+
+```bash
+python -m runner.episode check scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-7d-v1.json
+DAYS=7 ./deploy/scripts/run-abc.sh                      # Docker: A offline, B-careful, B-rubber_stamp, C-rubber_stamp, report
+python -m runner.ab_compare --episode scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-7d-v1.json \
+    --out artifacts/abc-local --run-arm-a               # no Docker: arm A only, the report says B and C did not run
+```
+
+Governed arms individually: `DEMO_ARGS="--reviewer rubber_stamp" ./deploy/scripts/run-demo-governed.sh`
+for arm B with the rubber-stamp reviewer, and
+`DEMO_ARGS="--reviewer rubber_stamp --inline-edge federation/edges/_inline_template --inline-edge-url http://127.0.0.1:8765/decide"`
+for arm C, with `python federation/edges/_inline_template/server.py --port 8765` running
+on the host. Every governed run writes `arm-b-metrics.json` (its accounting against
+the oracle) and `edges/edges.md` (offline edges beside the run) in its work directory.
+What the report is and what it does not establish: [federation/ABC-ROADMAP.md](federation/ABC-ROADMAP.md).
+
 ## Trust boundary
 
 | Listener | Bind | Credential | Routes |

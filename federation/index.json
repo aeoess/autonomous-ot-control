@@ -64,9 +64,9 @@
     {
       "id": "admission_runtime",
       "mode": "inline",
-      "status": "SPECIFIED",
-      "scoring": "none",
-      "note": "ADR-004: a pre-dispatch permit/refuse that can only add refusals. No harness yet."
+      "status": "OPEN",
+      "scoring": "review",
+      "note": "ADR-004 arm C: runner.demo --inline-edge consults the edge after REMORA and the reviewer approved; it can only add refusals (runner.admission, composition rule pinned by test). Scored in the A/B/C report (runner.ab_compare) as refusals of forbidden proposals, false refusals, misses and unavailable answers; not by run records. Reference edge: federation/edges/_inline_template."
     },
     {
       "id": "tool_definition",

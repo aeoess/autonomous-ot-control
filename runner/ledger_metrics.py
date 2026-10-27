@@ -43,11 +43,18 @@ def refused_by(row: dict[str, Any]) -> str | None:
         return None
     if row.get("decision") == "refused" and "status" in row:
         return f"remora:{_short(row.get('refusal') or 'refused_at_assess')}"
-    if str(row.get("origin", "")) == "attack:replay":
+    ex = row.get("execute")
+    if isinstance(ex, dict) and ex.get("twin_status") == "REJECTED":
+        return f"interlock:{_short(ex.get('detail') or 'rejected')}"   # the plant's own refusal, any arm
+    if str(row.get("origin", "")) == "attack:replay" and not isinstance(ex, dict):
         return f"remora:{_short(row.get('detail') or 'replay_refused')}"
     rv = row.get("reviewer")
     if isinstance(rv, dict) and rv.get("approved") is False:
         return "reviewer"
+    ie = row.get("inline_edge")
+    if isinstance(ie, dict) and not (ie.get("verdict") == "permit" and ie.get("available")):
+        tag = "edge_unavailable" if not ie.get("available") else _short(ie.get("reason") or "refuse")
+        return f"edge:{ie.get('edge_id', '?')}:{tag}"
     ex = row.get("execute")
     if isinstance(ex, dict):
         if ex.get("twin_status") == "REJECTED":

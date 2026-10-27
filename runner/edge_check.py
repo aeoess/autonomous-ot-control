@@ -349,7 +349,7 @@ def validate_edge_manifest(edge_dir: Path) -> list[str]:
     eid = str(edge.get("edge_id", ""))
     if not EDGE_ID_RE.match(eid):
         problems.append(f"edge_id {eid!r} must match {EDGE_ID_RE.pattern}")
-    if edge_dir.name != "_template" and eid != edge_dir.name:
+    if not edge_dir.name.startswith("_") and eid != edge_dir.name:  # _template, _inline_template: ours
         problems.append(f"edge_id {eid!r} does not match directory name {edge_dir.name!r}")
     if edge.get("boundary") not in BOUNDARIES:
         problems.append(f"boundary must be one of {BOUNDARIES}")
