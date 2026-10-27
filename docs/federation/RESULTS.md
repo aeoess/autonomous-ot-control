@@ -12,6 +12,7 @@ Negative results and false refusals stay here.
 | Date | Edge | Boundary | Fixtures (package digest) | Testbed | Positives | Negatives caught | Status | Level | Operator / host | Run ref |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-27 | `template-reference-verifier` | `effect_evidence` | `v1` (`437cd68da508…`) | `942ba37` | 12 / 12 | 6 / 6 | PASS | `L0_SELF_TEST` | PRODUCER / PRODUCER_CONTROLLED | `federation/records/template-reference-verifier/20261027T151113Z.json` |
+| 2026-10-27 | `template-reference-verifier` | `effect_evidence` | `v2` (`407a3c57ce2b…`) | `942ba37` | 12 / 12 | 10 / 10 | PASS | `L0_SELF_TEST` | PRODUCER / PRODUCER_CONTROLLED | `federation/records/template-reference-verifier/20261027T171131Z-v2.json` |
 
 ## By claim
 
@@ -20,9 +21,9 @@ passing run. `disputed` counts records where a seeded fault for the claim went u
 
 | Claim | Records | Highest level | Disputed |
 |---|---|---|---|
-| `call_binding` | 1 | `L0_SELF_TEST` | 0 |
-| `decision_correspondence` | 1 | `L0_SELF_TEST` | 0 |
-| `declared_effect_observed` | 1 | `L0_SELF_TEST` | 0 |
-| `evidence_digest_integrity` | 1 | `L0_SELF_TEST` | 0 |
-| `observation_after_dispatch` | 1 | `L0_SELF_TEST` | 0 |
-| `single_dispatch` | 1 | `L0_SELF_TEST` | 0 |
+| `call_binding` | 2 | `L0_SELF_TEST` | 0 |
+| `decision_correspondence` | 2 | `L0_SELF_TEST` | 0 |
+| `declared_effect_observed` | 2 | `L0_SELF_TEST` | 0 |
+| `evidence_digest_integrity` | 2 | `L0_SELF_TEST` | 0 |
+| `observation_after_dispatch` | 2 | `L0_SELF_TEST` | 0 |
+| `single_dispatch` | 2 | `L0_SELF_TEST` | 0 |
