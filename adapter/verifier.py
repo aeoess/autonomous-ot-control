@@ -1,23 +1,29 @@
-"""SDK effect-attestation helper (OT-003).
+"""SDK effect-attestation helper (OT-003), aligned to the pinned remora.sdk.
 
-After a governed dispatch, the effect is checked through the independent
-read-only observer (``twin.effect_observer``), which uses a separate credential
-and vantage (``same_test_deployment``). This helper binds that observation to a
-REMORA operation so it can be recorded as a postcondition result.
+After a governed dispatch, the effect is observed through the independent
+read-only observer (``twin.effect_observer``) and recorded in REMORA using the
+real effect API verified at commit 2594d08b:
 
-Where the pinned ``remora.sdk`` exposes ``build_postcondition`` /
-``verify_effect`` / ``record_effect`` (SDD §6), this helper hands the observed
-envelope to them so REMORA holds the authoritative effect record. When the SDK
-is not available (offline unit tests, the Docker-only simulator path), it still
-returns the observed envelope and effect status, but makes **no** claim that
-REMORA recorded it — ``remora_recorded`` is ``False`` and the status is never
-promoted. A verifier status is never a retry permit (INV-05/INV-10).
+    build_postcondition(*, tool_id, target_selector, expected_fields,
+                        comparison_rules=None, reader="", ...) -> PostconditionSpec
+    verify_effect(spec, observed, *, proposal_id, execution_id, toolspec_hash,
+                  verifier_identity, ...) -> EffectVerificationView
+    RemoraClient.record_effect(proposal_id, EffectVerificationView) -> ...
+
+Verification runs in this process because the reader holds the read credential;
+only hashes cross back to REMORA. ``observed=None`` (reader could not see the
+object) is UNOBSERVABLE, never MISMATCH, and is never a retry permit
+(INV-05/INV-10). The SDK is imported lazily (it ships only in the REMORA image /
+governed runner image) and may be injected for tests.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from twin.effect_observer import (EFFECT_VERIFIED, EFFECT_VERIFIER_FAILED, EffectObserver)
+from twin.effect_observer import (EFFECT_UNOBSERVABLE, EFFECT_VERIFIER_FAILED, EffectObserver)
+
+TOOL_ID = "set_zone_setpoint"
+DEFAULT_VERIFIER_IDENTITY = "ot-effect-observer/v1"
 
 
 def _load_sdk() -> Any | None:
@@ -29,35 +35,64 @@ def _load_sdk() -> Any | None:
 
 
 class EffectAttestor:
-    def __init__(self, observer: EffectObserver, *, sdk: Any | None = None) -> None:
+    def __init__(self, observer: EffectObserver, *, sdk: Any | None = None,
+                 verifier_identity: str = DEFAULT_VERIFIER_IDENTITY) -> None:
         self._observer = observer
-        # Allow explicit injection for tests; otherwise discover the pinned SDK.
         self._sdk = sdk if sdk is not None else _load_sdk()
+        self._verifier_identity = verifier_identity
 
     @property
     def sdk_available(self) -> bool:
         return self._sdk is not None
 
-    def attest(self, operation_id: str, *, zone_id: str, expected_setpoint_c: float,
-               execution_token: str | None = None) -> dict[str, Any]:
-        """Observe the effect and, when the SDK is present, record it in REMORA.
+    def attest(self, *, proposal_id: str, execution_id: str, toolspec_hash: str,
+               zone_id: str, expected_setpoint_c: float, operation_id: str,
+               client: Any | None = None) -> dict[str, Any]:
+        """Observe the effect, build+verify a postcondition, and record it.
 
-        Returns the observation envelope plus ``effect_status``, ``verified``
-        (True only on ``EFFECT_VERIFIED``) and ``remora_recorded``.
+        Returns the observation envelope plus the SDK verification view (as a
+        dict) and ``remora_recorded``. Without the SDK, returns the honest
+        observation only and records nothing.
         """
         envelope = self._observer.observe(operation_id, zone_id=zone_id,
                                           expected_setpoint_c=expected_setpoint_c)
-        status = envelope.get("effect_status", EFFECT_VERIFIER_FAILED)
-        result = {**envelope, "verified": status == EFFECT_VERIFIED, "remora_recorded": False}
-        if self._sdk is None or execution_token is None:
+        result: dict[str, Any] = {"observation": envelope, "remora_recorded": False}
+        if self._sdk is None:
+            result["verification"] = None
             return result
-        # The exact SDK symbols are reconciled against the pinned commit; a
-        # failure to record must not masquerade as verification.
-        try:
-            postcondition = self._sdk.build_postcondition(
-                operation_id=operation_id, observation=envelope)
-            self._sdk.record_effect(execution_token, postcondition)
-            result["remora_recorded"] = True
-        except Exception as e:  # recording failed; keep the honest status
-            result["remora_record_error"] = f"{type(e).__name__}: {e}"
+
+        spec = self._sdk.build_postcondition(
+            tool_id=TOOL_ID,
+            target_selector={"zone_id": zone_id},
+            expected_fields={"setpoint_c": expected_setpoint_c},
+            reader=self._verifier_identity,
+        )
+        observed = self._observed_fields(envelope)
+        view = self._sdk.verify_effect(
+            spec, observed,
+            proposal_id=proposal_id, execution_id=execution_id,
+            toolspec_hash=toolspec_hash, verifier_identity=self._verifier_identity,
+        )
+        result["verification"] = view.to_dict() if hasattr(view, "to_dict") else view
+        if client is not None:
+            try:
+                recorded = client.record_effect(proposal_id, view)
+                result["remora_recorded"] = True
+                result["recorded"] = recorded.to_dict() if hasattr(recorded, "to_dict") else recorded
+            except Exception as e:  # recording failed; do not claim it succeeded
+                result["remora_record_error"] = f"{type(e).__name__}: {e}"
         return result
+
+    @staticmethod
+    def _observed_fields(envelope: dict[str, Any]) -> dict[str, Any] | None:
+        """The observed delta fields, or None when the object was unobservable.
+
+        A stale/absent reading is UNOBSERVABLE: not knowing is not the same as
+        knowing the value is wrong, so hand the SDK ``None`` rather than a guess.
+        """
+        status = envelope.get("effect_status")
+        if status in (EFFECT_UNOBSERVABLE, EFFECT_VERIFIER_FAILED):
+            return None
+        if "observed_setpoint_c" not in envelope:
+            return None
+        return {"setpoint_c": envelope["observed_setpoint_c"]}

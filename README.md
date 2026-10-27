@@ -11,15 +11,12 @@ Specification: [`docs/SDD-OT-001.md`](docs/SDD-OT-001.md).
 
 ## Status
 
-**PR 1 (OT-001 + OT-002)** delivered the simulator boundary: bootstrap,
-deterministic twin, protected actuator, read-only observer, boundary smoke and
-evidence. **PR 2 (OT-003 + OT-004)** adds the REMORA-governed safety boundary:
-the signed ToolSpec, the deployment-owned actuator callable and its REMORA
-registration seam, the SDK proposing runner, and the token-custody / network
-fencing that keeps the actuator reachable only through REMORA's dispatcher. The
-governed **code** is implemented and unit-tested offline; the end-to-end
-authorized effect **through a running REMORA dispatcher** stays `NOT_ESTABLISHED`
-until the pinned REMORA execution image is built (it requires the pinned upstream).
+**PR 1 (OT-001 + OT-002)** delivered the simulator boundary. **PR 2 (OT-003 +
+OT-004)** added the governed safety boundary. **OT-005 slice 1** runs it: the
+pinned REMORA (`9b1763ca`) in production mode with PostgreSQL, a signed ToolSpec
+bundle REMORA enforces and pins by digest, and signed cumulative limits it
+refuses to start without. `./deploy/scripts/run-governed.sh` runs the acceptance
+suite against that stack from a clean bootstrap; evidence lands in `artifacts/`.
 
 | Capability | Status |
 |---|---|
@@ -27,18 +24,25 @@ until the pinned REMORA execution image is built (it requires the pinned upstrea
 | Local interlock (bounds, delta, interval, rate, freshness, revision, stop switch, alarm freeze) | `TESTED_LOCALLY` |
 | Single-use operation IDs incl. replay after restart (twin side) | `TESTED_LOCALLY` |
 | Separate read / actuator / control listeners and credentials | `TESTED_LOCALLY` |
-| Runner cannot reach actuator over Docker networks | `IMPLEMENTED` — becomes `TESTED_DOCKER` only via `run-demo.sh` evidence |
+| Runner and harness cannot reach the actuator over Docker networks (AT-05) | `TESTED_DOCKER` |
 | Read-only effect observer (`same_test_deployment` vantage) | `TESTED_LOCALLY` |
 | Rule baseline, scoring, evidence manifest | `TESTED_LOCALLY` |
-| Signed ToolSpec (bounds mirror the guard; deploy-time attestation) | `TESTED_LOCALLY` |
-| Deployment-owned callable: one governed effect, idempotent, fail-closed | `TESTED_LOCALLY` |
-| SDK proposing runner: never self-approves, fail-closed, `UNKNOWN` not retried | `TESTED_LOCALLY` |
-| Actuator-credential custody + plant-private fencing (twin + REMORA only) | `TESTED_LOCALLY` (structural) |
-| REMORA execution image + registry hook (`deploy/Dockerfile.remora-ot`) | `IMPLEMENTED` — needs pinned upstream to build |
-| Authorized effect **through REMORA's dispatcher**; SDK-only actor → zero effect | `NOT_ESTABLISHED` — requires the built REMORA image |
-| Human review flow, governed-agent vs baseline comparison | `NOT_ESTABLISHED` (PR 3) |
+| Signed ToolSpec enforced by REMORA (schema, target, closure digest, pinned bundle) | `TESTED_DOCKER` |
+| Signed cumulative limits, mandatory; ZONE-03 budget refuses what the interlock allows (LIM-01) | `TESTED_DOCKER` |
+| Authorized effect **through REMORA's dispatcher**, exactly once; operator cannot approve (AT-02) | `TESTED_DOCKER` |
+| Replay refused, also after a REMORA restart (AT-04); tampered call refused (AT-03) | `TESTED_DOCKER` |
+| Contract refusals: unknown tool/zone, bounds, extra args, wrong target (AT-08) | `TESTED_DOCKER` |
+| Interlock refusal and stop switch: no effect, no replay shortcut (AT-08b, AT-10) | `TESTED_DOCKER` |
+| PostgreSQL outage: unready, no effect, no blind resend on recovery (AT-11) | `TESTED_DOCKER` |
+| Two concurrent approved writes to one zone: at most one effect (AT-13) | `TESTED_DOCKER` — held by the twin interlock, not by REMORA |
+| Typed SDK `approve` on a deferred audit ref (SDK-01) | **FAIL** at the pin — fixed upstream in REMORA-research#1099 |
+| Stale observation, timeout after actuation (AT-09, AT-12) | `NOT_ESTABLISHED` — no fault hook in the running twin yet |
+| Governed-agent vs baseline comparison (AT-16) | `NOT_ESTABLISHED` |
 | Miniflare / Cloudflare / federation | `NOT_ESTABLISHED` (PR 4–6) |
-| Real-building savings | `NOT_ESTABLISHED` — synthetic model only |
+| Real-building savings, physical OT safety | `NOT_ESTABLISHED` — synthetic model only |
+
+`TESTED_DOCKER` means one host, one REMORA replica, Docker networks, synthetic
+plant, `same_test_deployment` vantage. It is not a hosted or multi-node claim.
 
 Statuses are promoted only by new evidence, never by editing this table.
 
@@ -57,31 +61,37 @@ python -m pytest -q
 python -m runner.baseline --run-id local-1 --out artifacts
 ```
 
-### Governed profile (PR 2)
-
-The governed path adds PostgreSQL, the protected REMORA execution image and the
-SDK proposing runner. Building `deploy/Dockerfile.remora-ot` requires access to
-the pinned REMORA upstream, so this path is opt-in and its end-to-end claim is
-`NOT_ESTABLISHED` here:
+### Governed acceptance suite (OT-005)
 
 ```bash
-docker compose --profile governed up --build -d --wait postgres remora twin
-docker compose --profile governed run --rm governed \
-  runner.governed --setpoint 20.5 --intent-ref WORK-ORDER-001
+./deploy/scripts/run-governed.sh      # bootstrap, sign, up, acceptance suite, evidence
+docker compose -f compose.yaml -f compose.governed.yaml down -v
+```
+
+`governed-bootstrap.sh` writes local dev secrets to `.env`, keeps two Ed25519
+signer seeds in `deploy/.keys/`, and signs the ToolSpec bundle and the limits
+policy into `deploy/.generated/` in a container with no network (all three are
+gitignored). REMORA receives only the public keys and the pinned bundle digest.
+One governed proposal from the CLI:
+
+```bash
+docker compose -f compose.yaml -f compose.governed.yaml --profile cli run --rm governed   runner.governed --setpoint 20.5 --intent-ref WORK-ORDER-001
 ```
 
 The proposing runner holds only an operator SDK token and the read token — no
-actuator credential, no plant-private route. See `docs/integration-contracts.md`.
+actuator credential, no plant-private route. The actuator credential lives only
+in the `twin` and `remora` services.
 
 ## Layout
 
 ```
 twin/       model, clock, scenarios, guard (local interlock), api (3 listeners), server, effect_observer, ctl
-adapter/    deployment-owned REMORA bridge: contracts (signed ToolSpec), registry (callable + hook), verifier
-runner/     baseline, scoring, evidence, smoke (boundary probes), governed (SDK propose harness)
+adapter/    REMORA-free helpers: contracts (signed ToolSpec), actuation (effect primitive), verifier (SDK effect API)
+deploy/ot/  deployment modules loaded inside the REMORA image: ot_registry (register_tools), ot_bundle, intents, limits
+runner/     baseline, scoring, evidence, smoke, governed (SDK proposer), acceptance + harness_step (OT-005)
 contracts/  ot-tool-v1, ot-toolspec-v1, twin-observation-v1, effect-receipt-v1 JSON Schemas
 scenarios/  baseline day, stale observation, refusal vectors
-deploy/     Dockerfiles (twin, runner, remora-ot) and scripts; compose.yaml at repo root
+deploy/     Dockerfiles (twin, runner, remora-ot, governed) and scripts (deploy/ot: REMORA deployment modules, signer); compose.yaml + compose.governed.yaml at repo root
 docs/       SDD-OT-001, integration-contracts, adr/
 upstream/   pinned REMORA commit
 ```

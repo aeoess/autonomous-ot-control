@@ -1,0 +1,45 @@
+# Proposing-side governed runner (OT-003). Holds the pinned remora.sdk client
+# and a role-restricted operator token — NO actuator credential, no plant-private
+# route. It proposes to REMORA; only REMORA's dispatcher reaches the actuator.
+#
+# remora.sdk has no heavy third-party dependencies at the pinned commit (the
+# package's base dependency set is empty), so this installs the pinned REMORA
+# for its SDK plus this project's hash-locked runtime deps (httpx etc.).
+ARG REMORA_REPO=https://github.com/darklordVirtual/REMORA-research
+ARG REMORA_COMMIT=9b1763cabcc23f8bbdd2f629600ebee68ca0f08c
+
+FROM python:3.12-slim AS remora-src
+ARG REMORA_REPO
+ARG REMORA_COMMIT
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git init -q remora \
+    && cd remora \
+    && git remote add origin "${REMORA_REPO}" \
+    && git fetch --depth 1 origin "${REMORA_COMMIT}" \
+    && git checkout -q FETCH_HEAD \
+    && test "$(git rev-parse HEAD)" = "${REMORA_COMMIT}"
+
+FROM python:3.12-slim
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
+WORKDIR /app
+
+COPY requirements.lock /app/requirements.lock
+RUN pip install --require-hashes --no-deps -r /app/requirements.lock
+
+# The pinned REMORA SDK (client transport only; it mints no authority).
+COPY --from=remora-src /src/remora /opt/remora
+RUN pip install --no-deps /opt/remora
+
+COPY twin /app/twin
+COPY runner /app/runner
+COPY adapter /app/adapter
+COPY contracts /app/contracts
+COPY upstream /app/upstream
+
+RUN useradd --create-home --uid 10001 runner
+USER runner
+WORKDIR /work
+ENTRYPOINT ["python", "-m"]
+CMD ["runner.governed", "--help"]
