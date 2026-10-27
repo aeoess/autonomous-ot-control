@@ -420,9 +420,16 @@ def at_limits_budget(c: Ctx) -> tuple[bool, str]:
 
 
 def at_sdk_typed_approve(c: Ctx) -> tuple[bool, str]:
-    """The typed SDK must parse a successful approval (deferred audit ref)."""
+    """The typed SDK must parse a successful approval (deferred audit ref).
+
+    Earlier cases (AT-13) spend ZONE-02's hourly movement budget, so a fixed
+    absolute target can be refused with limit_exceeded before the SDK is even
+    exercised. Start a new budget window and move half a degree from where
+    the zone is, so the case tests the SDK and not the budget."""
     s = c.s
-    a = s.step("assess", **call("ZONE-02", 21.0, wo=WO2))
+    s.ctl("advance", "3600")
+    sp0 = setpoint(s, "ZONE-02")
+    a = s.step("assess", **call("ZONE-02", round(min(sp0 + 0.5, 23.0), 1), wo=WO2))
     item = body(a).get("review_item_id")
     if not item:
         return False, f"no review item: {_brief(a)}"
