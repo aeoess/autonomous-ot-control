@@ -89,6 +89,43 @@ python -m runner.calibration build --category Kontorbygg --size medium --out twi
 python -m runner.calibration check twin/fixtures/calibrated/kontor-medium-v1.json
 ```
 
+## Calibrating against a measured building
+
+`runner.site_calibration` takes an anonymised hourly meter export (schema
+hourly meter v2: `manifest.json`, `meters/<id>.json`,
+`data_quality_audit.json`), identified only by its `site_id`. The export
+itself stays outside the repository (`.gitignore`); no address, owner or
+meter-point identifier is read or written.
+
+1. **Quality gate** from the export's own audit: flagged rows, the
+   simultaneous-doubling window, catch-up spikes (over 20 × the meter's P99)
+   and the partial last hour are excluded. An absent hour stays absent, never
+   zero. Joins to weather are by UTC hour.
+2. **Targets**, each with its coverage: the electricity load shape of the
+   top-level meters (hourly median kW, weekday and weekend, night base,
+   daytime level, ratios); the heating and cooling energy signatures
+   (kWh/day = base + a·max(0, Tb − T)); heating-cable energy against hours in
+   the icing band.
+3. **Identifiability is reported.** A signature's balance temperature and
+   weather-independent base count as targets only if the kinked fit beats a
+   straight line clearly and has days on both sides; otherwise only the slope
+   does.
+4. **The same targets on the twin** (`twin_targets`), for a candidate fixture
+   over a year of the same area, so the two can be compared line by line.
+
+```bash
+python -m runner.exogenous fetch --site twin/fixtures/site-demo-building-no1.json \
+    --from <first day> --to <last day> --out scenarios/data/demo-building-no1 --kinds outdoor solar price
+python -m runner.site_calibration --data <extracted export> \
+    --weather scenarios/data/demo-building-no1/outdoor-temperature-<period>.json --out artifacts/<site>-calibration
+```
+
+What one measured site can fit, and what it cannot: building scale from the
+heating slope, base load from the night, lighting and equipment from the
+weekday daytime increment, and the weekday/weekend pattern. Not the balance
+temperature or domestic hot water when the heating meters do not cover warm
+days, not the meter hierarchy, not COP, and not a causal saving.
+
 ## What it still does not establish
 
 A measured calibration needs time series: outdoor and indoor temperature,

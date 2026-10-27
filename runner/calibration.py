@@ -185,6 +185,8 @@ def build_fixture(params: dict[str, Any], *, building_id: str, template: Path = 
         pz["radiator_nominal_w"] = round(params["heater_w_per_m2"] * area, 0)
         pz["cooling_max_w"] = round(params["cooling_w_per_m2"] * area, 0)
         pz["equipment_w_per_m2"] = params["equipment_w_per_m2"]
+        if "equipment_base_w_per_m2" in params:
+            pz["equipment_base_w_per_m2"] = params["equipment_base_w_per_m2"]
         pz["lighting_w_per_m2"] = params["lighting_w_per_m2"]
         pz["min_airflow_l_s_m2"] = params["min_airflow_l_s_m2"]
         pz["airflow_per_person_l_s"] = PERSON_L_S
