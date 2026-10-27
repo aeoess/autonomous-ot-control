@@ -54,7 +54,7 @@ refusals, never permissions.
 | `effect_evidence` | offline | Is each claimed effect backed by the decision, the twin's own record, the observation and the evidence digest? | open, auto-scored |
 | `corpus_adequacy` | offline | Which seeded faults would a checker miss? (mutate the reference verifier over the fixture set) | open, report reviewed |
 | `runner_validity` | offline | Does the scorer report a failing verifier as a failure, never a pass? | open, report reviewed |
-| `admission_runtime` | inline | `permit` or `refuse` before dispatch, with a reason | specified (ADR-004), no harness yet |
+| `admission_runtime` | inline | `permit` or `refuse` before dispatch, with a reason; consulted only after REMORA and the reviewer approved, can only add refusals | open: harness in the governed demo (`--inline-edge`), reference edge `federation/edges/_inline_template`, scored in the A/B/C report |
 | `tool_definition` | inline | Does the served tool definition match the approved one? | needs the MCP gateway |
 | `authority_fixture` | inline | What does a synthetic signed work order authorize? | specified, no harness yet |
 
@@ -98,16 +98,25 @@ fixtures do not establish (a synthetic plant, one deployment).
 - Where this leads, and what is still missing: [`docs/federation/ABC-ROADMAP.md`](docs/federation/ABC-ROADMAP.md)
 - The discussion that motivated this: aeoess/agent-governance-vocabulary#177
 
-**Where the edges end up.** Every offline edge already runs beside a governed
-run (`runner.edge_pass`): its verdicts on the run's real trails are reported
-next to the run and never change its outcome. The demo week is also pinned
-as an episode (`scenarios/episodes/`), every proposal judged `permitted` or
+**Where the edges end up: the A/B/C report.** The demo week is pinned as an
+episode (`scenarios/episodes/`), every proposal judged `permitted` or
 `forbidden:<rule>` by an oracle written from the work orders and the plant's
-limits before any run, and every governed run accounts for arm B against
-it: forbidden and permitted effects over their denominators, refusals by
-layer. The final A/B/C report of ADR-004, ungoverned versus REMORA versus
-REMORA plus an edge, is not built yet; the roadmap says what exists, what is
-missing and in which order.
+limits before any arm runs. Arm A applies the stream ungoverned (interlock
+only, known-negative), arm B runs it through REMORA with a declared reviewer
+model, arm C adds one inline edge that is consulted after REMORA and the
+reviewer approved and can only add refusals. `runner.ab_compare` accounts
+every arm against the oracle, runs every offline edge beside every arm, and
+reports what each edge added: refusals of forbidden proposals, false refusals,
+misses, findings on real trails, and its record on the sealed sets. That is
+how edges are compared. One command on a Docker host:
+
+```bash
+DAYS=7 ./deploy/scripts/run-abc.sh     # A offline; B-careful, B-rubber_stamp, C with the reference inline edge; report
+```
+
+Arm A, the harness, the reference inline edge and the comparison are tested
+locally; the Docker run of arms B and C has not been done yet
+([roadmap](docs/federation/ABC-ROADMAP.md)).
 
 External contributors keep their own authorship. A bounded report can be
 submitted without joining or providing an adapter. External verifier source

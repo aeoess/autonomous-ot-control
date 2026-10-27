@@ -25,7 +25,10 @@ export OT_GIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo UNKNOWN)$(git diff -
 trap '"${COMPOSE[@]}" logs --no-color remora twin > "artifacts/${RUN_ID}-stack.log" 2>&1 || true; "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
 "${COMPOSE[@]}" up --build -d --wait postgres remora twin harness
 
-"$PY" -m runner.demo --run-id "$RUN_ID" --out artifacts --project "$COMPOSE_PROJECT_NAME" --days "${DAYS:-7}" --strategy "${STRATEGY:-P1}"
+# DEMO_ARGS: extra runner.demo flags, e.g. "--reviewer rubber_stamp --inline-edge federation/edges/_inline_template"
+# (run-abc.sh uses them for arms B and C).
+# shellcheck disable=SC2086
+"$PY" -m runner.demo --run-id "$RUN_ID" --out artifacts --project "$COMPOSE_PROJECT_NAME" --days "${DAYS:-7}" --strategy "${STRATEGY:-P1}" ${DEMO_ARGS:-}
 
 # Offline edges beside the run (ADR-004, runner.edge_pass): every registered
 # offline effect_evidence edge over this run's exported trails. Their verdicts

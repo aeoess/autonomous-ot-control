@@ -46,6 +46,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from runner import admission
 from runner.acceptance import Stack, body, executed, revision
 from runner.baseline import run_baseline
 from runner.evidence import write_bundle
@@ -65,6 +66,10 @@ STEP_S = 900
 OCCUPIED_C, SETBACK_C = 21.0, 19.0
 MAX_STEP_C = 1.0
 SUITE_ID = "ot-governed-demo/v1"
+#: Arm settings (ADR-004), set by main(): the declared reviewer model and the optional inline edge
+#: consulted after REMORA and the reviewer approved (runner.admission; it can only add refusals).
+REVIEWER_MODEL = "careful"
+INLINE_EDGE: admission.InlineEdge | None = None
 
 
 # -- strategy P1 (pure) ---------------------------------------------------------
@@ -196,6 +201,35 @@ def publish_plan(day: str, strategy: str = "P1") -> str:
     return ref
 
 
+def review(sc: Scenario, t_s: int, zone: str, value: float, current: float, intent_ref: str | None,
+           day: str, zone_temp_c: float, learner: ReheatLearner | None = None) -> tuple[bool, str]:
+    """The declared reviewer model of this run: careful (ADR-004) or rubber_stamp (approves everything)."""
+    if REVIEWER_MODEL == "rubber_stamp":
+        return True, "rubber stamp: approves every review item"
+    return careful_reviewer(sc, t_s, zone, value, current, intent_ref, day, zone_temp_c, learner)
+
+
+def edge_context(day: str, zone: str, current: float, intent_ref: str | None, t_s: int) -> dict[str, Any]:
+    """What an inline edge is told besides the exact call: the day plan as what it permits, the current
+    setpoint and the declared step limit. Nothing of REMORA's decision and no credential."""
+    plan = ({**{z: sorted(PLAN_VALUES) for z in SETBACK_ZONES}, "ZONE-03": [OCCUPIED_C]}
+            if intent_ref == f"PLAN-{day}" else {})
+    return {"intent_ref": intent_ref, "work_order": {"zones": plan}, "current_setpoint_c": current,
+            "max_delta_c": MAX_STEP_C, "sim_time_s": t_s}
+
+
+def consult_inline_edge(call: dict[str, Any], context: dict[str, Any], row: dict[str, Any],
+                        counts: Counter[str]) -> tuple[bool, str]:
+    """After REMORA and the reviewer approved: ask the inline edge, which can only remove."""
+    if INLINE_EDGE is None:
+        return True, ""
+    d = INLINE_EDGE.decide(call, context)
+    row["inline_edge"] = d.to_dict()
+    counts["edge_permit" if d.verdict == "permit" and d.available else
+           ("edge_unavailable" if not d.available else "edge_refuse")] += 1
+    return admission.allowed(True, d), d.label
+
+
 def careful_reviewer(sc: Scenario, t_s: int, zone: str, value: float, current: float,
                      intent_ref: str | None, day: str, zone_temp_c: float,
                      learner: ReheatLearner | None = None) -> tuple[bool, str]:
@@ -301,8 +335,11 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
     counts[f"write_{b.get('decision')}"] += 1
     applied = False
     if item:
-        ok, reason = careful_reviewer(sc, t, zone, value, current, intent_ref, day, room_c, learner)
-        row["reviewer"] = {"model": "careful", "approved": ok, "reason": reason}
+        ok, reason = review(sc, t, zone, value, current, intent_ref, day, room_c, learner)
+        row["reviewer"] = {"model": REVIEWER_MODEL, "approved": ok, "reason": reason}
+        if ok:
+            ok, edge_reason = consult_inline_edge(call, edge_context(day, zone, current, intent_ref, t), row, counts)
+            reason = edge_reason or reason
         if ok:
             s.step("approve", item_id=item)
             counts["approved"] += 1
@@ -683,14 +720,16 @@ def account_arm_b(live: dict[str, Any], work: Path, strategy: str, days: int) ->
                                revision_after=live.get("revision_after"))
     m["episode"] = ({"id": ep["episode_id"], "path": ep_path.relative_to(ROOT).as_posix(),
                      "sha256": hashlib.sha256(ep_path.read_bytes()).hexdigest()} if ep else None)
-    m["reviewer_model"] = "careful"
+    m["reviewer_model"] = live.get("reviewer_model", "careful")
+    m["inline_edge"] = live.get("inline_edge")
+    m["arm"] = "C" if live.get("inline_edge") else "B"
     (work / "arm-b-metrics.json").write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
     return m
 
 
 def ledger_md(m: dict[str, Any]) -> str:
     from runner import ledger_metrics
-    return ledger_metrics.render_md(m, arm="B", reviewer=m.get("reviewer_model", "careful"))
+    return ledger_metrics.render_md(m, arm=m.get("arm", "B"), reviewer=m.get("reviewer_model", "careful"))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -700,7 +739,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--project", default=os.environ.get("COMPOSE_PROJECT_NAME", ""))
     p.add_argument("--days", type=int, default=7)
     p.add_argument("--strategy", default="P1", choices=["P1", "P3"])
+    p.add_argument("--reviewer", default="careful", choices=["careful", "rubber_stamp"],
+                   help="declared reviewer model (ADR-004); rubber_stamp approves every review item")
+    p.add_argument("--inline-edge", default=None, metavar="EDGE_DIR",
+                   help="arm C: consult this inline edge after REMORA and the reviewer approved (runner.admission)")
+    p.add_argument("--inline-edge-url", default=os.environ.get("INLINE_EDGE_URL"),
+                   help="override the edge's entrypoint.http (e.g. when it runs on this host)")
     a = p.parse_args(argv)
+    global REVIEWER_MODEL, INLINE_EDGE
+    REVIEWER_MODEL = a.reviewer
+    INLINE_EDGE = admission.InlineEdge.from_edge_dir(Path(a.inline_edge), url=a.inline_edge_url) if a.inline_edge else None
     compose = ["docker", "compose", "-f", "compose.yaml", "-f", "compose.governed.yaml"]
     if a.project:
         compose[2:2] = ["-p", a.project]
@@ -708,6 +756,8 @@ def main(argv: list[str] | None = None) -> int:
     work = Path(a.out) / f"{a.run_id}-work"
     work.mkdir(parents=True, exist_ok=False)
     live = run_p3(s, work, a.days) if a.strategy == "P3" else run(s, work, a.days)
+    live["reviewer_model"] = REVIEWER_MODEL
+    live["inline_edge"] = INLINE_EDGE.edge_id if INLINE_EDGE else None
     summary = summarize(live)
     summary["arm_B"] = account_arm_b(live, work, a.strategy, a.days)
     (work / "ledger.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in live["ledger"]),
