@@ -83,8 +83,8 @@ aeoess/agent-governance-vocabulary#177, the discussion that motivated this.
 | `corpus_adequacy` | offline | Which seeded faults would a checker miss? (mutate the reference verifier over the fixture set) | open, report reviewed |
 | `runner_validity` | offline | Does the scorer report a failing verifier as a failure, never a pass? | open, report reviewed |
 | `admission_runtime` | inline | `permit` or `refuse` before dispatch, with a reason; consulted only after REMORA and the reviewer approved, can only add refusals | open: harness in the governed demo (`--inline-edge`), reference edge `federation/edges/_inline_template`, scored in the A/B/C report |
-| `tool_definition` | inline | Does the served tool definition match the approved one? | needs the MCP gateway |
-| `authority_fixture` | inline | What does a synthetic signed work order authorize? | specified, no harness yet |
+| `tool_definition` | inline | Does the served tool definition match the approved one? | no harness yet. Planned next, against the signed ToolSpec bundle REMORA pins by digest (no MCP gateway needed): the harness hands the edge the served definition and the pinned digest per call, same shape as AgentAvow's `tool_manifest_digest` (E8) |
+| `authority_fixture` | inline | What does a synthetic signed work order authorize? | no harness yet. Blocked on a signed work-order format: the testbed's work orders are intent-table entries, not signed artifacts. Planned after `tool_definition` with the testbed's own Ed25519 signer as the interim format and the episode's work orders as the oracle; a federation authority format (APS) is preferred when one is pinned |
 
 </details>
 
