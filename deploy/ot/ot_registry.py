@@ -26,6 +26,7 @@ lazily and may be injected in tests.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -35,6 +36,8 @@ from adapter.actuation import ActuationError, ActuatorClient, EffectUnknown, app
 from adapter.contracts import ToolSpec
 
 READ_TIMEOUT_S = 5.0
+# REMORA proposal ids are UUIDs; nothing else goes into a twin operation URL.
+_OPERATION_ID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 
 def _current_proposal_id() -> str:
@@ -161,6 +164,11 @@ def observe_limit_value(tenant: str, quantity: str, resource: str) -> float:
     if quantity != "setpoint_movement":
         raise KeyError(f"no observation for {quantity!r}")
     tools = _tools()
+    # REMORA may call this with the agent's own argument (the limit preview at
+    # assess ran before the signed contract until REMORA #1101). Only a zone
+    # in the signed contract is ever put into a twin URL.
+    if resource not in tools._toolspec.zones:
+        raise KeyError(f"no observation for resource {resource!r}")
     r = tools._read.get(f"/v1/zones/{resource}", headers=tools._read_headers)
     r.raise_for_status()
     return float(r.json()["setpoint_c"])
@@ -174,7 +182,7 @@ def check_limit_evidence(tenant: str, operation: Any, evidence_ref: str) -> dict
     False`` (the reservation is returned), never a guess.
     """
     kind, _, operation_id = evidence_ref.partition(":")
-    if kind != "twin-op" or not operation_id:
+    if kind != "twin-op" or not _OPERATION_ID.fullmatch(operation_id):
         raise ValueError(f"evidence_ref {evidence_ref!r} is not twin-op:<operation_id>")
     tools = _tools()
     r = tools._read.get(f"/v1/operations/{operation_id}", headers=tools._read_headers)

@@ -1,25 +1,32 @@
 # Integration contracts — REMORA governed dispatch (PR 2, OT-003 + OT-004)
 
 This records the seams between `autonomous-ot-control` and the pinned REMORA
-upstream, **reconciled against the real source at commit `2594d08b`** (not from
-memory), and the custody/fencing boundary. It is a design + integration record,
-not a claim that the governed path has been run end to end. See
+upstream, reconciled against the real source (first at `2594d08b`, now pinned at
+`9b1763ca`), and the custody/fencing boundary. Since OT-005 slice 1 the governed
+path runs end to end in Docker; the acceptance results are in the README and in
+each run's `artifacts/<run-id>/` evidence bundle. See
 `docs/SDD-OT-001.md` for the full spec and invariants (INV-01..12).
 
-## Status at this PR
+## Findings from the first live governed runs (2026-10-27)
 
-| Capability | Status |
-|---|---|
-| Signed ToolSpec: digest, attestation, bounds mirror of the guard | `TESTED_LOCALLY` |
-| Actuator effect primitive: one effect, idempotent, 409 refusal raises | `TESTED_LOCALLY` |
-| Deployment registry module: real `register_tools(register)` contract | `TESTED_LOCALLY` |
-| Effect attestor on the real `build_postcondition`/`verify_effect`/`record_effect` API | `TESTED_LOCALLY` |
-| Governed runner: `assess`/`execute_accepted`, never self-approves, fails closed | `TESTED_LOCALLY` |
-| Token custody + plant-private fencing (actuator credential only in twin + REMORA) | `TESTED_LOCALLY` (structural) |
-| REMORA execution image (`servers.api:app`) + deployment modules | `IMPLEMENTED` — needs pinned upstream to build |
-| One authorized effect **through REMORA's dispatcher**; SDK-only actor → zero effect | `NOT_ESTABLISHED` — requires the built image + PostgreSQL + role tokens |
+Building the image and running the suite found defects that offline tests could
+not. Each is fixed where it belongs; nothing upstream is patched locally (INV-11).
 
-## Verified REMORA contracts (commit 2594d08b)
+| # | Finding | Where fixed |
+|---|---|---|
+| 1 | The REMORA image lacked `httpx`, which `ot_registry` imports. The registry is imported at the first dispatch, so the failure came **after** the approval (500, item left in `review_conflict`, no effect). | here: `deploy/ot/requirements-adapter.lock` (hash-pinned, equal to `requirements.lock`) |
+| 2 | `remora.sdk` `AuditRef` called `int(None)` on the documented deferred audit ref, so `RemoraClient.approve` raised `TypeError` after a successful approval. | REMORA-research#1099 (acceptance case SDK-01 FAILs at the pin until then) |
+| 3 | A `closure-sha256:` digest did not follow a sibling local package: the registry's effect code in `adapter/` was recorded as the constant `unresolved`, so editing it left the signed digest unchanged. | REMORA-research#1100 |
+| 4 | Assess ran the limit preview before the signed contract, so the observer was called with an agent-chosen resource (`ZONE-09`, a path) and the refusal named the meter. | REMORA-research#1101; here the observer also accepts only contract zones and UUID operation ids |
+| 5 | The default demo failed in CI: compose interpolates every service, so the governed `:?` variables broke the simulator-only run. | here: governed services moved to `compose.governed.yaml` |
+
+Observations recorded, not defects: an interlock or stop-switch refusal spends
+the approval (re-execution needs a new approval); AT-13's single effect is held
+by the twin interlock (revision/min-interval), not by REMORA; the 0.1 degC
+resolution cannot be signed (REMORA's schema validator has no `multipleOf`), so
+only the adapter and the interlock enforce it.
+
+## Verified REMORA contracts (first at 2594d08b, re-checked live at 9b1763ca)
 
 **Tool registry hook.** `REMORA_TOOL_REGISTRY_MODULE` names a module exposing
 `register_tools(register)`; REMORA calls `register(name, callable)` and each
@@ -77,12 +84,13 @@ publish only the public key in `REMORA_LIMITS_TRUSTED_KEYS`, and set
 | `postgres` | authority | no | REMORA authority/ledger + envelope store |
 | `governed` (proposing runner) | observe, authority | no | proposes via SDK with an operator token; reads only |
 | `runner` (smoke/baseline) | observe | no | untrusted boundary probes |
+| `harness` (acceptance step executor) | observe, authority | no | operator, approver and viewer REMORA tokens plus the read token; REMORA separates the roles |
 
 Pinned by `tests/boundary/test_custody_and_fencing.py`.
 
-## Remaining to establish the governed E2E (next round)
+## Next
 
-1. Build `deploy/Dockerfile.remora-ot` from the pinned upstream; run real PostgreSQL and the role-separated token table.
-2. Reconcile the `CURRENT_PROPOSAL_ID` contextvar access and the `register_tools` wiring against the running image (an integration test, D-03).
-3. Sign the cumulative-limits policy and enable `REMORA_REQUIRE_LIMITS=1`.
-4. Drive VERIFY → reviewer `approve` → `execute` → twin observation → `record_effect`, plus negatives (tampered args, replay, outage, wrong role, timeout/UNKNOWN), retaining full CI evidence.
+1. Repin to a REMORA commit that contains #1099–#1101 and drop `ALLOW_FAILING=SDK-01`.
+2. Fault hooks in the twin for AT-09 (stale observation, unit, TFM) and AT-12 (timeout after actuation).
+3. AT-16: the same seeded scenario with and without REMORA (and an adversarial agent), scored with exact denominators.
+4. Federation capsule (OT-007) for #177 edges: read-only fixtures and evidence exports, never the credential-holding runtime.

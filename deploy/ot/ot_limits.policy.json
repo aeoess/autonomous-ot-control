@@ -1,6 +1,6 @@
 {
   "schema": "remora-cumulative-limits/v1",
-  "comment": "Reference cumulative-limits policy for the OT setpoint pilot (UNSIGNED). REMORA verifies a SIGNED envelope (remora-cumulative-limits-signed/v1): sign this with the authority Ed25519 key via REMORA's scripts/sign_limit_policy.py, publish only the public key in REMORA_LIMITS_TRUSTED_KEYS, and set REMORA_REQUIRE_LIMITS=1 to enforce. Movement is observed from the twin (ot_registry.observe_limit_value), not from what REMORA last allowed.",
+  "comment": "Reference cumulative-limits policy for the OT setpoint pilot (UNSIGNED). REMORA verifies a SIGNED envelope (remora-cumulative-limits-signed/v1): sign this with the authority Ed25519 key via REMORA's scripts/sign_limit_policy.py, publish only the public key in REMORA_LIMITS_TRUSTED_KEYS, and set REMORA_REQUIRE_LIMITS=1 to enforce. Movement is observed from the twin (ot_registry.observe_limit_value), not from what REMORA last allowed. ZONE-03 is the sensitive laboratory zone: its REMORA budget (5 decidegrees, 0.5 degC, per hour) is deliberately tighter than the twin interlock (1.0 degC per change, 2 changes per hour), so the acceptance suite can show the REMORA layer refusing what the interlock alone would allow.",
   "coverage": "all_writes",
   "meters": {
     "set_zone_setpoint": [
@@ -44,7 +44,7 @@
       "unit": "decidegrees",
       "resource": "ZONE-03",
       "principal": "*",
-      "max": 40,
+      "max": 5,
       "window_seconds": 3600
     }
   ]

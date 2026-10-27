@@ -9,3 +9,5 @@ build/
 dist/
 node_modules/
 .wrangler/
+deploy/.generated/
+deploy/.keys/

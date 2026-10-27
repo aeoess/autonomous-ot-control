@@ -1,0 +1,180 @@
+# Governed overlay (OT-003..OT-005): PostgreSQL, the protected REMORA execution
+# image, the proposing runner and the acceptance harness. Always used together
+# with the base file, which owns the twin, the networks and the volumes:
+#
+#   ./deploy/scripts/governed-bootstrap.sh     # dev secrets, build, sign, .env
+#   ./deploy/scripts/run-governed.sh           # up, acceptance suite, evidence
+#
+# Kept in its own file so the simulator demo (compose.yaml alone) never needs a
+# governed secret to interpolate.
+#
+# REMORA runs as the pinned upstream API in REMORA_ENV=production with every
+# fail-closed prerequisite bound: durable execution state and envelope store in
+# PostgreSQL, a role-separated token table, a signed ToolSpec bundle that REMORA
+# enforces and pins by digest, and signed cumulative limits it refuses to start
+# without. REMORA holds only PUBLIC verification keys; the signing seeds stay in
+# deploy/.keys/ on the signer's side (gitignored).
+#
+# Custody (INV-01/INV-02): TWIN_ACTUATOR_TOKEN is injected only into `twin`
+# (base file) and `remora`. `governed` and `harness` hold REMORA role tokens and
+# the read token, never the actuator or control token, and never join
+# plant-private.
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=16m"]
+  pids_limit: 128
+  mem_limit: 512m
+  cpus: 1.0
+
+x-remora-build: &remora-build-args
+  REMORA_REPO: ${REMORA_REPO:-https://github.com/darklordVirtual/REMORA-research}
+  REMORA_COMMIT: ${REMORA_COMMIT:-9b1763cabcc23f8bbdd2f629600ebee68ca0f08c}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${REMORA_PG_DB:-remora}
+      POSTGRES_USER: ${REMORA_PG_USER:-remora}
+      POSTGRES_PASSWORD: ${REMORA_PG_PASSWORD:?run deploy/scripts/governed-bootstrap.sh}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-remora} -d $${POSTGRES_DB:-remora}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt: ["no-new-privileges:true"]
+    networks: [authority]
+
+  remora:
+    image: autonomous-ot-control/remora-ot:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.remora-ot
+      args: *remora-build-args
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      twin:
+        condition: service_healthy
+    environment:
+      REMORA_ENV: production
+      REMORA_ENABLED_SURFACES: execution
+      # Durable execution state + envelope store.
+      REMORA_PG_DSN: postgresql://${REMORA_PG_USER:-remora}:${REMORA_PG_PASSWORD:?missing}@postgres:5432/${REMORA_PG_DB:-remora}
+      REMORA_CONTROL_PLANE_DSN: postgresql://${REMORA_PG_USER:-remora}:${REMORA_PG_PASSWORD:?missing}@postgres:5432/${REMORA_PG_DB:-remora}
+      # Role-separated token table: the operator proposes and executes but
+      # cannot approve; the approver and supervisor are admins; the viewer
+      # reads. Each token names its actor, so the audit chain records who acted.
+      REMORA_API_TOKENS: >-
+        {"${REMORA_OPERATOR_TOKEN:?missing}":{"tenant":"ot-pilot","role":"operator","actor_id":"ot-agent"},
+         "${REMORA_APPROVER_TOKEN:?missing}":{"tenant":"ot-pilot","role":"admin","actor_id":"ot-approver"},
+         "${REMORA_SUPERVISOR_TOKEN:?missing}":{"tenant":"ot-pilot","role":"admin","actor_id":"ot-supervisor"},
+         "${REMORA_VIEWER_TOKEN:?missing}":{"tenant":"ot-pilot","role":"viewer","actor_id":"ot-viewer"}}
+      REMORA_API_BEARER_TOKEN: ${REMORA_OPERATOR_TOKEN:?missing}
+      REMORA_PDP_SIGNING_KEY: ${REMORA_PDP_SIGNING_KEY:?missing}
+      REMORA_LEASE_SIGNING_KEY: ${REMORA_LEASE_SIGNING_KEY:?missing}
+      REMORA_AUDIT_SIGNING_KEY: ${REMORA_AUDIT_SIGNING_KEY:?missing}
+      REMORA_ENVELOPE_SIGNING_KEY: ${REMORA_ENVELOPE_SIGNING_KEY:?missing}
+      # Deployment-owned semantics.
+      REMORA_TOOL_REGISTRY_MODULE: ot_registry
+      REMORA_SEMANTIC_BUNDLE_MODULE: ot_bundle
+      REMORA_INTENT_SOURCE_FILE: /app/ot_intents.json
+      REMORA_EXECUTION_ARTIFACT_DIR: /var/lib/remora/artifacts
+      # Signed ToolSpec bundle: enforced at assess, its callables measured at
+      # registration, the bundle accepted only at this digest.
+      REMORA_TOOLSPEC_BUNDLE: /etc/remora-ot/toolspec-bundle.json
+      REMORA_TOOLSPEC_VERIFY_KEYS: ${REMORA_TOOLSPEC_VERIFY_KEYS:?run deploy/scripts/governed-bootstrap.sh}
+      REMORA_TOOLSPEC_PINNED_DIGEST: ${REMORA_TOOLSPEC_PINNED_DIGEST:?run deploy/scripts/governed-bootstrap.sh}
+      # Signed cumulative limits, mandatory: the API refuses to start without
+      # them, unsigned, or with coverage other than all_writes. Movement is
+      # read from the twin (observer), and an UNKNOWN outcome is resolved
+      # against the twin's operation log (evidence module), never on trust.
+      REMORA_REQUIRE_LIMITS: "1"
+      REMORA_LIMITS_FILE: /etc/remora-ot/limits.signed.json
+      REMORA_LIMITS_TRUSTED_KEYS: ${REMORA_LIMITS_TRUSTED_KEYS:?run deploy/scripts/governed-bootstrap.sh}
+      REMORA_LIMITS_LEDGER: /var/lib/remora/limits-ledger.db
+      # The ledger is this container's SQLite file beside a PostgreSQL authority
+      # store; REMORA refuses that pairing unless one host runs executors.
+      REMORA_LIMITS_LEDGER_SCOPE: single_host
+      REMORA_LIMITS_OBSERVER_MODULE: ot_registry
+      REMORA_LIMITS_EVIDENCE_MODULE: ot_registry
+      # OT adapter wiring: the dispatcher presents the actuator token on the
+      # plant-private route and reads the twin to bind the revision.
+      OT_TWIN_ACTUATOR_URL: http://172.31.250.10:8200
+      OT_TWIN_READ_URL: http://twin:8100
+      OT_TOOLSPEC_PATH: /app/contracts/ot-toolspec-v1.json
+      TWIN_ACTUATOR_TOKEN: ${TWIN_ACTUATOR_TOKEN:?missing}
+      TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
+      PYTHONPATH: /app
+    volumes:
+      - remora-state:/var/lib/remora
+      - ./deploy/.generated:/etc/remora-ot:ro
+    networks:
+      authority:
+        aliases: [remora]
+      observe: {}
+      plant-private:
+        ipv4_address: 172.31.250.20
+
+  # Proposing runner: one governed proposal from the CLI.
+  governed:
+    <<: *hardening
+    image: autonomous-ot-control/governed:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.governed
+      args: *remora-build-args
+    profiles: [cli]
+    user: "${OT_UID:-10001}:${OT_GID:-10001}"
+    depends_on:
+      remora:
+        condition: service_healthy
+    environment:
+      REMORA_URL: http://remora:8000
+      REMORA_OPERATOR_TOKEN: ${REMORA_OPERATOR_TOKEN:?missing}
+      TWIN_READ_URL: http://twin:8100
+      TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
+      OT_GIT_SHA: ${OT_GIT_SHA:-UNKNOWN}
+      # Deliberately absent: TWIN_ACTUATOR_TOKEN, TWIN_CONTROL_TOKEN.
+    volumes:
+      - ./artifacts:/work/artifacts
+    networks: [observe, authority]
+
+  # Acceptance harness (OT-005): a long-running, credential-scoped step
+  # executor the host driver (runner/acceptance.py) calls with
+  # `docker compose exec`. It holds the operator, approver and viewer tokens
+  # so one driver can play agent and reviewer; REMORA, not the harness,
+  # separates those roles. It has no actuator or control token and no route
+  # to plant-private, so it can reach the plant only through REMORA.
+  harness:
+    <<: *hardening
+    image: autonomous-ot-control/governed:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.governed
+      args: *remora-build-args
+    user: "${OT_UID:-10001}:${OT_GID:-10001}"
+    depends_on:
+      remora:
+        condition: service_healthy
+    entrypoint: ["python", "-c", "import time\nwhile True: time.sleep(3600)"]
+    environment:
+      REMORA_URL: http://remora:8000
+      REMORA_OPERATOR_TOKEN: ${REMORA_OPERATOR_TOKEN:?missing}
+      REMORA_APPROVER_TOKEN: ${REMORA_APPROVER_TOKEN:?missing}
+      REMORA_VIEWER_TOKEN: ${REMORA_VIEWER_TOKEN:?missing}
+      TWIN_READ_URL: http://twin:8100
+      TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?missing}
+      TWIN_ACTUATOR_PROBE_URL: http://172.31.250.10:8200
+      # Deliberately absent: TWIN_ACTUATOR_TOKEN, TWIN_CONTROL_TOKEN.
+    networks: [observe, authority]

@@ -13,12 +13,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE = (ROOT / "compose.yaml").read_text()
+# The governed overlay is a separate file (so the simulator demo needs no
+# governed secret); its services join the same networks and are checked alike.
+GOVERNED = (ROOT / "compose.governed.yaml").read_text()
 LOCK = json.loads((ROOT / "upstream" / "remora.lock.json").read_text())
 
 ACTUATOR_TOKEN = "TWIN_ACTUATOR_TOKEN"
 PLANT_NET = "plant-private"
 # Services that must never hold the write credential or a plant-private route.
-UNTRUSTED = ("runner", "governed", "postgres")
+UNTRUSTED = ("runner", "governed", "harness", "postgres")
 # Services that legitimately hold the write credential (verify vs. present).
 WRITE_CUSTODIANS = ("twin", "remora")
 
@@ -60,11 +63,11 @@ def _services(compose: str) -> dict[str, str]:
     return out
 
 
-SERVICES = _services(COMPOSE)
+SERVICES = {**_services(COMPOSE), **_services(GOVERNED)}
 
 
 def test_all_expected_services_present():
-    assert set(SERVICES) >= {"twin", "runner", "postgres", "remora", "governed"}
+    assert set(SERVICES) >= {"twin", "runner", "postgres", "remora", "governed", "harness"}
 
 
 def test_write_credential_custody():
@@ -100,7 +103,23 @@ def test_remora_image_pins_commit_and_installs_adapter():
     assert "COPY adapter" in df
     assert LOCK["commit"] in df, "Dockerfile.remora-ot must pin the locked REMORA commit"
     # compose passes the same pinned commit as the default build arg.
-    assert LOCK["commit"] in SERVICES["remora"]
+    assert LOCK["commit"] in GOVERNED
+
+
+def test_the_harness_is_credential_scoped():
+    h = SERVICES["harness"]
+    assert "TWIN_CONTROL_TOKEN" not in h
+    assert "authority" in h and "observe" in h
+
+
+def test_remora_holds_only_public_signing_values():
+    r = SERVICES["remora"]
+    for public in ("REMORA_TOOLSPEC_VERIFY_KEYS", "REMORA_TOOLSPEC_PINNED_DIGEST",
+                   "REMORA_LIMITS_TRUSTED_KEYS"):
+        assert public in r
+    for seed in ("SIGNING_SEED", "REMORA_TOOLSPEC_SIGNING_KEY", "OT_TOOLSPEC_SIGNING"):
+        assert seed not in r, f"remora must not receive {seed}"
+    assert 'REMORA_REQUIRE_LIMITS: "1"' in r
 
 
 def test_governed_source_holds_no_actuator_capability():

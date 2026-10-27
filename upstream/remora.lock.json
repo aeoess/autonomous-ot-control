@@ -1,10 +1,13 @@
 {
   "schema": "ot-upstream-pin/v1",
   "repository": "https://github.com/darklordVirtual/REMORA-research",
-  "commit": "2594d08b592e61f3d0f436671a230faaa311db9a",
-  "observed_utc": "2026-10-26",
+  "commit": "9b1763cabcc23f8bbdd2f629600ebee68ca0f08c",
+  "observed_utc": "2026-10-27",
   "license": "BUSL-1.1 (see upstream LICENSE and Research Grant); not relicensed by this repository",
-  "consumed_surface": ["remora.sdk", "REMORA_TOOL_REGISTRY_MODULE deployment hook"],
-  "status": "PINNED_NOT_YET_CONSUMED",
-  "note": "OT-003 (PR 2) builds the REMORA execution image from exactly this commit."
+  "consumed_surface": [
+    "remora.sdk",
+    "REMORA_TOOL_REGISTRY_MODULE deployment hook"
+  ],
+  "status": "PINNED_CONSUMED",
+  "note": "Built into deploy/Dockerfile.remora-ot and deploy/Dockerfile.governed; the governed acceptance suite runs against exactly this commit."
 }

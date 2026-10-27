@@ -21,7 +21,8 @@ from tests.conftest import plant_fingerprint
 from twin.api import build_actuator_app, build_read_app
 
 ROOT = Path(__file__).resolve().parents[2]
-PROPOSAL = "remora-proposal-abc12345"
+# REMORA proposal ids are UUIDs (observed on the live governed run).
+PROPOSAL = "7912188c-60d5-4d00-8b26-ff4d6c03e67a"
 
 
 def _load_module():
@@ -93,6 +94,17 @@ def test_limit_hooks(tools, otreg, twin, monkeypatch):
     tools.set_zone_setpoint({"zone_id": "ZONE-02", "setpoint_c": 20.5})
     ev = otreg.check_limit_evidence("ot-pilot", {}, f"twin-op:{PROPOSAL}")
     assert ev["executed"] is True and ev["source"] == "twin-operation-log"
-    assert otreg.check_limit_evidence("ot-pilot", {}, "twin-op:never")["executed"] is False
-    with pytest.raises(ValueError):
-        otreg.check_limit_evidence("ot-pilot", {}, "bad-ref")
+    never = "00000000-0000-4000-8000-000000000000"
+    assert otreg.check_limit_evidence("ot-pilot", {}, f"twin-op:{never}")["executed"] is False
+    for bad in ("bad-ref", "twin-op:never", "twin-op:../status", f"twin-op:{PROPOSAL}/x"):
+        with pytest.raises(ValueError):
+            otreg.check_limit_evidence("ot-pilot", {}, bad)
+
+
+@pytest.mark.parametrize("resource", ["ZONE-09", "../operations/x", "ZONE-01/../status", ""])
+def test_the_observer_reads_only_contract_zones(tools, otreg, monkeypatch, resource):
+    """REMORA may hand the observer the agent's own argument before the signed
+    contract has checked it (REMORA #1101). It must never reach a twin URL."""
+    monkeypatch.setattr(otreg, "_TOOLS", tools)
+    with pytest.raises(KeyError):
+        otreg.observe_limit_value("ot-pilot", "setpoint_movement", resource)

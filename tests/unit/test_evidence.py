@@ -29,7 +29,7 @@ def test_failed_results_counted(tmp_path):
                         claims={}, results=[{"case_id": "a", "outcome": "PASS"},
                                             {"case_id": "b", "outcome": "FAIL"}])
     m = json.loads((root / "manifest.json").read_text())
-    assert m["counts"] == {"cases": 2, "passed": 1, "failed": 1, "skipped": 0}
+    assert m["counts"] == {"cases": 2, "passed": 1, "failed": 1, "skipped": 0, "not_run": 0}
 
 
 def test_baseline_cli_reproducible(tmp_path):

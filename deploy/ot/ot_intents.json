@@ -4,18 +4,30 @@
     "operation": "update",
     "resource_type": "zone",
     "requested_effect": "update",
-    "target_entities": ["target_resource"],
-    "source_spans": ["zone ZONE-01"],
-    "action_spans": ["lower the setpoint"]
+    "target_entities": [
+      "target_resource"
+    ],
+    "source_spans": [
+      "zone ZONE-01"
+    ],
+    "action_spans": [
+      "lower the setpoint"
+    ]
   },
   "WORK-ORDER-002": {
     "task_text": "Raise the setpoint on zone ZONE-02 ahead of the morning occupancy ramp so the space reaches comfort by start of day.",
     "operation": "update",
     "resource_type": "zone",
     "requested_effect": "update",
-    "target_entities": ["target_resource"],
-    "source_spans": ["zone ZONE-02"],
-    "action_spans": ["raise the setpoint"]
+    "target_entities": [
+      "target_resource"
+    ],
+    "source_spans": [
+      "zone ZONE-02"
+    ],
+    "action_spans": [
+      "raise the setpoint"
+    ]
   },
   "MON-ROUND": {
     "task_text": "Read the zone temperatures and building energy on the monitoring round.",
@@ -23,7 +35,26 @@
     "resource_type": "zone",
     "requested_effect": "read",
     "target_entities": [],
-    "source_spans": ["zone temperatures"],
-    "action_spans": ["read the zone temperatures"]
+    "source_spans": [
+      "zone temperatures"
+    ],
+    "action_spans": [
+      "read the zone temperatures"
+    ]
+  },
+  "WORK-ORDER-003": {
+    "task_text": "Adjust the setpoint on zone ZONE-03, the sensitive laboratory zone, by small steps only.",
+    "operation": "update",
+    "resource_type": "zone",
+    "requested_effect": "update",
+    "target_entities": [
+      "target_resource"
+    ],
+    "source_spans": [
+      "zone ZONE-03"
+    ],
+    "action_spans": [
+      "adjust the setpoint"
+    ]
   }
 }

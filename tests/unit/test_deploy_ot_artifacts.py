@@ -42,10 +42,60 @@ def test_governed_image_installs_the_sdk():
 
 
 def test_compose_uses_real_remora_env_contract():
-    compose = (ROOT / "compose.yaml").read_text()
+    compose = (ROOT / "compose.governed.yaml").read_text()
     for key in ("REMORA_PG_DSN:", "REMORA_CONTROL_PLANE_DSN:", "REMORA_API_TOKENS:",
                 "REMORA_ENV: production", "REMORA_ENABLED_SURFACES: execution",
                 "REMORA_ENVELOPE_SIGNING_KEY:", "REMORA_TOOL_REGISTRY_MODULE: ot_registry"):
         assert key in compose, f"missing {key} in compose governed config"
     # The superseded wrong variable name must not reappear.
     assert "REMORA_DATABASE_URL" not in compose
+
+
+def test_adapter_lock_lines_equal_the_project_lock():
+    """deploy/ot/requirements-adapter.lock copies requirements.lock verbatim."""
+    def blocks(text: str) -> dict[str, str]:
+        out, name = {}, None
+        for line in text.splitlines():
+            if line and not line[0].isspace() and not line.startswith("#"):
+                name = line.split("==")[0]
+                out[name] = line
+            elif name and line.strip().startswith("--hash"):
+                out[name] += line.strip()
+        return out
+    adapter = blocks((OT / "requirements-adapter.lock").read_text())
+    project = blocks((ROOT / "requirements.lock").read_text())
+    assert set(adapter) == {"certifi", "httpcore", "httpx"}
+    for name, pinned in adapter.items():
+        assert project[name] == pinned, name
+
+
+def test_signed_specs_mirror_the_deployment_contract():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("sign_deployment", OT / "sign_deployment.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    toolspec = json.loads((ROOT / "contracts" / "ot-toolspec-v1.json").read_text())
+    specs = {s["tool_id"]: s for s in mod.build_specs(toolspec, {
+        "read_zone_state": "closure-sha256:" + "a" * 64,
+        "read_building_energy": "closure-sha256:" + "a" * 64,
+        "set_zone_setpoint": "closure-sha256:" + "a" * 64})}
+    assert set(specs) == {"read_zone_state", "read_building_energy", "set_zone_setpoint"}
+    write = specs["set_zone_setpoint"]
+    props = write["argument_schema"]["properties"]
+    assert write["argument_schema"]["additionalProperties"] is False
+    assert props["zone_id"]["enum"] == ["ZONE-01", "ZONE-02", "ZONE-03"]
+    assert (props["setpoint_c"]["minimum"], props["setpoint_c"]["maximum"]) == (19.0, 23.0)
+    # REMORA's validator has no multipleOf; signing one would be refused.
+    assert "multipleOf" not in json.dumps(write)
+    assert write["allowed_targets"] == ["simulated_pilot"]
+    assert write["action_type"] == "write" and write["risk_tier"] == "high"
+    assert all(s["action_type"] == "read" for k, s in specs.items() if k != "set_zone_setpoint")
+
+
+def test_zone_03_budget_is_tighter_than_the_interlock():
+    """LIM-01 depends on it: REMORA must refuse what the interlock would allow."""
+    pol = json.loads((OT / "ot_limits.policy.json").read_text())
+    cfg = json.loads((ROOT / "twin" / "fixtures" / "three-zone-v1.json").read_text())
+    z3 = next(lim for lim in pol["limits"] if lim["resource"] == "ZONE-03")
+    assert z3["max"] / 10 < cfg["guard"]["max_delta_c"]

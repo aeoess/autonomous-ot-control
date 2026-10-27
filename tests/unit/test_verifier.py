@@ -79,7 +79,12 @@ def test_unobservable_is_passed_as_none(twin, tokens, observer):
     assert sdk.calls["verify_effect"]["observed"] is None  # UNOBSERVABLE != MISMATCH
 
 
-def test_no_sdk_records_nothing(observer):
+def test_no_sdk_records_nothing(observer, monkeypatch):
+    # sdk=None means "load the installed SDK"; make it absent explicitly, so the
+    # test does not depend on whether remora happens to be installed here.
+    import adapter.verifier as verifier
+
+    monkeypatch.setattr(verifier, "_load_sdk", lambda: None)
     attestor = EffectAttestor(observer, sdk=None)
     out = attestor.attest(proposal_id="P3", execution_id="E3", toolspec_hash="TS",
                           zone_id="ZONE-01", expected_setpoint_c=20.5, operation_id="x1")

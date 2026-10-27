@@ -13,7 +13,7 @@
 # (servers/tool_registry_research.py, servers/execution_api.py). Do NOT bake
 # credentials or signing keys into the image; compose injects them at runtime.
 ARG REMORA_REPO=https://github.com/darklordVirtual/REMORA-research
-ARG REMORA_COMMIT=2594d08b592e61f3d0f436671a230faaa311db9a
+ARG REMORA_COMMIT=9b1763cabcc23f8bbdd2f629600ebee68ca0f08c
 
 FROM python:3.12-slim AS remora-src
 ARG REMORA_REPO
@@ -38,6 +38,13 @@ COPY --from=remora-src /src/remora /opt/remora
 RUN pip install --upgrade pip \
  && pip install -e "/opt/remora[api,postgres,security]"
 
+# The OT registry reaches the twin over httpx, which REMORA's extras do not
+# install. Without it the registry fails to import at the first dispatch, after
+# the approval was already spent (found by the first live governed run).
+COPY deploy/ot/requirements-adapter.lock /tmp/requirements-adapter.lock
+RUN pip install --require-hashes --no-deps -r /tmp/requirements-adapter.lock \
+ && python -c "import httpx"
+
 # Deployment-owned modules (not shipped package code): the OT tool registry,
 # the semantic bundle, the intent (work-order) source, and the reference
 # cumulative-limits policy. Named like the upstream ot-pilot deployment files.
@@ -45,6 +52,9 @@ COPY deploy/ot/ot_registry.py /app/ot_registry.py
 COPY deploy/ot/ot_bundle.py /app/ot_bundle.py
 COPY deploy/ot/ot_intents.json /app/ot_intents.json
 COPY deploy/ot/ot_limits.policy.json /app/ot_limits.policy.json
+# The deploy-time signer (governed-bootstrap.sh runs it with --network none).
+# The runtime never executes it and never holds its seeds.
+COPY deploy/ot/sign_deployment.py /app/sign_deployment.py
 
 # The OT adapter helpers the registry closes over, plus the twin schema helpers
 # and the signed ToolSpec they bind. Only the pieces the execution side needs —
@@ -65,6 +75,6 @@ USER remora
 
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/v1/health', timeout=4).status == 200 else 1)"
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/v1/ready', timeout=4).status == 200 else 1)"
 
 CMD ["uvicorn", "servers.api:app", "--host", "0.0.0.0", "--port", "8000"]

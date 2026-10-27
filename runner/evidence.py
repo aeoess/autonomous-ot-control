@@ -81,8 +81,11 @@ def write_bundle(out_dir: str | Path, *, suite_id: str, run_id: str, manifest_ex
         "trace_digest": canonical_digest(trace),
         "metrics_digest": canonical_digest(metrics),
         "files": files,
+        # "failed" stays every non-PASS (a NOT_RUN is never a pass); "not_run"
+        # says how many of those were not exercised at all.
         "counts": {"cases": len(results), "passed": len(results) - len(failed),
-                   "failed": len(failed), "skipped": 0},
+                   "failed": len(failed), "skipped": 0,
+                   "not_run": sum(1 for r in results if r.get("outcome") == "NOT_RUN")},
         "claims": dict(sorted(claims.items())),
         "limitations": [
             "Simulation only; no physical OT write path exists in this build.",
