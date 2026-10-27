@@ -25,6 +25,205 @@ SAFETY = (("comfort_dh", "comfort dh"), ("hazard_h", "icing h"), ("co2_excess_pp
           ("tank_over_60_h", "tank>60 °C h"))
 
 
+#: What each strategy is, in one sentence each. Shown for the strategies the file carries.
+STRATEGY_DESC = {
+    "P0": "As found. Fixed 21 °C occupied (1 h preheat) and 20 °C otherwise, the air-handling unit on a fixed "
+          "weekday schedule, lighting on schedule, heating cables on an air thermostat, the tank at 50 °C with no "
+          "cap. The baseline every saving is measured against.",
+    "P1": "Classic night setback. P0 plus setback to 19 °C outside occupancy and a self-tuning optimal start "
+          "that learns how long the building takes to reheat.",
+    "P2": "Rule-based caretaker. P1 plus a weekend and holiday setback chosen by the outdoor mean, occupancy-aware "
+          "ventilation, presence lighting with daylight dimming, ground-sensor control of the heating cables, and "
+          "the tank following the radiator curve with a cheap-hour boost and a peak limiter.",
+    "P3": "The digital caretaker (ADR-009). Safety overlays (frost, air quality, icing, degraded telemetry), one "
+          "active comfort profile, one named algorithm per setpoint, an independent validator against the site "
+          "policy, a hash-pinned sensor-free fallback, and fault detection on the zone sensors. Every change is a "
+          "governed tool call with its decision record.",
+    "P3raw": "P3 with the independent validator and the telemetry checks switched off: the same optimizer, but "
+             "nothing stops it from acting on a frozen or drifted sensor. It exists only to show what the "
+             "validator is worth.",
+}
+
+#: The A/B/C arms of a faulted run (res["faults"] is true): which strategy plays which role.
+ARMS = (("A", "P0", "the building as found, with the same seeded sensor faults; nothing reacts to them"),
+        ("B", "P3raw", "the caretaker without validator or telemetry checks: saves energy, but a faulted sensor "
+                       "can drive it into an unsafe state"),
+        ("C", "P3", "the full caretaker: the validator refuses what the site policy forbids and the fallback "
+                    "takes over when telemetry is not trusted"))
+
+#: Every number in the tables, in words.
+METRICS = (
+    ("NOK", "cost for the year: Nord Pool day-ahead spot for the area plus a declared reference grid tariff "
+            "(energy part and a monthly power charge on the highest hourly kW). Taxes excluded."),
+    ("saves NOK (min..max)", "the saving against P0, mean over the seeds, with the smallest and largest seed "
+                             "in brackets. The seeds vary occupancy and the sensor faults, not the weather or "
+                             "the prices."),
+    ("%", "the saving as a share of P0's cost in the same area."),
+    ("kWh %", "the share of P0's energy saved; it differs from the NOK share because prices vary by hour."),
+    ("spot NOK/kWh", "the energy-weighted average spot price P0 paid in the area."),
+    ("comfort dh", "degree-hours outside the occupied comfort band, summed over the three zones. One zone one "
+                   "degree too warm for one hour is one degree-hour. Lower is better."),
+    ("icing h", "hours in which the ground sensor reported a wet surface at −10..+1 °C while the heating cable "
+                "was off: an icing hazard on the ramp. Lower is better."),
+    ("CO2>1000 ppm·h", "ppm-hours above 1000 ppm while occupied, summed over the zones: how far and how long "
+                       "the air quality limit was exceeded. Lower is better."),
+    ("tank>60 °C h", "hours the hot-water tank stood above 60 °C, beyond the heat pump's supply limit: wasted "
+                     "heat and a safety limit in the site policy. Zero is the target."),
+    ("submitted / held / fallback / escalated", "how the caretaker routed each control step: proposed a change, "
+                                                "held the current value, switched to the sensor-free fallback, "
+                                                "or escalated to a person."),
+    ("optimizer faults injected / caught", "deliberately corrupted proposals fed to the caretaker, and how many "
+                                           "the validator refused."),
+    ("FDD alarms / true / fault episodes detected of", "fault-detection alarms raised, how many pointed at a "
+                                                       "real seeded sensor fault, and how many of the seeded "
+                                                       "fault episodes were detected at all."),
+)
+
+
+def arms(res: dict[str, Any]) -> list[tuple[str, str, str]]:
+    ss = strategies(res)
+    return [(a, s, d) for a, s, d in ARMS if s in ss] if res.get("faults") else []
+
+
+def abc_rows(res: dict[str, Any]) -> list[dict[str, Any]]:
+    """One headline row per area for a faulted run: cost, saving and the safety numbers for every arm."""
+    if {a for a, _, _ in arms(res)} != {"A", "B", "C"}:
+        return []
+    out = []
+    for area, name in res["areas"].items():
+        y = year_row(res, area)
+        row = {"area": area, "name": name, "arms": {}}
+        for a, s, _ in arms(res):
+            v = y[s]
+            row["arms"][a] = {"strategy": s, "nok": v["total_nok"],
+                              "saving_pct": y.get(f"{s}_saving_pct", 0.0) if s != "P0" else 0.0,
+                              "tank_h": v.get("tank_over_60_h"), "comfort_dh": v["comfort_dh"],
+                              "icing_h": v["hazard_h"], "co2": v.get("co2_excess_ppmh")}
+        out.append(row)
+    return out
+
+
+def abc_verdict(res: dict[str, Any]) -> str:
+    """The A/B/C result in two sentences, computed from the numbers, never typed in."""
+    rs = abc_rows(res)
+    if not rs or "C" not in rs[0]["arms"] or "B" not in rs[0]["arms"]:
+        return ""
+    c_pct = [r["arms"]["C"]["saving_pct"] for r in rs]
+    b_pct = [r["arms"]["B"]["saving_pct"] for r in rs]
+    tank_b = [r["arms"]["B"]["tank_h"] or 0 for r in rs]
+    tank_c = [r["arms"]["C"]["tank_h"] or 0 for r in rs]
+    def rng(vals: list[float], fmt: str) -> str:
+        lo, hi = min(vals), max(vals)
+        return format(lo, fmt) if format(lo, fmt) == format(hi, fmt) else f"{lo:{fmt}}–{hi:{fmt}}"
+
+    more = "more than" if min(c - b for c, b in zip(c_pct, b_pct)) > 0 else "about as much as"
+    return (f"C (the full caretaker) saves {rng(c_pct, '.1f')} % of A's cost across the {len(rs)} areas, "
+            f"{more} B, the same optimizer without the validator, at {rng(b_pct, '.1f')} %. "
+            f"With the same seeded sensor faults, B leaves the tank above 60 °C for {rng(tank_b, '.0f')} h "
+            f"a year and C for {rng(tank_c, '.0f')} h. The validator therefore costs no savings and removes "
+            "the unsafe hours. A saves nothing and reacts to no fault.")
+
+
+def how_to_read_md(res: dict[str, Any]) -> list[str]:
+    ss = strategies(res)
+    L = ["## How to read this report", "",
+         "One synthetic three-zone office building with its own heat pump, hot-water tank, air-handling unit, "
+         "lighting and heated entrance ramp is placed at a fictitious site in each Norwegian price area. The same "
+         "building runs the full year 2025 once per strategy and seed, on that area's verified day-ahead prices "
+         "and ERA5 weather. Every strategy is applied directly to the twin, offline: no REMORA, no governance "
+         "in the loop. The governed runs are reported separately.", "",
+         "### The strategies", "", "| Strategy | What it is |", "|---|---|"]
+    L += [f"| **{s}** | {STRATEGY_DESC.get(s, '')} |" for s in ss]
+    if arms(res):
+        L += ["", "### The A/B/C arms", "",
+              "Every arm sees the same seeded sensor faults (frozen and drifted zone temperature sensors) and the "
+              "same corrupted proposals. The arms differ only in what stands between the optimizer and the plant.", "",
+              "| Arm | Strategy | What it shows |", "|---|---|---|"]
+        L += [f"| **{a}** | {s} | {d} |" for a, s, d in arms(res)]
+    L += ["", "### The numbers", "", "| Column | Meaning |", "|---|---|"]
+    L += [f"| {k} | {v} |" for k, v in METRICS]
+    L += ["", "**What this does and does not show.** The savings are properties of the simulated building: real "
+          "levers, synthetic plant. They show which levers matter and by how much relative to each other, and "
+          "what the validator is worth when sensors lie. They are not a real-building saving, and a real site "
+          "must be measured before any figure here means anything there.", ""]
+    return L
+
+
+def how_to_read_html(res: dict[str, Any]) -> str:
+    ss = strategies(res)
+    strat = "".join(f"<tr><td><b>{E(s)}</b></td><td>{E(STRATEGY_DESC.get(s, ''))}</td></tr>" for s in ss)
+    arm_html = ""
+    if arms(res):
+        arm_html = ("<h3>The A/B/C arms</h3><p>Every arm sees the same seeded sensor faults (frozen and drifted zone "
+                    "temperature sensors) and the same corrupted proposals. The arms differ only in what stands "
+                    "between the optimizer and the plant.</p><div class=card><table><tr><th>Arm</th><th>Strategy</th>"
+                    "<th>What it shows</th></tr>"
+                    + "".join(f"<tr><td><b>{a}</b></td><td>{E(s)}</td><td>{E(d)}</td></tr>" for a, s, d in arms(res))
+                    + "</table></div>")
+    metrics = "".join(f"<tr><td>{E(k)}</td><td>{E(v)}</td></tr>" for k, v in METRICS)
+    return (
+        "<h2>How to read this report</h2>"
+        "<p>One synthetic three-zone office building with its own heat pump, hot-water tank, air-handling unit, "
+        "lighting and heated entrance ramp is placed at a fictitious site in each Norwegian price area. The same "
+        "building runs the full year 2025 once per strategy and seed, on that area's verified day-ahead prices and "
+        "ERA5 weather. Every strategy is applied directly to the twin, offline: no REMORA, no governance in the "
+        "loop. The governed runs are reported separately.</p>"
+        f"<h3>The strategies</h3><div class=card><table><tr><th>Strategy</th><th>What it is</th></tr>{strat}</table></div>"
+        f"{arm_html}"
+        f"<details class=card><summary><b>The numbers</b>: what every column means</summary><table>"
+        f"<tr><th>Column</th><th>Meaning</th></tr>{metrics}</table></details>"
+        "<p><b>What this does and does not show.</b> The savings are properties of the simulated building: real "
+        "levers, synthetic plant. They show which levers matter and by how much relative to each other, and what "
+        "the validator is worth when sensors lie. They are not a real-building saving, and a real site must be "
+        "measured before any figure here means anything there.</p>")
+
+
+def abc_md(res: dict[str, Any]) -> list[str]:
+    rs = abc_rows(res)
+    if not rs:
+        return []
+    has_tank = rs[0]["arms"]["C"]["tank_h"] is not None
+    cols = ["A cost NOK", "B saves %", "C saves %"]
+    if has_tank:
+        cols += ["A tank>60 °C h", "B tank>60 °C h", "C tank>60 °C h"]
+    cols += ["A comfort dh", "B comfort dh", "C comfort dh"]
+    L = ["## A/B/C result", "", abc_verdict(res), "",
+         "| Area | " + " | ".join(cols) + " |", "|---|" + "---:|" * len(cols)]
+    for r in rs:
+        a, b, c = r["arms"]["A"], r["arms"]["B"], r["arms"]["C"]
+        cells = [nok(a["nok"]), f"{b['saving_pct']:.1f}", f"**{c['saving_pct']:.1f}**"]
+        if has_tank:
+            cells += [f"{a['tank_h']:.0f}", f"{b['tank_h']:.0f}", f"**{c['tank_h']:.0f}**"]
+        cells += [f"{a['comfort_dh']:.0f}", f"{b['comfort_dh']:.0f}", f"{c['comfort_dh']:.0f}"]
+        L.append(f"| {r['area']} {r['name']} | " + " | ".join(cells) + " |")
+    L += ["", "A = P0, B = P3raw, C = P3. The full tables below give the energy, the cost parts, the other safety "
+          "numbers and the caretaker's own record per arm.", ""]
+    return L
+
+
+def abc_html(res: dict[str, Any]) -> str:
+    rs = abc_rows(res)
+    if not rs:
+        return ""
+    has_tank = rs[0]["arms"]["C"]["tank_h"] is not None
+    head = "<th>Area</th><th>A cost NOK</th><th>B saves %</th><th>C saves %</th>"
+    if has_tank:
+        head += "<th>A tank&gt;60 °C h</th><th>B tank&gt;60 °C h</th><th>C tank&gt;60 °C h</th>"
+    head += "<th>A comfort dh</th><th>B comfort dh</th><th>C comfort dh</th>"
+    body = ""
+    for r in rs:
+        a, b, c = r["arms"]["A"], r["arms"]["B"], r["arms"]["C"]
+        body += (f"<tr><td>{E(r['area'])} {E(r['name'])}</td><td>{nok(a['nok'])}</td><td>{b['saving_pct']:.1f}</td>"
+                 f"<td><b>{c['saving_pct']:.1f}</b></td>")
+        if has_tank:
+            body += f"<td>{a['tank_h']:.0f}</td><td>{b['tank_h']:.0f}</td><td><b>{c['tank_h']:.0f}</b></td>"
+        body += f"<td>{a['comfort_dh']:.0f}</td><td>{b['comfort_dh']:.0f}</td><td>{c['comfort_dh']:.0f}</td></tr>"
+    return (f"<h2>A/B/C result</h2><p>{E(abc_verdict(res))}</p>"
+            f"<div class=card><table><tr>{head}</tr>{body}</table>"
+            "<p class=muted>A = P0, B = P3raw, C = P3. The sections below give the energy, the cost parts, the "
+            "other safety numbers and the caretaker's own record per arm.</p></div>")
+
+
 def safety_keys(res: dict[str, Any]) -> list[tuple[str, str]]:
     """The safety KPIs this result file carries (older files lack the CO2 and tank ones)."""
     y = next(iter(next(iter(res["table"].values()))["year"].values()))["P0"]
@@ -94,8 +293,10 @@ def render_md(res: dict[str, Any]) -> str:
     by_nok = max(rs, key=lambda r: r["by"][best]["saving_nok"]["mean"])
     by_kwh = max(rs, key=lambda r: r["by"][best]["kwh_saved"])
     L = [f"# {title(res)}", "",
-         f"Seeds {', '.join(map(str, res['seeds']))}. Strategies: {', '.join(ss)}. Scope: {res['scope']}", "",
-         "## Year", "",
+         f"Seeds {', '.join(map(str, res['seeds']))}. Strategies: {', '.join(ss)}. Scope: {res['scope']}", ""]
+    L += how_to_read_md(res)
+    L += abc_md(res)
+    L += ["## Year", "",
          "| Area | P0 NOK | P0 kWh | Spot NOK/kWh (P0) | "
          + " | ".join(f"{s} saves NOK (min..max) | {s} % | {s} kWh %" for s in ss[1:]) + " |",
          "|---|---:|---:|---:|" + "---:|---:|---:|" * (len(ss) - 1)]
@@ -290,6 +491,8 @@ svg .grid{{stroke:var(--line)}} svg .tick{{fill:var(--muted);font:11.5px var(--s
 {tile("Spot price range (P0 weighted)", f"{min(r['spot_price'] for r in rs):.2f}–{max(r['spot_price'] for r in rs):.2f}", "NOK/kWh, 2025, taxes excluded")}
 {tile(f"Icing hazard with {best}", f"{sum(year_row(res, r['area'])[best]['hazard_h'] for r in rs):.0f} h", f"P0: {sum(year_row(res, r['area'])['P0']['hazard_h'] for r in rs):.0f} h over all areas")}
 </div>
+{how_to_read_html(res)}
+{abc_html(res)}
 <h2>1. Year cost by area</h2>
 <p>The same building and the same strategies at five coordinates, each with its own verified day-ahead prices and local ERA5 weather. Cost is spot plus a declared reference grid tariff (energy part and the monthly power charge on the highest hourly kW).</p>
 <div class="card"><div class="legend">{legend}</div>{grouped_bars(rs, res)}</div>

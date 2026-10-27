@@ -2,6 +2,38 @@
 
 Seeds 177, 178, 179. Strategies: P0, P1, P2, P3. Scope: Synthetic, uncalibrated building-services twin (three-zone-hvac-seasonal-v2) at fictitious sites in each Norwegian price area. Verified 2025 day-ahead prices per area and local ERA5 weather. Cost = spot + a declared reference grid tariff (ASSUMPTION; taxes excluded). Strategies applied directly (offline); not a real-building saving.
 
+## How to read this report
+
+One synthetic three-zone office building with its own heat pump, hot-water tank, air-handling unit, lighting and heated entrance ramp is placed at a fictitious site in each Norwegian price area. The same building runs the full year 2025 once per strategy and seed, on that area's verified day-ahead prices and ERA5 weather. Every strategy is applied directly to the twin, offline: no REMORA, no governance in the loop. The governed runs are reported separately.
+
+### The strategies
+
+| Strategy | What it is |
+|---|---|
+| **P0** | As found. Fixed 21 °C occupied (1 h preheat) and 20 °C otherwise, the air-handling unit on a fixed weekday schedule, lighting on schedule, heating cables on an air thermostat, the tank at 50 °C with no cap. The baseline every saving is measured against. |
+| **P1** | Classic night setback. P0 plus setback to 19 °C outside occupancy and a self-tuning optimal start that learns how long the building takes to reheat. |
+| **P2** | Rule-based caretaker. P1 plus a weekend and holiday setback chosen by the outdoor mean, occupancy-aware ventilation, presence lighting with daylight dimming, ground-sensor control of the heating cables, and the tank following the radiator curve with a cheap-hour boost and a peak limiter. |
+| **P3** | The digital caretaker (ADR-009). Safety overlays (frost, air quality, icing, degraded telemetry), one active comfort profile, one named algorithm per setpoint, an independent validator against the site policy, a hash-pinned sensor-free fallback, and fault detection on the zone sensors. Every change is a governed tool call with its decision record. |
+
+### The numbers
+
+| Column | Meaning |
+|---|---|
+| NOK | cost for the year: Nord Pool day-ahead spot for the area plus a declared reference grid tariff (energy part and a monthly power charge on the highest hourly kW). Taxes excluded. |
+| saves NOK (min..max) | the saving against P0, mean over the seeds, with the smallest and largest seed in brackets. The seeds vary occupancy and the sensor faults, not the weather or the prices. |
+| % | the saving as a share of P0's cost in the same area. |
+| kWh % | the share of P0's energy saved; it differs from the NOK share because prices vary by hour. |
+| spot NOK/kWh | the energy-weighted average spot price P0 paid in the area. |
+| comfort dh | degree-hours outside the occupied comfort band, summed over the three zones. One zone one degree too warm for one hour is one degree-hour. Lower is better. |
+| icing h | hours in which the ground sensor reported a wet surface at −10..+1 °C while the heating cable was off: an icing hazard on the ramp. Lower is better. |
+| CO2>1000 ppm·h | ppm-hours above 1000 ppm while occupied, summed over the zones: how far and how long the air quality limit was exceeded. Lower is better. |
+| tank>60 °C h | hours the hot-water tank stood above 60 °C, beyond the heat pump's supply limit: wasted heat and a safety limit in the site policy. Zero is the target. |
+| submitted / held / fallback / escalated | how the caretaker routed each control step: proposed a change, held the current value, switched to the sensor-free fallback, or escalated to a person. |
+| optimizer faults injected / caught | deliberately corrupted proposals fed to the caretaker, and how many the validator refused. |
+| FDD alarms / true / fault episodes detected of | fault-detection alarms raised, how many pointed at a real seeded sensor fault, and how many of the seeded fault episodes were detected at all. |
+
+**What this does and does not show.** The savings are properties of the simulated building: real levers, synthetic plant. They show which levers matter and by how much relative to each other, and what the validator is worth when sensors lie. They are not a real-building saving, and a real site must be measured before any figure here means anything there.
+
 ## Year
 
 | Area | P0 NOK | P0 kWh | Spot NOK/kWh (P0) | P1 saves NOK (min..max) | P1 % | P1 kWh % | P2 saves NOK (min..max) | P2 % | P2 kWh % | P3 saves NOK (min..max) | P3 % | P3 kWh % |
