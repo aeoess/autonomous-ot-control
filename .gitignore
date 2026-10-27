@@ -13,3 +13,7 @@ deploy/.generated/
 deploy/.keys/
 # Local reference copies of Statsbygg PA 0802 PDFs; the sources and their digests are in docs/tfm.md
 docs/TFM/
+
+# Customer meter exports stay local, even anonymised; only code and, by decision, aggregates are committed.
+docs/ot_hourly_*.zip
+docs/ot_hourly_*/
