@@ -6,7 +6,7 @@
 # package's base dependency set is empty), so this installs the pinned REMORA
 # for its SDK plus this project's hash-locked runtime deps (httpx etc.).
 ARG REMORA_REPO=https://github.com/darklordVirtual/REMORA-research
-ARG REMORA_COMMIT=9b1763cabcc23f8bbdd2f629600ebee68ca0f08c
+ARG REMORA_COMMIT=123a5fd033bd1192fad05d366ec5263eb66c17b7
 
 FROM python:3.12-slim AS remora-src
 ARG REMORA_REPO

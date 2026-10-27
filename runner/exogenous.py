@@ -38,6 +38,7 @@ import argparse
 import hashlib
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -62,6 +63,7 @@ WEATHER_KINDS = {
 }
 AREAS = ("NO1", "NO2", "NO3", "NO4", "NO5")
 STEP_S = 3600
+PRICE_REQUEST_GAP_S = 0.25
 
 Fetch = Callable[[str], bytes]
 
@@ -101,16 +103,29 @@ def _iso(ts: datetime) -> str:
     return ts.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+#: Rows whose published time_end is not time_start + 1 h. The source mislabels
+#: the end of one row on the autumn DST change (it publishes all 25 hours, but
+#: one row reads 02:00+02:00..03:00+01:00). Every row is the hourly product
+#: starting at time_start; such rows are named in the snapshot's limitations.
+#: Reset per fetch.
+END_LABEL_FIXES: list[str] = []
+
+
 def parse_prices(raw: bytes) -> list[tuple[datetime, float]]:
-    """hvakosterstrommen rows -> [(start, NOK/kWh)], hourly, sorted, gap-free."""
+    """hvakosterstrommen rows -> [(start, NOK/kWh)], one hourly product per row.
+
+    The hour is taken from ``time_start``. A row whose ``time_end`` is not one
+    hour later is kept, and recorded in ``END_LABEL_FIXES``; duplicate start
+    hours and gaps are refused later by ``_series``.
+    """
     rows = json.loads(raw.decode("utf-8"))
     out = []
     for r in rows:
-        start = datetime.fromisoformat(r["time_start"])
-        end = datetime.fromisoformat(r["time_end"])
+        start = datetime.fromisoformat(r["time_start"]).astimezone(UTC)
+        end = datetime.fromisoformat(r["time_end"]).astimezone(UTC)
         if (end - start).total_seconds() != STEP_S:
-            raise ExogenousError(f"price row is not one hour: {r['time_start']}..{r['time_end']}")
-        out.append((start.astimezone(UTC), float(r["NOK_per_kWh"])))
+            END_LABEL_FIXES.append(f"{r['time_start']}..{r['time_end']} read as one hour from its start")
+        out.append((start, float(r["NOK_per_kWh"])))
     return sorted(out)
 
 
@@ -174,7 +189,10 @@ def fetch_kind(kind: str, site: dict[str, Any], first: date, last: date,
             return parse_weather(raw, kind)
     raws: dict[str, str] = {}
     points: list[tuple[datetime, float]] = []
-    for url in urls:
+    END_LABEL_FIXES.clear()
+    for i, url in enumerate(urls):
+        if kind == "price" and i and get is http_get:
+            time.sleep(PRICE_REQUEST_GAP_S)  # one day per request: stay gentle with a free service
         try:
             raw = get(url)
         except (urllib.error.URLError, OSError) as e:
@@ -191,7 +209,8 @@ def fetch_kind(kind: str, site: dict[str, Any], first: date, last: date,
                        "source (ENTSO-E Transparency) is NOT_ESTABLISHED",
                        "spot price only: no grid tariff, VAT or supplier markup",
                        "hourly as published by the source; whether an hour is an aggregate "
-                       "of 15-minute day-ahead products is UNCERTAIN"]
+                       "of 15-minute day-ahead products is UNCERTAIN",
+                       *(f"source time_end corrected: {r}" for r in END_LABEL_FIXES)]
     else:
         var, _, _, timing = WEATHER_KINDS[kind]
         source = {"name": "Open-Meteo historical weather API", "upstream": "ERA5 reanalysis",

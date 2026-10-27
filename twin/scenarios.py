@@ -61,6 +61,9 @@ class Scenario:
     #: Optional inputs the building-services plant needs (three-zone-hvac-v1):
     #: global horizontal irradiance, outdoor relative humidity, precipitation.
     extra_series: dict[str, Series] = field(default_factory=dict)
+    _holidays: frozenset[str] = field(default_factory=frozenset, repr=False)
+    _presence: dict[tuple[str, int], float] = field(default_factory=dict, repr=False)
+    _equipment: dict[tuple[str, int], float] = field(default_factory=dict, repr=False)
 
     @property
     def digest(self) -> str:
@@ -81,7 +84,54 @@ class Scenario:
         start_h, end_h = self.raw["occupancy"]["weekday_hours_utc"]
         dt = parse_utc(self.start_utc).timestamp() + t_s
         d = datetime.fromtimestamp(dt, UTC)
+        if d.date().isoformat() in self._holidays:
+            return False
         return d.weekday() < 5 and start_h <= d.hour < end_h
+
+    # -- realistic variation (optional block "variation"; absent = none) ------
+    def presence(self, zone_id: str, t_s: int) -> float:
+        """Share of the zone's design occupants present, 0..1 (1.0 without variation).
+
+        Seeded per zone and day: a normal draw around the declared mean, clipped
+        to the declared bounds, times the summer-holiday factor in that window.
+        Deterministic for a given scenario seed.
+        """
+        v = self.raw.get("variation")
+        if not v:
+            return 1.0
+        day = int(t_s // 86400)
+        key = (zone_id, day)
+        if key not in self._presence:
+            rng = random.Random(f"{self.seed}:presence:{zone_id}:{day}")
+            p = v["presence"]
+            share = min(p["max"], max(p["min"], rng.gauss(p["mean"], p["sd"])))
+            d = datetime.fromtimestamp(parse_utc(self.start_utc).timestamp() + t_s, UTC).date()
+            for w in v.get("reduced_presence", []):
+                if w["from"] <= d.isoformat() <= w["to"]:
+                    share *= float(w["factor"])
+            self._presence[key] = share
+        return self._presence[key]
+
+    def equipment_factor(self, zone_id: str, t_s: int) -> float:
+        """Hourly multiplier on the zone's equipment load (1.0 without variation).
+
+        Seeded per zone and hour: lognormal with the declared sigma, clipped."""
+        v = self.raw.get("variation")
+        if not v:
+            return 1.0
+        hour = int(t_s // 3600)
+        key = (zone_id, hour)
+        if key not in self._equipment:
+            e = v["equipment"]
+            rng = random.Random(f"{self.seed}:equipment:{zone_id}:{hour}")
+            self._equipment[key] = min(e["max"], max(e["min"], math.exp(rng.gauss(0.0, e["sigma"]))))
+        return self._equipment[key]
+
+    def mean_outdoor_24h(self, t_s: int) -> float:
+        """Mean outdoor temperature over the preceding 24 h (from t=0 at the start)."""
+        lo = max(0, t_s - 86400)
+        pts = list(range(lo, t_s + 1, 3600)) or [t_s]
+        return sum(self.outdoor_c(u) for u in pts) / len(pts)
 
     def gain_w_per_m2(self, t_s: int) -> float:
         occ = self.raw["occupancy"]
@@ -223,7 +273,18 @@ def load_scenario(source: str | Path | dict[str, Any], *, base_dir: str | Path |
     sc = Scenario(raw=raw, scenario_id=sid, seed=seed, start_utc=start,
                   duration_seconds=duration, disturbances=tuple(dist),
                   outdoor_series=outdoor_series, price_series=price_series,
-                  extra_series=extra)
+                  extra_series=extra,
+                  _holidays=frozenset(str(h) for h in occ.get("holidays", [])))
+    var = raw.get("variation")
+    if var is not None:
+        for k in ("presence", "equipment"):
+            _req(var, k, dict)
+        for k in ("mean", "sd", "min", "max"):
+            _req(var["presence"], k, (int, float))
+        for k in ("sigma", "min", "max"):
+            _req(var["equipment"], k, (int, float))
+        if not 0 <= var["presence"]["min"] <= var["presence"]["max"] <= 1:
+            raise ScenarioError("variation.presence bounds must lie in 0..1")
     rng = random.Random(seed)
     n = duration // sc._noise_step + 2
     std = 0.0 if outdoor_series is not None else float(o["noise_std_c"])

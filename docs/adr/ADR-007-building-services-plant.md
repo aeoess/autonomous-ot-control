@@ -178,3 +178,48 @@ documentation.
   the same inputs, never a real-building saving.
 - Slice B multiplies the governed surface from one tool to nine. Each needs
   its interlock and acceptance cases before it is `IMPLEMENTED`.
+
+## Addendum, 2026-10-27: seasons, realistic variation and a year of real data
+
+**Summer stop.** The seasonal config is `twin/fixtures/three-zone-hvac-seasonal.json` (`plant.heating_limit`).
+
+- Space heating switches off when the 24 h mean outdoor temperature rises above 15 degC. It switches back on below 12 degC. The state is evaluated once per simulated hour, with hysteresis.
+- While heating is off, the radiator circuit is off, the AHU heating coil is off, and the heat source (heat pump, district heating or electric boiler) does not charge the tank for space heating.
+- Domestic hot water is not modelled.
+- The new points are `HYD-01.HeatingSeason` and `OUT-01.Temp24hMean`.
+- `tests/unit/test_seasonal_realism.py` pins that there is no space heating outside the season for every heat source, and that the stop switches with hysteresis (1 to 12 switches in 2025).
+
+**Occupancy calendar and seeded variation.** Scenario keys `occupancy.holidays` and `variation`.
+
+- The 2025 Norwegian public holidays, plus Christmas Eve and New Year's Eve, are unoccupied.
+- Presence per zone and day is drawn from N(0.75, 0.15), clipped to 0.2..1.0.
+- Presence is reduced to 30 % in the July common holiday and to 40 % between Christmas and New Year.
+- The equipment load varies per hour, lognormal with sigma 0.2, clipped to 0.6..1.5 (`ZONE-*.EquipmentFactor`).
+- All of it is deterministic for a scenario seed, so arms and strategies see the same building on the same seed.
+
+**A year of verified data.** `scenarios/trondheim-2025-hvac-v1.json` covers 2025-01-01..2025-12-31 UTC, with 8 760 hourly values for each series:
+
+- NO3 day-ahead prices;
+- ERA5 outdoor temperature;
+- shortwave radiation;
+- relative humidity;
+- precipitation.
+
+The price source publishes all 25 hours on the autumn DST change, but labels one row's end as `02:00+02:00..03:00+01:00`. `runner.exogenous` reads every row as the hour starting at `time_start` and names the corrected rows in the snapshot's limitations.
+
+**First seasonal result** (`runner.seasonal`, three seeds, P1 against P0, arm A of the same policy; synthetic building, spot cost only):
+
+| | Result |
+|---|---|
+| P0 for the year | 44 145 kWh, 14 029 NOK |
+| P1 saving | 83 NOK (0.6 %), range 77..88 over the seeds; comfort marginally better |
+| Where the saving falls | almost all in October to March |
+| Spot prices | from 0.07 NOK/kWh (July) to 0.68 NOK/kWh (November) |
+| P0 by consumer | equipment 56 %, heating cables 17 %, heat pump 13 %, lighting 5 %, cooling 5 %, fans 4 % |
+
+Setback only reaches the heat pump's share. The large levers are cable control, lighting, AHU night stop and price-shifted tank charging. Those are the `SPECIFIED` tools and procedures above, and they need slice B before they can be measured.
+
+**Time compression.** REMORA measures cumulative-limit windows on its own wall clock. A governed demo that compresses a simulated day into minutes would hit the production budgets (4.0 degC per zone per hour) after a few simulated days, and REMORA then correctly refuses with `limit_exceeded`. That was found by the first live week.
+
+- The demo signs `deploy/ot/ot_limits.demo-accelerated.policy.json`, which uses a 60 s window. Its comment states why.
+- Cumulative limits are demonstrated in real time only, by acceptance case LIM-01 with the production policy.

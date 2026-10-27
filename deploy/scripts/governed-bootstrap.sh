@@ -39,7 +39,7 @@ rand() { "$PY" -c "import secrets;print('dev-'+secrets.token_urlsafe(32))"; }
 
 for k in TWIN_READ_TOKEN TWIN_ACTUATOR_TOKEN TWIN_CONTROL_TOKEN \
          REMORA_PG_PASSWORD \
-         REMORA_OPERATOR_TOKEN REMORA_APPROVER_TOKEN REMORA_SUPERVISOR_TOKEN REMORA_VIEWER_TOKEN \
+         REMORA_OPERATOR_TOKEN REMORA_APPROVER_TOKEN REMORA_SUPERVISOR_TOKEN REMORA_VIEWER_TOKEN REMORA_VERIFIER_TOKEN \
          REMORA_PDP_SIGNING_KEY REMORA_LEASE_SIGNING_KEY REMORA_AUDIT_SIGNING_KEY \
          REMORA_ENVELOPE_SIGNING_KEY; do
   append_if_missing "$k" "$(rand)"
@@ -73,7 +73,7 @@ out="$(docker run --rm --network none \
   -e OT_LIMITS_SIGNING_SEED="$(cat deploy/.keys/limits.seed)" \
   -v "$PWD/deploy/.generated:/out" \
   --entrypoint python autonomous-ot-control/remora-ot:local \
-  /app/sign_deployment.py --out /out)"
+  /app/sign_deployment.py --out /out --limits "/app/${LIMITS_POLICY:-ot_limits.policy.json}")"
 
 while IFS='=' read -r key val; do
   case "$key" in
@@ -82,5 +82,8 @@ while IFS='=' read -r key val; do
     *) echo "governed-bootstrap: unexpected signer output: ${key}" >&2; exit 1 ;;
   esac
 done <<< "$out"
+
+# Work-order source REMORA reads on every assess (the demo appends day plans).
+cp deploy/ot/ot_intents.json deploy/.generated/ot_intents.json
 
 echo "governed-bootstrap: .env, deploy/.keys/ and deploy/.generated/ are ready (all gitignored)."

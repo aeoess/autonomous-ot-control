@@ -145,15 +145,42 @@ class Twin:
         self.setpoints = replace(self.setpoints, zones=zones)
         occupied = self.scenario.occupied(t)
         design = self.config["design_occupants"]
+        sc = self.scenario
         exo = plant_mod.Exogenous(
-            outdoor_c=self.scenario.outdoor_c(t), solar_w_m2=self.scenario.solar_w_m2(t),
-            outdoor_rh_pct=self.scenario.outdoor_rh_pct(t),
-            occupants={zid: int(design[zid]) if occupied else 0 for zid in self.zones},
-            icing_risk=self.scenario.icing_risk(t))
+            outdoor_c=sc.outdoor_c(t), solar_w_m2=sc.solar_w_m2(t),
+            outdoor_rh_pct=sc.outdoor_rh_pct(t),
+            occupants={zid: round(int(design[zid]) * sc.presence(zid, t)) if occupied else 0
+                       for zid in self.zones},
+            icing_risk=sc.icing_risk(t),
+            heating_season=self._heating_season(t),
+            equipment_factor={zid: sc.equipment_factor(zid, t) for zid in self.zones})
         res = plant_mod.step(self.plant, self.plant_state, temps, self.setpoints, exo, dt)
         self.plant_state = res.state
         self.points = res.points
         return res.zone_heat_w, res.electric_w, res.district_heat_w
+
+    def _heating_season(self, t: int) -> bool:
+        """Summer stop with hysteresis on the 24 h mean outdoor temperature.
+
+        Config ``plant.heating_limit`` = {"on_below_c", "off_above_c"}; absent
+        means heating is always available (the v1 behaviour). Evaluated once per
+        simulated hour, as a BMS does.
+        """
+        lim = self.config["plant"].get("heating_limit")
+        if not lim:
+            return True
+        hour = t // 3600
+        if getattr(self, "_season_hour", None) != hour:
+            mean = self.scenario.mean_outdoor_24h(t)
+            prev = getattr(self, "_season_on", None)
+            if prev is None:
+                prev = mean < float(lim["off_above_c"])
+            if prev and mean > float(lim["off_above_c"]):
+                prev = False
+            elif not prev and mean < float(lim["on_below_c"]):
+                prev = True
+            self._season_on, self._season_hour, self.outdoor_mean_24h = prev, hour, mean
+        return bool(self._season_on)
 
     def district_heat_price(self, t: int) -> float:
         """Declared district-heating tariff: a spot-linked energy price (ASSUMPTION)."""
@@ -252,7 +279,7 @@ class Twin:
 
     def status(self) -> dict[str, Any]:
         with self._lock:
-            return {"building_id": self.config["building_id"], "model": MODEL_ID,
+            return {"building_id": self.config["building_id"], "model": self.model_id,
                     "config_digest": self.config_digest, "scenario_id": self.scenario.scenario_id,
                     "scenario_digest": self.scenario.digest, "seed": self.scenario.seed,
                     "state_revision": self.revision, "stop_switch": self.stop_switch,

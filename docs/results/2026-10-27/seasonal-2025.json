@@ -1,0 +1,437 @@
+{
+  "seeds": [
+    177,
+    178,
+    179
+  ],
+  "days": 365,
+  "table": {
+    "month": {
+      "2025-01": {
+        "p0_kwh": 5557.743375381403,
+        "p0_cost_nok": 1702.5817110246803,
+        "p1_cost_nok": 1687.1510950254285,
+        "savings_nok_mean": 15.43061599925189,
+        "savings_nok_min": 6.834135123174519,
+        "savings_nok_max": 24.716572445592192,
+        "savings_kwh_mean": 23.965973757423853,
+        "savings_pct": 0.9063069278457797,
+        "comfort_delta_dh_mean": -0.7334783329040165,
+        "heating_season_h": 743.9999999999974,
+        "p0_breakdown_kwh": {
+          "heat_pump": 1047.5047305689618,
+          "backup_heater": 0.0,
+          "fans": 136.6610000000014,
+          "cooling": 81.04333921212813,
+          "heating_cables": 1800.0000000000216,
+          "lighting": 369.616317400001,
+          "equipment": 2122.917988200374
+        },
+        "mean_price_nok_per_kwh": 0.3063440673720995
+      },
+      "2025-02": {
+        "p0_kwh": 4901.6551671994885,
+        "p0_cost_nok": 1887.533194298833,
+        "p1_cost_nok": 1874.7432621575715,
+        "savings_nok_mean": 12.789932141261337,
+        "savings_nok_min": 4.215099964613955,
+        "savings_nok_max": 23.904571228037412,
+        "savings_kwh_mean": 18.777840080120466,
+        "savings_pct": 0.6776003823345977,
+        "comfort_delta_dh_mean": -1.0426845259575346,
+        "heating_season_h": 671.9999999999977,
+        "p0_breakdown_kwh": {
+          "heat_pump": 872.2122483436264,
+          "backup_heater": 0.0,
+          "fans": 122.73800000000128,
+          "cooling": 77.31370362323857,
+          "heating_cables": 1638.0000000000261,
+          "lighting": 265.3941883999998,
+          "equipment": 1925.9970268325749
+        },
+        "mean_price_nok_per_kwh": 0.3850807798414053
+      },
+      "2025-03": {
+        "p0_kwh": 4310.536106671653,
+        "p0_cost_nok": 908.7234261744089,
+        "p1_cost_nok": 904.9710948844294,
+        "savings_nok_mean": 3.7523312899796415,
+        "savings_nok_min": 1.5603485884594193,
+        "savings_nok_max": 5.108581843287993,
+        "savings_kwh_mean": 23.278744927213967,
+        "savings_pct": 0.4129233584058024,
+        "comfort_delta_dh_mean": -0.801986135808781,
+        "heating_season_h": 743.9999999999974,
+        "p0_breakdown_kwh": {
+          "heat_pump": 683.1268293920582,
+          "backup_heater": 0.0,
+          "fans": 134.49100000000155,
+          "cooling": 104.89462562226642,
+          "heating_cables": 1071.000000000014,
+          "lighting": 225.04929599999946,
+          "equipment": 2091.9743556570097
+        },
+        "mean_price_nok_per_kwh": 0.2108144796114636
+      },
+      "2025-04": {
+        "p0_kwh": 3085.975389458415,
+        "p0_cost_nok": 571.5245886800067,
+        "p1_cost_nok": 570.1478848224475,
+        "savings_nok_mean": 1.3767038575591262,
+        "savings_nok_min": 0.2685638370594461,
+        "savings_nok_max": 2.8449511147982776,
+        "savings_kwh_mean": 20.628210528849497,
+        "savings_pct": 0.24088269950707836,
+        "comfort_delta_dh_mean": -0.16730021928893515,
+        "heating_season_h": 719.9999999999975,
+        "p0_breakdown_kwh": {
+          "heat_pump": 452.5408869744725,
+          "backup_heater": 0.0,
+          "fans": 128.34500000000148,
+          "cooling": 127.21178081751573,
+          "heating_cables": 251.99999999999895,
+          "lighting": 133.06687479999968,
+          "equipment": 1992.8108468663331
+        },
+        "mean_price_nok_per_kwh": 0.18520063077376275
+      },
+      "2025-05": {
+        "p0_kwh": 2768.121476356156,
+        "p0_cost_nok": 389.6309618870064,
+        "p1_cost_nok": 387.35125093887353,
+        "savings_nok_mean": 2.279710948132864,
+        "savings_nok_min": 0.5808079335474758,
+        "savings_nok_max": 3.9995255325729886,
+        "savings_kwh_mean": 21.338617423179432,
+        "savings_pct": 0.5850949157356709,
+        "comfort_delta_dh_mean": 1.0147895579117403,
+        "heating_season_h": 743.9999999999974,
+        "p0_breakdown_kwh": {
+          "heat_pump": 309.27466523662065,
+          "backup_heater": 0.0,
+          "fans": 133.6510000000015,
+          "cooling": 162.88559453300866,
+          "heating_cables": 0.0,
+          "lighting": 88.88029600000011,
+          "equipment": 2073.4299205866073
+        },
+        "mean_price_nok_per_kwh": 0.14075645350647722
+      },
+      "2025-06": {
+        "p0_kwh": 2560.5135471224507,
+        "p0_cost_nok": 338.8724953335001,
+        "p1_cost_nok": 339.41077945788373,
+        "savings_nok_mean": -0.5382841243836083,
+        "savings_nok_min": -1.262198122245536,
+        "savings_nok_max": 0.5864819999633255,
+        "savings_kwh_mean": 6.642726741435278,
+        "savings_pct": -0.15884562240846897,
+        "comfort_delta_dh_mean": 1.795301435441625,
+        "heating_season_h": 509.9999999999989,
+        "p0_breakdown_kwh": {
+          "heat_pump": 113.71133715063344,
+          "backup_heater": 0.39999999999999997,
+          "fans": 128.10000000000136,
+          "cooling": 230.31840120625588,
+          "heating_cables": 0.0,
+          "lighting": 58.22401179999996,
+          "equipment": 2029.7597969656965
+        },
+        "mean_price_nok_per_kwh": 0.1323455194034536
+      },
+      "2025-07": {
+        "p0_kwh": 2824.6205969024545,
+        "p0_cost_nok": 211.53127857940763,
+        "p1_cost_nok": 211.53222361031234,
+        "savings_nok_mean": -0.0009450309047072855,
+        "savings_nok_min": -0.014484173836535774,
+        "savings_nok_max": 0.020717695300845662,
+        "savings_kwh_mean": -0.23189572309032278,
+        "savings_pct": -0.0004467570522212517,
+        "comfort_delta_dh_mean": 0.7727967891773536,
+        "heating_season_h": 160.99999999999983,
+        "p0_breakdown_kwh": {
+          "heat_pump": 19.52637800497056,
+          "backup_heater": 0.0,
+          "fans": 121.05100000000138,
+          "cooling": 501.56226508998617,
+          "heating_cables": 0.0,
+          "lighting": 42.77990019999992,
+          "equipment": 2139.7010536075754
+        },
+        "mean_price_nok_per_kwh": 0.07488838635934958
+      },
+      "2025-08": {
+        "p0_kwh": 2671.924653982404,
+        "p0_cost_nok": 210.5652645943428,
+        "p1_cost_nok": 210.8550572313267,
+        "savings_nok_mean": -0.2897926369838994,
+        "savings_nok_min": -0.747096680442155,
+        "savings_nok_max": 0.40885790317133797,
+        "savings_kwh_mean": 2.453136847841961,
+        "savings_pct": -0.13762604081076207,
+        "comfort_delta_dh_mean": 0.5423056174593152,
+        "heating_season_h": 310.9999999999994,
+        "p0_breakdown_kwh": {
+          "heat_pump": 91.43075729006293,
+          "backup_heater": 8.60000000000001,
+          "fans": 134.6310000000014,
+          "cooling": 257.21982975830156,
+          "heating_cables": 0.0,
+          "lighting": 78.8866772,
+          "equipment": 2101.156389734282
+        },
+        "mean_price_nok_per_kwh": 0.07880658770841578
+      },
+      "2025-09": {
+        "p0_kwh": 2675.1075027282677,
+        "p0_cost_nok": 520.3365687561281,
+        "p1_cost_nok": 516.8483618859706,
+        "savings_nok_mean": 3.4882068701575313,
+        "savings_nok_min": 2.814013826907285,
+        "savings_nok_max": 4.04336986087128,
+        "savings_kwh_mean": 7.948165849571524,
+        "savings_pct": 0.6703751148023555,
+        "comfort_delta_dh_mean": 0.5355009783374953,
+        "heating_season_h": 272.99999999999955,
+        "p0_breakdown_kwh": {
+          "heat_pump": 111.72659135860141,
+          "backup_heater": 6.100000000000004,
+          "fans": 132.72000000000133,
+          "cooling": 222.96570553229657,
+          "heating_cables": 0.0,
+          "lighting": 131.94019239999992,
+          "equipment": 2069.6550134373515
+        },
+        "mean_price_nok_per_kwh": 0.19451052648368386
+      },
+      "2025-10": {
+        "p0_kwh": 3106.432887898661,
+        "p0_cost_nok": 968.9486366823861,
+        "p1_cost_nok": 962.9544810620595,
+        "savings_nok_mean": 5.994155620326637,
+        "savings_nok_min": 5.116117610047695,
+        "savings_nok_max": 6.981592706065385,
+        "savings_kwh_mean": 15.848922138811758,
+        "savings_pct": 0.6186247024249104,
+        "comfort_delta_dh_mean": -0.24026725796932938,
+        "heating_season_h": 743.9999999999974,
+        "p0_breakdown_kwh": {
+          "heat_pump": 374.8972726486413,
+          "backup_heater": 0.0,
+          "fans": 138.0260000000016,
+          "cooling": 143.03986878612426,
+          "heating_cables": 0.0,
+          "lighting": 309.6821432000004,
+          "equipment": 2140.7876032639497
+        },
+        "mean_price_nok_per_kwh": 0.3119168099388199
+      },
+      "2025-11": {
+        "p0_kwh": 5106.687359399778,
+        "p0_cost_nok": 3483.65004459032,
+        "p1_cost_nok": 3465.7481116155664,
+        "savings_nok_mean": 17.901932974753738,
+        "savings_nok_min": 15.933233040163941,
+        "savings_nok_max": 20.272429902242948,
+        "savings_kwh_mean": 23.55153383182672,
+        "savings_pct": 0.5138843668454367,
+        "comfort_delta_dh_mean": -0.7703400967550434,
+        "heating_season_h": 719.9999999999975,
+        "p0_breakdown_kwh": {
+          "heat_pump": 741.5311995663736,
+          "backup_heater": 0.0,
+          "fans": 130.02500000000137,
+          "cooling": 93.95672093830638,
+          "heating_cables": 1791.0000000000284,
+          "lighting": 330.4963526000009,
+          "equipment": 2019.6780862957437
+        },
+        "mean_price_nok_per_kwh": 0.682174137443138
+      },
+      "2025-12": {
+        "p0_kwh": 4575.612203439302,
+        "p0_cost_nok": 2835.0300009275647,
+        "p1_cost_nok": 2814.5009155377284,
+        "savings_nok_mean": 20.52908538983623,
+        "savings_nok_min": 18.903421583438103,
+        "savings_nok_max": 23.257291212732525,
+        "savings_kwh_mean": 30.849870944531478,
+        "savings_pct": 0.7241223332070392,
+        "comfort_delta_dh_mean": -0.9955541327636379,
+        "heating_season_h": 743.9999999999974,
+        "p0_breakdown_kwh": {
+          "heat_pump": 858.9469812767778,
+          "backup_heater": 0.0,
+          "fans": 127.28100000000117,
+          "cooling": 85.6823045530553,
+          "heating_cables": 1125.0000000000175,
+          "lighting": 329.6762034666683,
+          "equipment": 2049.025714143536
+        },
+        "mean_price_nok_per_kwh": 0.6195957775435138
+      }
+    },
+    "quarter": {
+      "2025-Q1": {
+        "p0_kwh": 14769.934649252546,
+        "p0_cost_nok": 4498.838331497922,
+        "p1_cost_nok": 4466.865452067429,
+        "savings_nok_mean": 31.972879430492867,
+        "savings_nok_min": 24.064822236890905,
+        "savings_nok_max": 36.527046265184254,
+        "savings_kwh_mean": 66.02255876475829,
+        "savings_pct": 0.7106918958754238,
+        "comfort_delta_dh_mean": -2.578148994670329,
+        "heating_season_h": 2159.999999999996,
+        "p0_breakdown_kwh": {
+          "heat_pump": 2602.8438083046453,
+          "backup_heater": 0.0,
+          "fans": 393.89000000000414,
+          "cooling": 263.2516684576332,
+          "heating_cables": 4509.000000000061,
+          "lighting": 860.0598018000001,
+          "equipment": 6140.88937068996
+        },
+        "mean_price_nok_per_kwh": 0.3045943288398769
+      },
+      "2025-Q2": {
+        "p0_kwh": 8414.610412937021,
+        "p0_cost_nok": 1300.0280459005132,
+        "p1_cost_nok": 1296.9099152192048,
+        "savings_nok_mean": 3.1181306813083816,
+        "savings_nok_min": 2.3362597482291676,
+        "savings_nok_max": 4.012241048309079,
+        "savings_kwh_mean": 48.60955469346421,
+        "savings_pct": 0.23985103176358716,
+        "comfort_delta_dh_mean": 2.6427907740643852,
+        "heating_season_h": 1973.9999999999964,
+        "p0_breakdown_kwh": {
+          "heat_pump": 875.5268893617266,
+          "backup_heater": 0.39999999999999997,
+          "fans": 390.0960000000042,
+          "cooling": 520.4157765567804,
+          "heating_cables": 251.99999999999895,
+          "lighting": 280.1711825999999,
+          "equipment": 6096.000564418635
+        },
+        "mean_price_nok_per_kwh": 0.15449652237039857
+      },
+      "2025-Q3": {
+        "p0_kwh": 8171.652753613126,
+        "p0_cost_nok": 942.4331119298786,
+        "p1_cost_nok": 939.2356427276096,
+        "savings_nok_mean": 3.1974692022689246,
+        "savings_nok_min": 2.880857937552719,
+        "savings_nok_max": 3.4977465533538634,
+        "savings_kwh_mean": 10.169406974323161,
+        "savings_pct": 0.3392781049173102,
+        "comfort_delta_dh_mean": 1.8506033849743062,
+        "heating_season_h": 744.9999999999987,
+        "p0_breakdown_kwh": {
+          "heat_pump": 222.68372665363492,
+          "backup_heater": 14.700000000000014,
+          "fans": 388.40200000000397,
+          "cooling": 981.7478003805842,
+          "heating_cables": 0.0,
+          "lighting": 253.60676979999982,
+          "equipment": 6310.512456779209
+        },
+        "mean_price_nok_per_kwh": 0.11532955943498435
+      },
+      "2025-Q4": {
+        "p0_kwh": 12788.732450737742,
+        "p0_cost_nok": 7287.62868220027,
+        "p1_cost_nok": 7243.203508215354,
+        "savings_nok_mean": 44.425173984916604,
+        "savings_nok_min": 41.519675175340126,
+        "savings_nok_max": 46.17211695896185,
+        "savings_kwh_mean": 70.25032691516996,
+        "savings_pct": 0.6095971120677874,
+        "comfort_delta_dh_mean": -2.0061614874880127,
+        "heating_season_h": 2207.999999999996,
+        "p0_breakdown_kwh": {
+          "heat_pump": 1975.3754534917925,
+          "backup_heater": 0.0,
+          "fans": 395.3320000000039,
+          "cooling": 322.6788942774858,
+          "heating_cables": 2916.000000000046,
+          "lighting": 969.8546992666697,
+          "equipment": 6209.491403703228
+        },
+        "mean_price_nok_per_kwh": 0.5698476147086704
+      }
+    },
+    "half": {
+      "2025-H1": {
+        "p0_kwh": 23184.545062189565,
+        "p0_cost_nok": 5798.866377398435,
+        "p1_cost_nok": 5763.775367286634,
+        "savings_nok_mean": 35.091010111801246,
+        "savings_nok_min": 28.077063285199984,
+        "savings_nok_max": 38.86330601341342,
+        "savings_kwh_mean": 114.63211345822249,
+        "savings_pct": 0.6051356908062476,
+        "comfort_delta_dh_mean": 0.06464177939408462,
+        "heating_season_h": 4133.999999999996,
+        "p0_breakdown_kwh": {
+          "heat_pump": 3478.370697666372,
+          "backup_heater": 0.39999999999999997,
+          "fans": 783.9860000000089,
+          "cooling": 783.6674450144134,
+          "heating_cables": 4761.000000000061,
+          "lighting": 1140.2309843999997,
+          "equipment": 12236.889935108598
+        },
+        "mean_price_nok_per_kwh": 0.25011775567921307
+      },
+      "2025-H2": {
+        "p0_kwh": 20960.385204350867,
+        "p0_cost_nok": 8230.06179413015,
+        "p1_cost_nok": 8182.439150942963,
+        "savings_nok_mean": 47.62264318718553,
+        "savings_nok_min": 44.400533112892845,
+        "savings_nok_max": 49.38592007486295,
+        "savings_kwh_mean": 80.41973388949312,
+        "savings_pct": 0.5786425956260861,
+        "comfort_delta_dh_mean": -0.15555810251350977,
+        "heating_season_h": 2952.9999999999973,
+        "p0_breakdown_kwh": {
+          "heat_pump": 2198.059180145428,
+          "backup_heater": 14.700000000000014,
+          "fans": 783.7340000000086,
+          "cooling": 1304.4266946580703,
+          "heating_cables": 2916.000000000046,
+          "lighting": 1223.4614690666692,
+          "equipment": 12520.003860482442
+        },
+        "mean_price_nok_per_kwh": 0.3926484038290379
+      }
+    },
+    "year": {
+      "2025": {
+        "p0_kwh": 44144.93026654043,
+        "p0_cost_nok": 14028.928171528585,
+        "p1_cost_nok": 13946.214518229597,
+        "savings_nok_mean": 82.71365329898678,
+        "savings_nok_min": 77.15853965900169,
+        "savings_nok_max": 88.24922608827546,
+        "savings_kwh_mean": 195.0518473477156,
+        "savings_pct": 0.5895935333595365,
+        "comfort_delta_dh_mean": -0.09091632311943461,
+        "heating_season_h": 7086.999999999996,
+        "p0_breakdown_kwh": {
+          "heat_pump": 5676.429877811799,
+          "backup_heater": 15.100000000000014,
+          "fans": 1567.7200000000214,
+          "cooling": 2088.0941396724843,
+          "heating_cables": 7677.000000000106,
+          "lighting": 2363.6924534666687,
+          "equipment": 24756.893795591055
+        },
+        "mean_price_nok_per_kwh": 0.3177925095095639
+      }
+    }
+  },
+  "scope": "Synthetic, uncalibrated three-zone building-services twin; verified NO3 day-ahead spot prices and ERA5 weather for 2025 at a fictitious Trondheim site; spot cost only (no grid tariff, VAT or markup); P1 applied directly (arm A of the same policy). Not a real-building saving."
+}

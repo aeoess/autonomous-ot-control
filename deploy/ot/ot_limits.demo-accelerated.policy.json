@@ -1,0 +1,51 @@
+{
+  "schema": "remora-cumulative-limits/v1",
+  "comment": "Accelerated-simulation variant, for runner.demo ONLY. REMORA measures limit windows on its own wall clock, while the demo compresses a simulated day into minutes; the production budgets (ot_limits.policy.json) would then refuse a normal day's changes as if they happened within one real hour (found 2026-10-27). Here the zone-01/02 window is 60 s with the same 4.0 degC budget, which bounds movement per simulated controller step at the demo's pace. Cumulative-limit behaviour itself is demonstrated in real time by the acceptance case LIM-01 with the production policy, never by this file.",
+  "coverage": "all_writes",
+  "meters": {
+    "set_zone_setpoint": [
+      {
+        "quantity": "setpoint_movement",
+        "kind": "change",
+        "argument": "setpoint_c",
+        "scale": 10,
+        "unit": "decidegrees",
+        "resource_argument": "zone_id",
+        "observed": true,
+        "previous_field": "previous_setpoint_c"
+      }
+    ]
+  },
+  "limits": [
+    {
+      "limit_id": "zone-01-movement",
+      "tenant": "ot-pilot",
+      "quantity": "setpoint_movement",
+      "unit": "decidegrees",
+      "resource": "ZONE-01",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "zone-02-movement",
+      "tenant": "ot-pilot",
+      "quantity": "setpoint_movement",
+      "unit": "decidegrees",
+      "resource": "ZONE-02",
+      "principal": "*",
+      "max": 40,
+      "window_seconds": 60
+    },
+    {
+      "limit_id": "zone-03-movement",
+      "tenant": "ot-pilot",
+      "quantity": "setpoint_movement",
+      "unit": "decidegrees",
+      "resource": "ZONE-03",
+      "principal": "*",
+      "max": 5,
+      "window_seconds": 3600
+    }
+  ]
+}

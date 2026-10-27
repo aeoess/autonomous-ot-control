@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "tools": {
+    "read_zone_state": {
+      "risk_tier": "low",
+      "domain": "building_automation",
+      "action_type": "read",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true
+    },
+    "read_building_energy": {
+      "risk_tier": "low",
+      "domain": "building_automation",
+      "action_type": "read",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true
+    },
+    "set_zone_setpoint": {
+      "risk_tier": "medium",
+      "domain": "building_automation",
+      "action_type": "write",
+      "target_environment": "simulated_pilot",
+      "schema_valid": true,
+      "rollback_available": true
+    }
+  }
+}

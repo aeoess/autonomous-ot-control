@@ -121,6 +121,25 @@
       "resolution": null
     },
     {
+      "id": "OUT-01.Temp24hMean",
+      "system": "outdoor",
+      "kind": "AV",
+      "unit": "degC",
+      "range": [
+        -40,
+        35
+      ],
+      "description": "Mean outdoor temperature over the preceding 24 h; drives the summer stop.",
+      "source": "Scenario.mean_outdoor_24h",
+      "affects": [
+        "HYD-01.HeatingSeason"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
       "id": "GRID-01.SpotPrice",
       "system": "market",
       "kind": "EX",
@@ -194,6 +213,25 @@
         "ZONE-01.LightingPower",
         "ZONE-01.EquipmentPower",
         "ZONE-01.AirTemp"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "ZONE-01.EquipmentFactor",
+      "system": "ZONE-01",
+      "kind": "EX",
+      "unit": "x",
+      "range": [
+        0.5,
+        1.6
+      ],
+      "description": "Hourly multiplier on the equipment load, open-plan office (seeded lognormal; 1.0 without variation).",
+      "source": "Scenario.equipment_factor",
+      "affects": [
+        "ZONE-01.EquipmentPower"
       ],
       "variants": [],
       "writable_via": null,
@@ -527,6 +565,25 @@
       "resolution": null
     },
     {
+      "id": "ZONE-02.EquipmentFactor",
+      "system": "ZONE-02",
+      "kind": "EX",
+      "unit": "x",
+      "range": [
+        0.5,
+        1.6
+      ],
+      "description": "Hourly multiplier on the equipment load, meeting room (seeded lognormal; 1.0 without variation).",
+      "source": "Scenario.equipment_factor",
+      "affects": [
+        "ZONE-02.EquipmentPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
       "id": "ZONE-02.HeatingSetpoint",
       "system": "ZONE-02",
       "kind": "SP",
@@ -853,6 +910,25 @@
       "resolution": null
     },
     {
+      "id": "ZONE-03.EquipmentFactor",
+      "system": "ZONE-03",
+      "kind": "EX",
+      "unit": "x",
+      "range": [
+        0.5,
+        1.6
+      ],
+      "description": "Hourly multiplier on the equipment load, laboratory (constant equipment load) (seeded lognormal; 1.0 without variation).",
+      "source": "Scenario.equipment_factor",
+      "affects": [
+        "ZONE-03.EquipmentPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
       "id": "ZONE-03.HeatingSetpoint",
       "system": "ZONE-03",
       "kind": "SP",
@@ -1149,6 +1225,31 @@
         "ZONE-01.RadiatorPower",
         "ZONE-02.RadiatorPower",
         "ZONE-03.RadiatorPower"
+      ],
+      "variants": [],
+      "writable_via": null,
+      "interlocks": [],
+      "resolution": null
+    },
+    {
+      "id": "HYD-01.HeatingSeason",
+      "system": "hydronic",
+      "kind": "BV",
+      "unit": "bool",
+      "range": [
+        0,
+        1
+      ],
+      "description": "Space heating enabled. Off (summer stop) when the 24 h mean outdoor temperature rises above plant.heating_limit.off_above_c, on again below on_below_c. Off means radiator circuit and AHU heating coil off and no tank charging for space heating; domestic hot water is not modelled.",
+      "source": "Twin._heating_season",
+      "affects": [
+        "ZONE-01.RadiatorValve",
+        "ZONE-02.RadiatorValve",
+        "ZONE-03.RadiatorValve",
+        "AHU-01.HeatingCoilPower",
+        "HP-01.Running",
+        "DH-01.HeatPower",
+        "EB-01.ElectricPower"
       ],
       "variants": [],
       "writable_via": null,
