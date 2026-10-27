@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edge-result-v1",
+  "title": "An offline edge's verdicts over a fixture set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "edge_id",
+    "fixtures_sha256",
+    "verdicts"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-edge-result/v1"
+    },
+    "edge_id": {
+      "type": "string"
+    },
+    "fixtures_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "edge_pin": {
+      "type": "string"
+    },
+    "verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "verdict",
+          "reason"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "ESTABLISHED",
+              "CONTRADICTED",
+              "NOT_ESTABLISHED"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

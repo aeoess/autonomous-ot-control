@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "federation-case-v1",
+  "title": "One decision trail handed to an offline federation edge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "case_id",
+    "kind",
+    "claim",
+    "decision",
+    "execution",
+    "twin_operation",
+    "observation",
+    "remora_evidence",
+    "evidence_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-federation-case/v1"
+    },
+    "case_id": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "positive",
+        "negative"
+      ]
+    },
+    "fault": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "For a negative case, the single fault seeded; null for a positive case."
+    },
+    "claim": {
+      "type": "object",
+      "required": [
+        "proposal_id",
+        "tool",
+        "zone_id",
+        "setpoint_c",
+        "claimed_effect"
+      ],
+      "properties": {
+        "proposal_id": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "zone_id": {
+          "type": "string"
+        },
+        "setpoint_c": {
+          "type": "number"
+        },
+        "claimed_effect": {
+          "type": "string"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": [
+        "decision",
+        "approved"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string"
+        },
+        "reasons": {
+          "type": "array"
+        },
+        "approved": {
+          "type": "boolean"
+        },
+        "reviewer": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": [
+        "executed"
+      ],
+      "properties": {
+        "executed": {
+          "type": "boolean"
+        },
+        "dispatched_at_sim_s": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "executions": {
+          "type": "integer"
+        }
+      }
+    },
+    "twin_operation": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "The twin's own operation record for operation_id = proposal_id (an independent witness)."
+    },
+    "observation": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "observed_setpoint_c": {
+          "type": "number"
+        },
+        "observed_at_sim_s": {
+          "type": "integer"
+        }
+      }
+    },
+    "remora_evidence": {
+      "description": "REMORA's evidence bundle for the proposal, verbatim."
+    },
+    "remora_envelope": {
+      "description": "REMORA's DecisionEnvelope for the proposal, verbatim."
+    },
+    "evidence_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the canonical JSON of remora_evidence."
+    }
+  }
+}

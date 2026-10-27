@@ -1,0 +1,46 @@
+name: federation-edge
+# Runs every changed federation edge against the frozen fixtures, sandboxed
+# (deploy/scripts/run-edge.sh), plus the template as a self-test that the
+# fixtures still discriminate. No secrets, read-only token, forks included.
+on:
+  pull_request:
+    paths:
+      - "federation/**"
+      - "runner/edge_check.py"
+      - "deploy/scripts/run-edge.sh"
+      - "contracts/edge-*.json"
+      - "contracts/federation-case-v1.schema.json"
+permissions:
+  contents: read
+jobs:
+  edges:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Which edges changed
+        id: changed
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          edges=$(git diff --name-only "$base"...HEAD -- federation/edges \
+                  | awk -F/ 'NF>=3 && $3!="_template"{print $3}' | sort -u | tr '\n' ' ')
+          echo "edges=${edges}" >> "$GITHUB_OUTPUT"
+          echo "changed edges: ${edges:-none}"
+      - name: Template self-test (fixtures must still catch every seeded fault)
+        run: ./deploy/scripts/run-edge.sh _template
+      - name: Run changed edges
+        if: steps.changed.outputs.edges != ''
+        run: |
+          rc=0
+          for e in ${{ steps.changed.outputs.edges }}; do
+            ./deploy/scripts/run-edge.sh "$e" || rc=1
+          done
+          exit $rc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: edge-reports-${{ github.run_id }}
+          path: artifacts/edges/
