@@ -19,7 +19,8 @@
     },
     "fixtures_sha256": {
       "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 over the raw bytes of the fixture set's manifest.json."
     },
     "edge_pin": {
       "type": "string"
@@ -47,6 +48,10 @@
           },
           "reason": {
             "type": "string"
+          },
+          "claim_id": {
+            "type": "string",
+            "description": "Optional: the claim the edge found contradicted or could not establish."
           }
         }
       }

@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edge-run-record-v1",
+  "title": "One run of a federation edge against a sealed fixture set (federation/records/<edge>/<run>.json)",
+  "type": "object",
+  "required": [
+    "schema",
+    "record_id",
+    "edge",
+    "fixtures",
+    "operator",
+    "host",
+    "independence_level",
+    "environment",
+    "command",
+    "started_at",
+    "completed_at",
+    "status",
+    "result",
+    "cases",
+    "establishes",
+    "does_not_establish",
+    "ceiling",
+    "runner_contract",
+    "run_ref"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-edge-run-record/v1"
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "edge_id",
+        "project",
+        "maintainer",
+        "boundary",
+        "mode",
+        "pin",
+        "evaluator",
+        "claims"
+      ]
+    },
+    "fixtures": {
+      "type": "object",
+      "required": [
+        "fixture_set",
+        "path",
+        "manifest_sha256",
+        "package_digest",
+        "testbed_commit"
+      ],
+      "properties": {
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "package_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "operator": {
+      "enum": [
+        "PRODUCER",
+        "EXTERNAL"
+      ],
+      "description": "PRODUCER: run by this repository's maintainers or its CI. EXTERNAL: run by the edge's maintainer."
+    },
+    "host": {
+      "enum": [
+        "PRODUCER_CONTROLLED",
+        "EXTERNAL"
+      ]
+    },
+    "independence_level": {
+      "enum": [
+        "L0_SELF_TEST",
+        "L1_REPRODUCTION",
+        "L2_SECOND_IMPLEMENTATION",
+        "L3_INDEPENDENT_RECOMPUTATION",
+        "L4_INDEPENDENT_HOST_RUN"
+      ],
+      "description": "Derived by runner.edge_check.derive_level from edge.evaluator, operator and host. A record whose level is not the derived one is refused."
+    },
+    "environment": {
+      "type": "string"
+    },
+    "command": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "completed_at": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "ok",
+        "problems",
+        "positives",
+        "positives_established",
+        "false_refusals",
+        "negatives",
+        "negatives_caught",
+        "negatives_not_established",
+        "negatives_passed",
+        "by_fault",
+        "by_claim",
+        "claims_established"
+      ]
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "case_id",
+          "kind",
+          "fault",
+          "claim_id",
+          "expected_verdict",
+          "verdict",
+          "reason"
+        ]
+      }
+    },
+    "establishes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "does_not_establish": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "ceiling": {
+      "type": "object",
+      "required": [
+        "implies_endorsement",
+        "implies_production_safety",
+        "implies_broader_validity",
+        "confers_authority"
+      ],
+      "properties": {
+        "implies_endorsement": {
+          "const": false
+        },
+        "implies_production_safety": {
+          "const": false
+        },
+        "implies_broader_validity": {
+          "const": false
+        },
+        "confers_authority": {
+          "const": false
+        }
+      }
+    },
+    "runner_contract": {
+      "type": "object",
+      "required": [
+        "fresh_working_directory",
+        "verifier_success_exit_zero",
+        "verifier_failure_exit_nonzero",
+        "no_report_on_failure",
+        "no_pass_on_failure",
+        "existing_output_refused",
+        "dependency_failure_exit_nonzero",
+        "killed_verifier_nonzero_or_unknown",
+        "malformed_result_fails_closed"
+      ],
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "run_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

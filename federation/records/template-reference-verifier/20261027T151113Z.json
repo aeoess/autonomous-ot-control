@@ -1,0 +1,326 @@
+{
+  "schema": "ot-edge-run-record/v1",
+  "record_id": "template-reference-verifier-20261027T151113Z",
+  "edge": {
+    "edge_id": "template-reference-verifier",
+    "project": "autonomous-ot-control reference verifier (template)",
+    "maintainer": "darklordVirtual",
+    "boundary": "effect_evidence",
+    "mode": "offline",
+    "pin": {
+      "kind": "git_commit",
+      "value": "in-tree"
+    },
+    "licence": "same as this repository",
+    "evaluator": {
+      "kind": "reference",
+      "imports_reference_verifier": false,
+      "imports_testbed_code": false,
+      "language": "python"
+    },
+    "claims": [
+      {
+        "claim_id": "decision_correspondence",
+        "claim_ceiling": "ESTABLISHED means only that every executed case carries an ACCEPT or an approved decision; not that the decision was authentic or the only one taken."
+      },
+      {
+        "claim_id": "single_dispatch",
+        "claim_ceiling": "ESTABLISHED means only that the recorded execution count is 1; not that no unrecorded dispatch happened."
+      },
+      {
+        "claim_id": "call_binding",
+        "claim_ceiling": "ESTABLISHED means only that the twin's operation record carries the proposal id; not that the twin's log is complete."
+      },
+      {
+        "claim_id": "declared_effect_observed",
+        "claim_ceiling": "ESTABLISHED means only that the twin's APPLIED record and the observation show the claimed zone and value; not that the physical plant would."
+      },
+      {
+        "claim_id": "observation_after_dispatch",
+        "claim_ceiling": "ESTABLISHED means only that the recorded observation time is at or after the recorded dispatch time, in simulated seconds."
+      },
+      {
+        "claim_id": "evidence_digest_integrity",
+        "claim_ceiling": "ESTABLISHED means only that evidence_sha256 equals the canonical digest of remora_evidence in the case file; not that the evidence is complete or authentic."
+      }
+    ],
+    "repository": "https://github.com/darklordVirtual/autonomous-ot-control"
+  },
+  "fixtures": {
+    "fixture_set": "v1",
+    "path": "federation/fixtures/v1",
+    "manifest_sha256": "51e8ce5f25998d98ead5fa5e02c955728c0198e2931bf55b4366390db4d96d16",
+    "package_digest": "sha256:437cd68da50815aa3e1ab1ea1ab36641d15a46975c57bc4601023ac15bfd387d",
+    "testbed_commit": "942ba37f33b766a1b127852894b79de20668efc8"
+  },
+  "operator": "PRODUCER",
+  "host": "PRODUCER_CONTROLLED",
+  "independence_level": "L0_SELF_TEST",
+  "environment": "Python 3.14.0 on Windows-11-10.0.26200-SP0",
+  "command": "./deploy/scripts/run-edge.sh _template v1 --local",
+  "started_at": "2026-10-27T15:11:13Z",
+  "completed_at": "2026-10-27T15:11:14Z",
+  "status": "PASS",
+  "result": {
+    "ok": true,
+    "problems": [],
+    "positives": 12,
+    "positives_established": 12,
+    "false_refusals": 0,
+    "negatives": 6,
+    "negatives_caught": 6,
+    "negatives_not_established": 0,
+    "negatives_passed": 0,
+    "by_fault": {
+      "effect_value_not_reached": 1,
+      "evidence_digest_mismatch": 1,
+      "executed_without_approval": 1,
+      "observed_before_dispatch": 1,
+      "proposal_swapped": 1,
+      "replayed_execution": 1
+    },
+    "by_claim": {
+      "call_binding": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "decision_correspondence": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "declared_effect_observed": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "evidence_digest_integrity": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "observation_after_dispatch": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "single_dispatch": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      }
+    },
+    "claims_established": [
+      "call_binding",
+      "decision_correspondence",
+      "declared_effect_observed",
+      "evidence_digest_integrity",
+      "observation_after_dispatch",
+      "single_dispatch"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "neg-effect_value_not_reached-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "kind": "negative",
+      "fault": "effect_value_not_reached",
+      "claim_id": "declared_effect_observed",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "the twin applied a different zone or value than claimed"
+    },
+    {
+      "case_id": "neg-evidence_digest_mismatch-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "kind": "negative",
+      "fault": "evidence_digest_mismatch",
+      "claim_id": "evidence_digest_integrity",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "the evidence digest does not match the evidence"
+    },
+    {
+      "case_id": "neg-executed_without_approval-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "kind": "negative",
+      "fault": "executed_without_approval",
+      "claim_id": "decision_correspondence",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "executed without an approval or an ACCEPT"
+    },
+    {
+      "case_id": "neg-observed_before_dispatch-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "kind": "negative",
+      "fault": "observed_before_dispatch",
+      "claim_id": "observation_after_dispatch",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "the effect was observed before the dispatch"
+    },
+    {
+      "case_id": "neg-proposal_swapped-05e55692-c8d8-4558-aec1-5890ad028480",
+      "kind": "negative",
+      "fault": "proposal_swapped",
+      "claim_id": "call_binding",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "the twin operation belongs to another proposal"
+    },
+    {
+      "case_id": "neg-replayed_execution-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "kind": "negative",
+      "fault": "replayed_execution",
+      "claim_id": "single_dispatch",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "executed 2 times"
+    },
+    {
+      "case_id": "pos-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-05e55692-c8d8-4558-aec1-5890ad028480",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-2b913957-c61e-4a11-964a-c36f3d8cc878",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-346ee3c4-2238-4fa9-838b-e54ba02f7c83",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-371e1786-5bdd-4c98-a663-14d6cab6bc64",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-38f39dcc-0d3c-4625-9a3c-a9879910358a",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-3e234cda-8d8a-4519-906f-fc0ea9b5ebd4",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    },
+    {
+      "case_id": "pos-3f2191da-5a16-4110-aefe-0175fbee13a7",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "approval, single dispatch, twin record, observation and digest agree"
+    }
+  ],
+  "establishes": [
+    "call_binding: every seeded fault for this claim was caught at level L0_SELF_TEST",
+    "decision_correspondence: every seeded fault for this claim was caught at level L0_SELF_TEST",
+    "declared_effect_observed: every seeded fault for this claim was caught at level L0_SELF_TEST",
+    "evidence_digest_integrity: every seeded fault for this claim was caught at level L0_SELF_TEST",
+    "observation_after_dispatch: every seeded fault for this claim was caught at level L0_SELF_TEST",
+    "single_dispatch: every seeded fault for this claim was caught at level L0_SELF_TEST"
+  ],
+  "does_not_establish": [
+    "ESTABLISHED means only that every executed case carries an ACCEPT or an approved decision; not that the decision was authentic or the only one taken.",
+    "ESTABLISHED means only that the recorded execution count is 1; not that no unrecorded dispatch happened.",
+    "ESTABLISHED means only that the twin's operation record carries the proposal id; not that the twin's log is complete.",
+    "ESTABLISHED means only that the twin's APPLIED record and the observation show the claimed zone and value; not that the physical plant would.",
+    "ESTABLISHED means only that the recorded observation time is at or after the recorded dispatch time, in simulated seconds.",
+    "ESTABLISHED means only that evidence_sha256 equals the canonical digest of remora_evidence in the case file; not that the evidence is complete or authentic.",
+    "that the simulated plant behaves like any real building (synthetic, uncalibrated model)",
+    "physical OT safety or a real-building saving (INV-12: no physical write path exists)",
+    "that REMORA's policy is the right policy for a real site",
+    "anything beyond one deployment seen from inside it (same_test_deployment vantage)",
+    "endorsement of the testbed by the edge, or of the edge by the testbed"
+  ],
+  "ceiling": {
+    "implies_endorsement": false,
+    "implies_production_safety": false,
+    "implies_broader_validity": false,
+    "confers_authority": false
+  },
+  "runner_contract": {
+    "fresh_working_directory": true,
+    "verifier_success_exit_zero": true,
+    "verifier_failure_exit_nonzero": true,
+    "no_report_on_failure": true,
+    "no_pass_on_failure": true,
+    "existing_output_refused": true,
+    "dependency_failure_exit_nonzero": true,
+    "killed_verifier_nonzero_or_unknown": true,
+    "malformed_result_fails_closed": true
+  },
+  "run_ref": null
+}

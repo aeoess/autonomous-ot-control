@@ -12,6 +12,38 @@
   },
   "licence": "same as this repository",
   "claim_ceiling": "Checks that each case's claimed effect is consistent with REMORA's recorded decision, the twin's own operation record, the observation and the evidence digest. It does not show the twin is right about the plant, or that REMORA's policy is correct.",
+  "claims": [
+    {
+      "claim_id": "decision_correspondence",
+      "claim_ceiling": "ESTABLISHED means only that every executed case carries an ACCEPT or an approved decision; not that the decision was authentic or the only one taken."
+    },
+    {
+      "claim_id": "single_dispatch",
+      "claim_ceiling": "ESTABLISHED means only that the recorded execution count is 1; not that no unrecorded dispatch happened."
+    },
+    {
+      "claim_id": "call_binding",
+      "claim_ceiling": "ESTABLISHED means only that the twin's operation record carries the proposal id; not that the twin's log is complete."
+    },
+    {
+      "claim_id": "declared_effect_observed",
+      "claim_ceiling": "ESTABLISHED means only that the twin's APPLIED record and the observation show the claimed zone and value; not that the physical plant would."
+    },
+    {
+      "claim_id": "observation_after_dispatch",
+      "claim_ceiling": "ESTABLISHED means only that the recorded observation time is at or after the recorded dispatch time, in simulated seconds."
+    },
+    {
+      "claim_id": "evidence_digest_integrity",
+      "claim_ceiling": "ESTABLISHED means only that evidence_sha256 equals the canonical digest of remora_evidence in the case file; not that the evidence is complete or authentic."
+    }
+  ],
+  "evaluator": {
+    "kind": "reference",
+    "imports_reference_verifier": false,
+    "imports_testbed_code": false,
+    "language": "python"
+  },
   "entrypoint": {
     "command": [
       "python",

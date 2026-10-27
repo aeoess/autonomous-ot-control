@@ -6,6 +6,29 @@ on:
 permissions:
   contents: read
 jobs:
+  commit-identity:
+    # Every commit is authored by the repository owner and carries no
+    # co-author trailer; contributors are people who joined by pull request.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Authors and trailers
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          bad=0
+          while IFS=$'\t' read -r sha author; do
+            if [[ "$author" != "darklordVirtual" ]]; then
+              echo "::error::commit $sha is authored by '$author', not darklordVirtual"; bad=1
+            fi
+          done < <(git log --format='%H%x09%an' "$base"..HEAD)
+          if git log --format='%B' "$base"..HEAD | grep -iE '^(Co-authored-by|Claude-Session):'; then
+            echo "::error::a commit carries a co-author or session trailer"; bad=1
+          fi
+          exit $bad
   test:
     runs-on: ubuntu-latest
     strategy:
