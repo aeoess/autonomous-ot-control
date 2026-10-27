@@ -1,0 +1,326 @@
+{
+  "schema": "ot-edge-run-record/v1",
+  "record_id": "agent-evidence-vectors-axes-20261027T171310Z",
+  "edge": {
+    "edge_id": "agent-evidence-vectors-axes",
+    "project": "agent-evidence-vectors (invocation axes)",
+    "maintainer": "astrogilda",
+    "boundary": "effect_evidence",
+    "mode": "offline",
+    "pin": {
+      "kind": "package",
+      "value": "agent-evidence-vectors==0.28.0 (invocation_axes/reader.py, sha256 a86c2c4830af011f3707c8164ca1350c9b965d2a960967bff83c79532df54938)"
+    },
+    "licence": "MIT",
+    "evaluator": {
+      "kind": "second_implementation",
+      "imports_reference_verifier": false,
+      "imports_testbed_code": false,
+      "language": "python"
+    },
+    "claims": [
+      {
+        "claim_id": "decision_correspondence",
+        "claim_ceiling": "ESTABLISHED means an allow, or an approved review, is bound to the call the trail claims; not that the approver was real or the capture complete."
+      },
+      {
+        "claim_id": "single_dispatch",
+        "claim_ceiling": "ESTABLISHED means the recorded execution count is 1; not that no unrecorded dispatch happened."
+      },
+      {
+        "claim_id": "call_binding",
+        "claim_ceiling": "ESTABLISHED means the twin's operation record binds to the same proposal, zone and value as the claim; not that the twin's log is complete."
+      },
+      {
+        "claim_id": "declared_effect_observed",
+        "claim_ceiling": "ESTABLISHED means the recorded observation equals the claimed setpoint under an execution bound to the call; the observation's vantage is same_deployment, so this is not an independent reading."
+      },
+      {
+        "claim_id": "observation_after_dispatch",
+        "claim_ceiling": "ESTABLISHED means the recorded observation time is at or after the recorded dispatch time, in simulated seconds."
+      },
+      {
+        "claim_id": "evidence_digest_integrity",
+        "claim_ceiling": "ESTABLISHED means the bytes of remora_evidence hash to evidence_sha256; not that the evidence is complete or authentic."
+      }
+    ],
+    "repository": "https://github.com/probityai/agent-evidence-vectors"
+  },
+  "fixtures": {
+    "fixture_set": "v1",
+    "path": "federation/fixtures/v1",
+    "manifest_sha256": "51e8ce5f25998d98ead5fa5e02c955728c0198e2931bf55b4366390db4d96d16",
+    "package_digest": "sha256:437cd68da50815aa3e1ab1ea1ab36641d15a46975c57bc4601023ac15bfd387d",
+    "testbed_commit": "942ba37f33b766a1b127852894b79de20668efc8"
+  },
+  "operator": "EXTERNAL",
+  "host": "EXTERNAL",
+  "independence_level": "L4_INDEPENDENT_HOST_RUN",
+  "environment": "Python 3.13.15 on Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "command": "./deploy/scripts/run-edge.sh agent-evidence-vectors-axes v1",
+  "started_at": "2026-10-27T17:13:10Z",
+  "completed_at": "2026-10-27T17:13:10Z",
+  "status": "PASS",
+  "result": {
+    "ok": true,
+    "problems": [],
+    "positives": 12,
+    "positives_established": 12,
+    "false_refusals": 0,
+    "negatives": 6,
+    "negatives_caught": 6,
+    "negatives_not_established": 0,
+    "negatives_passed": 0,
+    "by_fault": {
+      "effect_value_not_reached": 1,
+      "evidence_digest_mismatch": 1,
+      "executed_without_approval": 1,
+      "observed_before_dispatch": 1,
+      "proposal_swapped": 1,
+      "replayed_execution": 1
+    },
+    "by_claim": {
+      "call_binding": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "decision_correspondence": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "declared_effect_observed": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "evidence_digest_integrity": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "observation_after_dispatch": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      },
+      "single_dispatch": {
+        "negatives": 1,
+        "caught": 1,
+        "passed": 0
+      }
+    },
+    "claims_established": [
+      "call_binding",
+      "decision_correspondence",
+      "declared_effect_observed",
+      "evidence_digest_integrity",
+      "observation_after_dispatch",
+      "single_dispatch"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "neg-effect_value_not_reached-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "kind": "negative",
+      "fault": "effect_value_not_reached",
+      "claim_id": "declared_effect_observed",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "call_binding: the twin operation record belongs to another call; declared_effect_observed: bundle_bound_to_other_call"
+    },
+    {
+      "case_id": "neg-evidence_digest_mismatch-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "kind": "negative",
+      "fault": "evidence_digest_mismatch",
+      "claim_id": "evidence_digest_integrity",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "evidence_digest_integrity: member_digest_mismatch"
+    },
+    {
+      "case_id": "neg-executed_without_approval-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "kind": "negative",
+      "fault": "executed_without_approval",
+      "claim_id": "decision_correspondence",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "decision_correspondence: dispatched without an allow or an approval bound to the call; declared_effect_observed: dispatched_after_deny"
+    },
+    {
+      "case_id": "neg-observed_before_dispatch-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "kind": "negative",
+      "fault": "observed_before_dispatch",
+      "claim_id": "observation_after_dispatch",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "observation_after_dispatch: observed before the dispatch"
+    },
+    {
+      "case_id": "neg-proposal_swapped-05e55692-c8d8-4558-aec1-5890ad028480",
+      "kind": "negative",
+      "fault": "proposal_swapped",
+      "claim_id": "call_binding",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "call_binding: the twin operation record belongs to another call; declared_effect_observed: bundle_bound_to_other_call"
+    },
+    {
+      "case_id": "neg-replayed_execution-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "kind": "negative",
+      "fault": "replayed_execution",
+      "claim_id": "single_dispatch",
+      "expected_verdict": "CONTRADICTED",
+      "verdict": "CONTRADICTED",
+      "reason": "single_dispatch: executed 2 times"
+    },
+    {
+      "case_id": "pos-0332c7b9-0a37-4a37-b8b8-c9f7b30dfe63",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-05e55692-c8d8-4558-aec1-5890ad028480",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-08d7d9b6-3bb7-4b27-8a15-2646537dbfdb",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-15391a46-8858-4c4d-a0f3-3bb65914ad3e",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-274d9b03-f7e4-499f-b9f7-8f89720559d4",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-2a271bfa-8ddc-4268-b340-feaf478ddabc",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-2b913957-c61e-4a11-964a-c36f3d8cc878",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-346ee3c4-2238-4fa9-838b-e54ba02f7c83",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-371e1786-5bdd-4c98-a663-14d6cab6bc64",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-38f39dcc-0d3c-4625-9a3c-a9879910358a",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-3e234cda-8d8a-4519-906f-fc0ea9b5ebd4",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    },
+    {
+      "case_id": "pos-3f2191da-5a16-4110-aefe-0175fbee13a7",
+      "kind": "positive",
+      "fault": null,
+      "claim_id": null,
+      "expected_verdict": "ESTABLISHED",
+      "verdict": "ESTABLISHED",
+      "reason": "six claims established; observation vantage recorded as same_deployment, which the reader does not count as independent"
+    }
+  ],
+  "establishes": [
+    "call_binding: every seeded fault for this claim was caught at level L4_INDEPENDENT_HOST_RUN",
+    "decision_correspondence: every seeded fault for this claim was caught at level L4_INDEPENDENT_HOST_RUN",
+    "declared_effect_observed: every seeded fault for this claim was caught at level L4_INDEPENDENT_HOST_RUN",
+    "evidence_digest_integrity: every seeded fault for this claim was caught at level L4_INDEPENDENT_HOST_RUN",
+    "observation_after_dispatch: every seeded fault for this claim was caught at level L4_INDEPENDENT_HOST_RUN",
+    "single_dispatch: every seeded fault for this claim was caught at level L4_INDEPENDENT_HOST_RUN"
+  ],
+  "does_not_establish": [
+    "ESTABLISHED means an allow, or an approved review, is bound to the call the trail claims; not that the approver was real or the capture complete.",
+    "ESTABLISHED means the recorded execution count is 1; not that no unrecorded dispatch happened.",
+    "ESTABLISHED means the twin's operation record binds to the same proposal, zone and value as the claim; not that the twin's log is complete.",
+    "ESTABLISHED means the recorded observation equals the claimed setpoint under an execution bound to the call; the observation's vantage is same_deployment, so this is not an independent reading.",
+    "ESTABLISHED means the recorded observation time is at or after the recorded dispatch time, in simulated seconds.",
+    "ESTABLISHED means the bytes of remora_evidence hash to evidence_sha256; not that the evidence is complete or authentic.",
+    "that the simulated plant behaves like any real building (synthetic, uncalibrated model)",
+    "physical OT safety or a real-building saving (INV-12: no physical write path exists)",
+    "that REMORA's policy is the right policy for a real site",
+    "anything beyond one deployment seen from inside it (same_test_deployment vantage)",
+    "endorsement of the testbed by the edge, or of the edge by the testbed"
+  ],
+  "ceiling": {
+    "implies_endorsement": false,
+    "implies_production_safety": false,
+    "implies_broader_validity": false,
+    "confers_authority": false
+  },
+  "runner_contract": {
+    "fresh_working_directory": true,
+    "verifier_success_exit_zero": true,
+    "verifier_failure_exit_nonzero": true,
+    "no_report_on_failure": true,
+    "no_pass_on_failure": true,
+    "existing_output_refused": true,
+    "dependency_failure_exit_nonzero": true,
+    "killed_verifier_nonzero_or_unknown": true,
+    "malformed_result_fails_closed": true
+  },
+  "run_ref": null
+}

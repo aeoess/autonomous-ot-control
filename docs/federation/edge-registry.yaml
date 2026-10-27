@@ -10,4 +10,10 @@
 #           corpus_adequacy | runner_validity | admission_runtime
 # mode:     inline (may only add refusals) | offline (verdicts beside the run)
 schema: ot-edge-registry/v1
-participants: []
+participants:
+  - edge_id: agent-evidence-vectors-axes
+    project: agent-evidence-vectors (invocation axes)
+    maintainer: astrogilda
+    boundary: effect_evidence
+    mode: offline
+    consent_ref: https://github.com/darklordVirtual/autonomous-ot-control/pull/22
