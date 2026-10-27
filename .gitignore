@@ -11,3 +11,5 @@ node_modules/
 .wrangler/
 deploy/.generated/
 deploy/.keys/
+# Local reference copies of Statsbygg PA 0802 PDFs; the sources and their digests are in docs/tfm.md
+docs/TFM/
