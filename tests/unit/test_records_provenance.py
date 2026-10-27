@@ -25,6 +25,26 @@ def test_the_v2_template_record_was_run_on_a_clean_tree_at_a_commit_that_exists(
                            prov["testbed_commit_at_run"]) is not None
 
 
+def test_reviewed_reports_are_complete_and_pinned_and_rendered():
+    """A reviewed report names a reviewed-only boundary, a full existing commit, and what it does not establish."""
+    assert edge_check.validate_reports() == []
+    reports = edge_check.load_reports()
+    assert reports, "the first reviewed report (runner_validity, 4b9f6ec) is recorded"
+    text = edge_check.render_results(edge_check.load_records())
+    assert "## Reviewed reports" in text
+    for r in reports:
+        assert r["report_url"] in text and r["testbed_commit"][:7] in text
+    import copy
+    bad = copy.deepcopy(reports[0])
+    bad["boundary"] = "effect_evidence"
+    original = edge_check.load_reports
+    try:
+        edge_check.load_reports = lambda: [bad]
+        assert any("auto-scored" in p for p in edge_check.validate_reports())
+    finally:
+        edge_check.load_reports = original
+
+
 def test_a_record_may_only_name_a_revision_that_exists_and_is_an_ancestor_of_head():
     recs = edge_check.load_records()
     rec = copy.deepcopy(next(r for _, r in recs if r["fixtures"]["fixture_set"] == "v2"))

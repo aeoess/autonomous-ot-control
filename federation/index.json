@@ -17,6 +17,7 @@
     "template_edge": "federation/edges/_template/edge.json",
     "reference_verifier": "federation/edges/_template/adapter.py",
     "records": "federation/records",
+    "reviewed_reports": "federation/reports.json",
     "scorer": "runner/edge_check.py",
     "runner": "deploy/scripts/run-edge.sh",
     "fixture_builder": "runner/federation_fixtures.py",
