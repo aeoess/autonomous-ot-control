@@ -55,8 +55,8 @@ PR #21 with a merge commit, so the named ancestors remain on `main`.
 | `corpus_adequacy` | offline | the sealed set and the reference verifier as the checker to mutate | which seeded faults would a checker miss? | open, report reviewed |
 | `runner_validity` | offline | the sealed set and the scorer `runner.edge_check`; you supply the deliberately broken verifiers | does the scorer report a failure as a failure, never a pass? | open, report reviewed |
 | `admission_runtime` | inline | the exact call and a context (the day plan as what it permits, the current setpoint, the declared step limit), after REMORA and the reviewer approved | `permit` or `refuse`, with a reason, within 2 s | open: harness in `runner.demo --inline-edge`, reference edge `_inline_template`, scored in the A/B/C report ([ABC-ROADMAP.md](ABC-ROADMAP.md)) |
-| `tool_definition` | inline | the served tool definition | does it match the approved one? | blocked on the MCP gateway |
-| `authority_fixture` | inline | a synthetic signed work order | what does it authorize? | specified, no harness yet |
+| `tool_definition` | inline | the served tool definition and the digest of the signed ToolSpec bundle REMORA pinned, per call | does the served definition match the approved one? | no harness yet; planned next, against the pinned ToolSpec bundle rather than an MCP gateway, in the shape of AgentAvow's `tool_manifest_digest` (E8) |
+| `authority_fixture` | inline | a synthetic signed work order | what does it authorize? | no harness yet; blocked on a signed work-order format (the testbed's work orders are intent-table entries). Planned after `tool_definition`, with the testbed's Ed25519 signer as interim format and the episode's work orders as oracle; a pinned federation authority format is preferred when available |
 
 The scorer reads one verdict per case, so a green CI run is an
 `effect_evidence` result. A `corpus_adequacy` or `runner_validity` edge puts

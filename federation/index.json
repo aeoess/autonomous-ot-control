@@ -71,16 +71,16 @@
     {
       "id": "tool_definition",
       "mode": "inline",
-      "status": "BLOCKED",
+      "status": "SPECIFIED",
       "scoring": "none",
-      "note": "Needs the MCP gateway (OT-006 design, SPECIFIED)."
+      "note": "No harness yet. Planned next, against the signed ToolSpec bundle REMORA pins by digest (deploy/.generated/toolspec-bundle.json), not an MCP gateway: per call the harness hands the edge the served tool definition and the pinned digest; the edge answers whether they are the same definition. Same shape as AgentAvow's tool_manifest_digest (boundary-map E8)."
     },
     {
       "id": "authority_fixture",
       "mode": "inline",
       "status": "SPECIFIED",
       "scoring": "none",
-      "note": "A synthetic signed work order; no harness yet."
+      "note": "No harness yet. Blocked on a signed work-order format: the testbed's work orders are intent-table entries (deploy/ot/ot_intents.json), not signed artifacts. Planned after tool_definition, with the testbed's own Ed25519 signer as the interim format and the episode's work_orders as the oracle; a pinned federation authority format (APS) is preferred when one is available."
     }
   ],
   "result_vocabulary": [
