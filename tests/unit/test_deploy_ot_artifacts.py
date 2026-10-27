@@ -101,16 +101,17 @@ def test_zone_03_budget_is_tighter_than_the_interlock():
     assert z3["max"] / 10 < cfg["guard"]["max_delta_c"]
 
 
-def test_edge_registry_claims_no_consent_it_does_not_link():
-    """Listing is not consent (SDD §9): a status may move only with a consent_ref."""
+def test_edge_registry_lists_only_projects_that_joined():
+    """Opt-in only (ADR-004, docs/federation/README.md): an entry needs the
+    participant's own edge directory and the pull request that added it."""
     text = (ROOT / "docs" / "federation" / "edge-registry.yaml").read_text("utf-8")
-    entries = text.split("\n  - id: ")[1:]
-    assert len(entries) >= 2
+    entries = text.split("\n  - edge_id: ")[1:]
+    if "participants: []" in text:
+        assert not entries
+        return
     for entry in entries:
-        status = next(ln.split(":", 1)[1].strip() for ln in entry.splitlines()
-                      if ln.strip().startswith("status:"))
+        edge_id = entry.splitlines()[0].strip()
+        assert (ROOT / "federation" / "edges" / edge_id / "edge.json").is_file(), edge_id
         consent = next(ln.split(":", 1)[1].strip() for ln in entry.splitlines()
                        if ln.strip().startswith("consent_ref:"))
-        if status != "CANDIDATE_NOT_INVITED":
-            assert consent.startswith("https://github.com/"), entry.splitlines()[0]
-        assert "mode: inline" in entry or "mode: offline" in entry
+        assert consent.startswith("https://github.com/darklordVirtual/autonomous-ot-control/pull/"), edge_id

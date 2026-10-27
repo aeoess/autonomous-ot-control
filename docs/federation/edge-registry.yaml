@@ -1,119 +1,13 @@
-# Federation edge candidates for the A/B/C testbed (ADR-004, SDD §9, D-07).
+# Federation edges taking part in the A/B/C testbed (ADR-004, SDD §9, D-07).
 #
-# Source: a read of aeoess/agent-governance-vocabulary#177 on 2026-10-27
-# (201 comments). Being listed is NOT consent and NOT an assignment: every
-# entry is CANDIDATE_NOT_INVITED until the participant agrees in public, and
-# `consent_ref` then links that comment. No participant offered an OT
-# artifact; every fit below is our judgement of where their published
-# artifact could plug in. Pins are what the thread names; re-check before use.
+# A project appears here only after it has joined: its maintainer opened a pull
+# request that adds federation/edges/<edge-id>/edge.json and its adapter, and
+# that pull request is the consent record (consent_ref). Nothing is listed on
+# anyone's behalf, and being mentioned in a public discussion is not joining.
+# How to join: docs/federation/README.md.
 #
 # boundary: authority_fixture | tool_definition | effect_evidence |
 #           corpus_adequacy | runner_validity | admission_runtime
 # mode:     inline (may only add refusals) | offline (verdicts beside the run)
 schema: ot-edge-registry/v1
-recommended_first_pair: [corpus-adequacy, federation-port-admission]
-edges:
-  - id: corpus-adequacy
-    owner: Rul1an
-    project: corpus-adequacy (Assay)
-    artifact: https://github.com/corpus-adequacy/corpus-adequacy
-    prior_work_with_remora: "three rounds on evidence-sufficiency-v1 (v1.2 public at 011481d)"
-    boundary: corpus_adequacy
-    mode: offline
-    offered: "ran REMORA's corpus; reports go to the owner first, published with approval"
-    claim_ceiling: "adequacy of our acceptance corpus against seeded mutations, not plant safety"
-    licence: UNCERTAIN
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: federation-port-admission
-    owner: aeoess
-    project: federation-port (APS)
-    artifact: https://github.com/aeoess/federation-port
-    pins: ["3a2f6ce"]
-    boundary: admission_runtime
-    mode: inline
-    offered: "invited adapters for checks a project already performs; reruns are labelled reproduction"
-    claim_ceiling: "a second, independently authored pre-dispatch decision; v0 has no post-dispatch phase"
-    licence: "APS fixtures Apache-2.0 (948f99b8); federation-port UNCERTAIN"
-    notes: "REMORA already ships integrations/federation-port/remora-adapter"
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: probity-evidence-vectors
-    owner: astrogilda
-    project: Probity agent-evidence-vectors
-    artifact: https://github.com/probityai/agent-evidence-vectors
-    boundary: effect_evidence
-    mode: offline
-    offered: "adapters pin one positive and one negative fixture and run the vectors in CI"
-    claim_ceiling: "the exported execution -> observed-effect envelope, declared fields and vantage only"
-    blocked_on: "the federation envelope export (ADR-004)"
-    licence: UNCERTAIN
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: agent-errata-negative-runner
-    owner: piiiico
-    project: Agent Errata
-    boundary: runner_validity
-    mode: offline
-    offered: "conditional: will write a negative runner check if a runner author wants it"
-    claim_ceiling: "our runner cannot print PASS after a failed verifier (AT-18), not control safety"
-    licence: UNCERTAIN
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: aos-cold-run
-    owner: Tetsurohhori
-    project: aos-standard/catalog
-    boundary: runner_validity
-    mode: offline
-    offered: "cold runs of others' vectors from spec text, published good or bad"
-    claim_ceiling: "a reproduction from spec text, not an independent measurement of the plant"
-    licence: "CC0 for its RFC 8785 vectors"
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: agentavow-tool-digest
-    owner: kenneives
-    project: AgentAvow
-    pins: ["0727e5e9", "36426cf"]
-    boundary: tool_definition
-    mode: inline
-    offered: "will publish the pinned vector pair for any gate that wants to consume it"
-    claim_ceiling: "definition integrity of a served tool, nothing about runtime behaviour"
-    blocked_on: "an MCP tool surface in the testbed (OT-006 gateway)"
-    licence: "Apache-2.0 (vector folders)"
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: mcp-driftguard
-    owner: altrudev
-    project: MCP DriftGuard
-    artifact: https://github.com/altrudev/MCP-DriftGuard
-    pins: ["7ce1f461", "51b5573a"]
-    boundary: tool_definition
-    mode: inline
-    offered: "independent testing with participants' own disposable MCP fixtures"
-    claim_ceiling: "drift of a served interface against an approved baseline"
-    blocked_on: "an MCP tool surface in the testbed (OT-006 gateway)"
-    licence: Apache-2.0
-    notes: "altrudev's Frequency engine is excluded: use is not authorized until a version is designated"
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: pic-preexecution-gate
-    owner: madeinplutofabio
-    project: PIC Standard
-    pins: ["v0.9.0"]
-    boundary: authority_fixture
-    mode: inline
-    offered: "no OT offer; drafting a brief for the refund workflow (#193)"
-    claim_ceiling: "a signed pre-execution attestation over tool, arguments and impact"
-    licence: UNCERTAIN
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
-  - id: horizon-shield-testbed
-    owner: ogasurfproject-jpg
-    project: Horizon Shield (MUSUBI)
-    boundary: effect_evidence
-    mode: offline
-    offered: "invited a REMORA row in horizon-shield#55 (testbed on grant scope and receipts)"
-    claim_ceiling: "grant/receipt settlement; states that a signature cannot show a physical effect"
-    licence: UNCERTAIN
-    status: CANDIDATE_NOT_INVITED
-    consent_ref: null
+participants: []
