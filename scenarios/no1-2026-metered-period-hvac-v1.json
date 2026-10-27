@@ -1,0 +1,76 @@
+{
+  "schema": "ot-scenario/v1",
+  "scenario_id": "no1-2026-metered-period-hvac-v1",
+  "comment": "The metering period of the anonymised NO1 office (SITE_001), 2026-02-16 to 2026-10-26 UTC: verified NO1 day-ahead prices and local ERA5 weather for exactly those days, so the twin can be compared hour by hour with the measured meters. Occupancy from the measured profile.",
+  "site_ref": "../twin/fixtures/site-demo-building-no1.json",
+  "seed": 177,
+  "start_utc": "2026-02-16T00:00:00Z",
+  "duration_seconds": 21859200,
+  "outdoor": {
+    "series_ref": "data/demo-building-no1/outdoor-temperature-2026-02-16_2026-10-26.json",
+    "sha256": "abfb54bfc03b620695020cb70e433125e9a8b2f038481438f88f6f764960828a"
+  },
+  "price": {
+    "series_ref": "data/demo-building-no1/price-NO1-2026-02-16_2026-10-26.json",
+    "sha256": "4dc961c017088f591829259c232ce1b86c73b01779f40d20e22f85e5268d5e8e"
+  },
+  "solar": {
+    "series_ref": "data/demo-building-no1/solar-shortwave-2026-02-16_2026-10-26.json",
+    "sha256": "458274fad6a689a8a0047999ad7f159ffd1225f00e482f2a56579f87e30c1935"
+  },
+  "humidity": {
+    "series_ref": "data/demo-building-no1/humidity-rh-2026-02-16_2026-10-26.json",
+    "sha256": "a6303a9e412f96a93920187683527187569e12beff2faa6ab88c04fd0d239ecc"
+  },
+  "precipitation": {
+    "series_ref": "data/demo-building-no1/precipitation-precip-2026-02-16_2026-10-26.json",
+    "sha256": "68d958585b5ad0455ed2d199ee9e8bb40bd197e4e3fe5e96d923a15c90eb84a7"
+  },
+  "occupancy": {
+    "weekday_hours_local": [
+      8,
+      16
+    ],
+    "timezone": "Europe/Oslo",
+    "hours_note": "Derived from the measured weekday electricity profile of an anonymised office (SITE_001, NO1, 2026): hours whose median load is at least halfway between the night base and the peak, local time with summer time. Replaces the earlier fixed 07-17 UTC, which ran two hours late in summer.",
+    "gain_w_per_m2": 8.0,
+    "unoccupied_gain_w_per_m2": 1.0,
+    "holidays": [
+      "2026-04-02",
+      "2026-04-03",
+      "2026-04-06",
+      "2026-05-01",
+      "2026-05-14",
+      "2026-05-17",
+      "2026-05-25"
+    ],
+    "holidays_note": "Norwegian public holidays inside the period (17 May 2026 is a Sunday)."
+  },
+  "variation": {
+    "presence": {
+      "mean": 0.75,
+      "sd": 0.15,
+      "min": 0.2,
+      "max": 1.0
+    },
+    "reduced_presence": [
+      {
+        "from": "2026-07-06",
+        "to": "2026-07-26",
+        "factor": 0.3,
+        "note": "common summer holiday, weeks 28-30"
+      }
+    ],
+    "equipment": {
+      "sigma": 0.2,
+      "min": 0.6,
+      "max": 1.5
+    },
+    "note": "Typical bounds: presence 60-90 % of design on an ordinary workday; plug load +/-20 % hour to hour."
+  },
+  "comfort": {
+    "occupied_min_c": 20.0,
+    "occupied_max_c": 24.0
+  },
+  "disturbances": []
+}

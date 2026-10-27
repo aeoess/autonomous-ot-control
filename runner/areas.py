@@ -82,10 +82,11 @@ def fault_disturbances(area: str, seed: int, days: int) -> list[dict[str, Any]]:
 OPTIMIZER_FAULT_RATE = 0.01
 
 
-def run_one(args: tuple[str, str, int, int, bool]) -> dict[str, Any]:
+def run_one(args: tuple) -> dict[str, Any]:
     """One (area, strategy, seed) year. With faults: seeded sensor faults in every
     strategy, and for P3/P3raw 1 % of the proposals corrupted before validation."""
-    area, strategy, seed, days, faults = args
+    area, strategy, seed, days, faults = args[:5]
+    config = Path(args[5]) if len(args) > 5 and args[5] else CONFIG
     from runner.caretaker import Caretaker
     from runner.demo import STEP_S
     from runner.strategies import Controller
@@ -98,7 +99,7 @@ def run_one(args: tuple[str, str, int, int, bool]) -> dict[str, Any]:
     if faults:
         raw["disturbances"] = list(raw.get("disturbances", [])) + fault_disturbances(area, seed, days)
     sc = load_scenario(raw, base_dir=sp.parent)
-    tw = Twin(load_config(CONFIG), sc)
+    tw = Twin(load_config(config), sc)
     ctl: Any
     if strategy in ("P3", "P3raw"):
         ctl = Caretaker(tw, validated=strategy == "P3", record_days=RECORD_DAYS,
@@ -203,7 +204,8 @@ def summarize(runs: list[dict[str, Any]], seeds: list[int], strategies: list[str
     strategies = strategies or ["P0", "P1", "P2"]
     by = {(r["area"], r["strategy"], r["seed"]): aggregate(r) for r in runs}
     table: dict[str, Any] = {}
-    for area in AREAS:
+    areas_run = {a: AREAS[a] for a in AREAS if any(r['area'] == a for r in runs)}
+    for area in areas_run:
         table[area] = {}
         for lv in ("year", "half", "quarter", "month"):
             table[area][lv] = {}
@@ -219,8 +221,8 @@ def summarize(runs: list[dict[str, Any]], seeds: list[int], strategies: list[str
                     row[f"{s}_saving_pct"] = 100 * statistics.mean(sav) / row[strategies[0]]["total_nok"]
                 table[area][lv][key] = row
     caretaker = {area: {s: _mean_stats([r["caretaker"] for r in runs if r["area"] == area and r["strategy"] == s])
-                        for s in strategies if s in ("P3", "P3raw")} for area in AREAS}
-    res: dict[str, Any] = {"seeds": seeds, "areas": AREAS, "strategies": strategies, "faults": faults,
+                        for s in strategies if s in ("P3", "P3raw")} for area in areas_run}
+    res: dict[str, Any] = {"seeds": seeds, "areas": areas_run, "strategies": strategies, "faults": faults,
                            "table": table}
     if any(caretaker.values()):
         res["caretaker"] = caretaker
@@ -241,11 +243,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--strategies", nargs="+", default=["P0", "P1", "P2", "P3"],
                    help="the first is the baseline every other is paired with")
     p.add_argument("--faults", action="store_true", help="seeded sensor faults in every strategy")
+    p.add_argument("--config", default=str(CONFIG), help="the building (twin fixture) to run")
+    p.add_argument("--areas", nargs="+", default=list(AREAS), choices=list(AREAS))
     a = p.parse_args(argv)
-    jobs = [(area, s, sd, a.days, a.faults) for area in AREAS for s in a.strategies for sd in a.seeds]
+    jobs = [(area, s, sd, a.days, a.faults, a.config) for area in a.areas for s in a.strategies for sd in a.seeds]
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
         runs = list(ex.map(run_one, jobs))
     res = summarize(runs, a.seeds, a.strategies, a.faults)
+    cfg_path = Path(a.config).resolve()
+    res["config"] = cfg_path.relative_to(ROOT).as_posix() if cfg_path.is_relative_to(ROOT) else str(cfg_path)
+    res["building_id"] = json.loads(cfg_path.read_text("utf-8")).get("building_id")
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=False)
     (out / "areas.json").write_text(json.dumps(res, indent=2), encoding="utf-8")

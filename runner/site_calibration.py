@@ -243,7 +243,8 @@ def targets(data: Path, weather_path: Path) -> dict[str, Any]:
     }
 
 
-def twin_targets(fixture: Path, area: str = "NO1", days: int = 365, strategy: str = "P0") -> dict[str, Any]:
+def twin_targets(fixture: Path, area: str = "NO1", days: int = 365, strategy: str = "P0",
+                 scenario: Path | None = None) -> dict[str, Any]:
     """The same targets, computed on a year of the twin under a strategy (P0: as found).
 
     Thermal heating is read cleanly only from a district-heated fixture (heat bought x substation
@@ -257,9 +258,10 @@ def twin_targets(fixture: Path, area: str = "NO1", days: int = 365, strategy: st
     from twin.scenarios import load_scenario
 
     cfg = load_config(fixture)
-    sp = scenario_path(area)
+    sp = scenario or scenario_path(area)
     raw = json.loads(sp.read_text("utf-8"))
-    raw["duration_seconds"] = days * 86400
+    raw["duration_seconds"] = min(days * 86400, int(raw["duration_seconds"]))
+    days = raw["duration_seconds"] // 86400
     sc = load_scenario(raw, base_dir=sp.parent)
     tw = Twin(cfg, sc)
     ctl = Controller(strategy, tw)
@@ -279,12 +281,58 @@ def twin_targets(fixture: Path, area: str = "NO1", days: int = 365, strategy: st
             heat["TWIN_HEAT"][hour] = (tw.district_heat_kwh - d0) * eff
             weather[hour] = sc.outdoor_c(t + STEP_S - 1800)
             e0, d0 = tw.electric_kwh, tw.district_heat_kwh
-    out = {"fixture": fixture.name, "area": area, "strategy": strategy, "days": days,
+    out = {"fixture": fixture.name, "area": area, "scenario": sp.name, "strategy": strategy, "days": days,
+           "hourly_electricity_kwh": {h.isoformat(): round(v, 4) for h, v in elec["TWIN"].items()},
            "bra_m2": sum(z["area_m2"] for z in cfg["zones"]),
            "electricity_load_shape": load_shape(elec, ("TWIN",)),
            "heating_signature": fit_signature(daily(heat, ("TWIN_HEAT",), weather), heating=True) if dh_ok else None,
            "heating_comparable": dh_ok}
     return out
+
+
+def site_hourly(data: Path, meters: tuple[str, ...] = TOP_LEVEL_ELECTRICITY) -> dict[datetime, float]:
+    """The gated hourly sum over meters, on hours every meter observed (never filled)."""
+    manifest = json.loads((data / "manifest.json").read_text("utf-8"))
+    g = gate(load_meters(data), last_hour_utc=datetime.fromisoformat(manifest["period"]["last_hour_utc"]))
+    s = g["series"]
+    common = set.intersection(*(set(s[m]) for m in meters))
+    return {t: sum(s[m][t] for m in meters) for t in sorted(common)}
+
+
+def validate_hourly(measured: dict[datetime, float], simulated: dict[datetime, float]) -> dict[str, Any]:
+    """ASHRAE Guideline 14 style statistics on the hours both have: CV(RMSE) and NMBE, in %.
+    Guideline 14 calls an hourly model calibrated at CV(RMSE) <= 30 % and |NMBE| <= 10 %. Here the
+    model was fitted to aggregates of the same period, so this is an in-sample check, not a hold-out."""
+    hours = sorted(set(measured) & set(simulated))
+    if len(hours) < 48:
+        return {"hours": len(hours), "cv_rmse_pct": None, "nmbe_pct": None}
+    m = [measured[h] for h in hours]
+    s_ = [simulated[h] for h in hours]
+    mean = st.fmean(m)
+    n = len(hours)
+    rmse = (sum((a - b) ** 2 for a, b in zip(m, s_)) / (n - 1)) ** 0.5
+    nmbe = sum(a - b for a, b in zip(m, s_)) / ((n - 1) * mean)
+    cv = 100 * rmse / mean
+    # Monthly: sums over the hours both have in each calendar month (Guideline 14: CV <= 15 %, |NMBE| <= 5 %).
+    mm: dict[str, list[float]] = {}
+    for h, a, b in zip(hours, m, s_):
+        k = h.strftime("%Y-%m")
+        mm.setdefault(k, [0.0, 0.0])
+        mm[k][0] += a
+        mm[k][1] += b
+    months = sorted(mm)
+    mon = {}
+    if len(months) >= 3:
+        ma, mb = [mm[k][0] for k in months], [mm[k][1] for k in months]
+        mmean, nm = st.fmean(ma), len(months)
+        mcv = 100 * (sum((a - b) ** 2 for a, b in zip(ma, mb)) / (nm - 1)) ** 0.5 / mmean
+        mnmbe = 100 * sum(a - b for a, b in zip(ma, mb)) / ((nm - 1) * mmean)
+        mon = {"months": nm, "monthly_cv_rmse_pct": round(mcv, 1), "monthly_nmbe_pct": round(mnmbe, 1),
+               "guideline14_monthly": mcv <= 15.0 and abs(mnmbe) <= 5.0,
+               "by_month_kwh": {k: [round(mm[k][0], 0), round(mm[k][1], 0)] for k in months}}
+    return {"hours": n, "cv_rmse_pct": round(cv, 1), "nmbe_pct": round(100 * nmbe, 1),
+            "guideline14_hourly": cv <= 30.0 and abs(100 * nmbe) <= 10.0,
+            "measured_kwh": round(sum(m), 1), "simulated_kwh": round(sum(s_), 1), **mon}
 
 
 def render_md(t: dict[str, Any]) -> str:

@@ -1,0 +1,453 @@
+{
+  "schema": "ot-site-calibration/v1",
+  "site_id": "SITE_001",
+  "source_sha256": "006c212546b0496b30d8c840ce88219a02ab9d7e1ea684ce9dccbc670b319fec",
+  "note": "Aggregates of an anonymised office's meters (NO1, 2026-02-16..2026-10-27), published with the owner's consent. No address, owner or meter-point identifier. The hourly export itself is not in the repository.",
+  "targets": {
+    "period_utc": [
+      "2026-02-16T14:00:00+00:00",
+      "2026-10-27T22:00:00+00:00"
+    ],
+    "weather": "outdoor-temperature-2026-02-16_2026-10-26.json",
+    "excluded_rows": {
+      "C01": {
+        "flagged": 379,
+        "dq03_window": 0,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "C02": {
+        "flagged": 1,
+        "dq03_window": 3,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E01": {
+        "flagged": 95,
+        "dq03_window": 0,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E02": {
+        "flagged": 95,
+        "dq03_window": 0,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E03": {
+        "flagged": 95,
+        "dq03_window": 0,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E04": {
+        "flagged": 40,
+        "dq03_window": 55,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E05": {
+        "flagged": 24,
+        "dq03_window": 70,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E06": {
+        "flagged": 43,
+        "dq03_window": 52,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E07": {
+        "flagged": 73,
+        "dq03_window": 22,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E08": {
+        "flagged": 45,
+        "dq03_window": 50,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E09": {
+        "flagged": 78,
+        "dq03_window": 17,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E10": {
+        "flagged": 33,
+        "dq03_window": 62,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E11": {
+        "flagged": 40,
+        "dq03_window": 55,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E12": {
+        "flagged": 29,
+        "dq03_window": 66,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E13": {
+        "flagged": 1,
+        "dq03_window": 94,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E14": {
+        "flagged": 0,
+        "dq03_window": 94,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E15": {
+        "flagged": 0,
+        "dq03_window": 39,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E16": {
+        "flagged": 0,
+        "dq03_window": 67,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "E17": {
+        "flagged": 0,
+        "dq03_window": 22,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "H01": {
+        "flagged": 626,
+        "dq03_window": 0,
+        "spike": 0,
+        "partial_last_hour": 0
+      },
+      "H02": {
+        "flagged": 0,
+        "dq03_window": 94,
+        "spike": 0,
+        "partial_last_hour": 0
+      }
+    },
+    "electricity_load_shape": {
+      "meters": [
+        "E01",
+        "E02"
+      ],
+      "hours_used": 5985,
+      "median_kw_by_hour": {
+        "weekday": [
+          11.97,
+          12.33,
+          12.52,
+          12.63,
+          12.96,
+          13.87,
+          18.17,
+          21.43,
+          28.21,
+          30.62,
+          32.85,
+          32.23,
+          31.47,
+          30.98,
+          28.58,
+          26.23,
+          22.09,
+          19.45,
+          14.91,
+          12.94,
+          12.63,
+          12.48,
+          12.45,
+          11.8
+        ],
+        "weekend": [
+          12.3,
+          12.21,
+          12.55,
+          13.1,
+          12.59,
+          13.29,
+          14.82,
+          15.18,
+          15.2,
+          15.3,
+          15.67,
+          16.21,
+          16.44,
+          15.74,
+          15.12,
+          14.51,
+          13.98,
+          14.02,
+          12.79,
+          13.12,
+          13.22,
+          12.53,
+          12.86,
+          12.53
+        ]
+      },
+      "night_base_kw": 12.53,
+      "weekday_day_kw": 29.92,
+      "night_to_day_ratio": 0.419,
+      "weekend_to_weekday_ratio": 0.705
+    },
+    "electricity_technical_shape": {
+      "meters": [
+        "E02"
+      ],
+      "hours_used": 5985,
+      "median_kw_by_hour": {
+        "weekday": [
+          4.16,
+          4.15,
+          4.21,
+          4.22,
+          4.25,
+          4.2,
+          5.46,
+          5.61,
+          6.62,
+          6.78,
+          6.95,
+          7.3,
+          7.36,
+          7.31,
+          7.32,
+          7.04,
+          5.81,
+          5.71,
+          4.1,
+          3.37,
+          3.77,
+          3.83,
+          3.85,
+          3.81
+        ],
+        "weekend": [
+          4.06,
+          3.98,
+          3.99,
+          4.08,
+          4.03,
+          4.0,
+          4.38,
+          4.59,
+          4.32,
+          4.34,
+          4.45,
+          4.22,
+          4.45,
+          4.29,
+          4.51,
+          4.36,
+          4.14,
+          4.68,
+          3.96,
+          3.94,
+          4.59,
+          4.13,
+          4.18,
+          4.12
+        ]
+      },
+      "night_base_kw": 4.19,
+      "weekday_day_kw": 7.11,
+      "night_to_day_ratio": 0.589,
+      "weekend_to_weekday_ratio": 0.8
+    },
+    "heating_signature": {
+      "days": 51,
+      "days_on_weather_side": 49,
+      "days_on_base_side": 2,
+      "balance_identified": false,
+      "balance_temp_c": 11.0,
+      "kwh_per_day_per_k": 37.17,
+      "w_per_k": 1548.9,
+      "base_kwh_per_day": 403.0,
+      "r2": 0.753,
+      "outdoor_range_c": [
+        -11.1,
+        13.3
+      ]
+    },
+    "cooling_signature": {
+      "days": 68,
+      "days_on_weather_side": 51,
+      "days_on_base_side": 17,
+      "balance_identified": false,
+      "balance_temp_c": 14.4,
+      "kwh_per_day_per_k": 63.59,
+      "w_per_k": 2649.7,
+      "base_kwh_per_day": 609.8,
+      "r2": 0.368,
+      "outdoor_range_c": [
+        11.4,
+        25.7
+      ]
+    },
+    "heating_cables": {
+      "E16": {
+        "window_utc": [
+          "2026-03-13T10:00:00+00:00",
+          "2026-04-09T20:00:00+00:00"
+        ],
+        "observed_hours": 659,
+        "kwh": 1.0,
+        "hours_in_icing_band_in_window": 34,
+        "max_hour_kwh": 0.007
+      },
+      "E17": {
+        "window_utc": [
+          "2026-03-15T02:00:00+00:00",
+          "2026-04-10T06:00:00+00:00"
+        ],
+        "observed_hours": 150,
+        "kwh": 78.1,
+        "hours_in_icing_band_in_window": 35,
+        "max_hour_kwh": 1.895
+      }
+    },
+    "assumptions": [
+      "E01 and E02 are taken as the top-level electricity meters; the hierarchy is unknown (DQ08)",
+      "thermal heating = H01 + H02, thermal cooling = C01 + C02; these are thermal kWh, not grid electricity",
+      "days need at least 22 observed hours on every summed meter; a few missing hours are scaled to 24, a missing meter is never filled",
+      "local time is Europe/Oslo by the EU summer-time rule; joins are by UTC hour"
+    ],
+    "not_established": [
+      "causal savings",
+      "COP",
+      "floor area, so no kWh/m2",
+      "meter topology",
+      "dynamic thermal parameters beyond the steady-state signature"
+    ]
+  },
+  "fit": {
+    "params": {
+      "bra_m2": 1545.0,
+      "ua_per_m2": 0.7555999999999999,
+      "capacity_j_per_m2k": 244080.0,
+      "heater_w_per_m2": 90.0,
+      "heating_efficiency": 0.9,
+      "lighting_w_per_m2": 2.25,
+      "equipment_w_per_m2": 3.1,
+      "cooling_w_per_m2": 30.0,
+      "operating_airflow_l_s_m2": 2.222,
+      "min_airflow_l_s_m2": 1.639,
+      "sfp_kw_per_m3_s": 2.5,
+      "hrv_efficiency": 0.7,
+      "heating_c": 21.0,
+      "cooling_c": 23.0,
+      "window_share_of_bra": 0.1438,
+      "heat_source": "district_heating",
+      "equipment_base_w_per_m2": 7.81
+    },
+    "comparison": [
+      [
+        "heating slope W/K",
+        1548.9,
+        1624.3
+      ],
+      [
+        "night base kW",
+        12.53,
+        12.53
+      ],
+      [
+        "weekday daytime kW",
+        29.92,
+        29.9
+      ],
+      [
+        "night/day",
+        0.419,
+        0.419
+      ],
+      [
+        "weekend/weekday",
+        0.705,
+        0.673
+      ]
+    ],
+    "twin_dh_signature": {
+      "days": 253,
+      "days_on_weather_side": 91,
+      "days_on_base_side": 162,
+      "balance_identified": true,
+      "balance_temp_c": 8.5,
+      "kwh_per_day_per_k": 38.98,
+      "w_per_k": 1624.3,
+      "base_kwh_per_day": 3.8,
+      "r2": 0.845,
+      "outdoor_range_c": [
+        -11.1,
+        25.7
+      ]
+    },
+    "validation": {
+      "hours": 5963,
+      "cv_rmse_pct": 39.7,
+      "nmbe_pct": 1.0,
+      "guideline14_hourly": false,
+      "measured_kwh": 114621.9,
+      "simulated_kwh": 113433.5,
+      "months": 9,
+      "monthly_cv_rmse_pct": 19.8,
+      "monthly_nmbe_pct": 1.2,
+      "guideline14_monthly": false,
+      "by_month_kwh": {
+        "2026-02": [
+          9500.0,
+          7820.0
+        ],
+        "2026-03": [
+          15886.0,
+          12780.0
+        ],
+        "2026-04": [
+          13949.0,
+          12892.0
+        ],
+        "2026-05": [
+          12230.0,
+          13123.0
+        ],
+        "2026-06": [
+          12189.0,
+          14057.0
+        ],
+        "2026-07": [
+          10548.0,
+          15032.0
+        ],
+        "2026-08": [
+          12046.0,
+          13830.0
+        ],
+        "2026-09": [
+          14806.0,
+          12723.0
+        ],
+        "2026-10": [
+          13467.0,
+          11175.0
+        ]
+      }
+    },
+    "fixtures": [
+      "twin/fixtures/calibrated/site-001-v1.json",
+      "twin/fixtures/calibrated/site-001-dh-v1.json"
+    ],
+    "scenario": "scenarios/no1-2026-metered-period-hvac-v1.json"
+  }
+}
