@@ -16,18 +16,23 @@ import json
 import os
 import tempfile
 import threading
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from twin import guard as guard_mod
 from twin.clock import VirtualClock, format_utc, parse_utc
 from twin.guard import GuardConfig
+from twin import plant as plant_mod
 from twin.scenarios import Scenario
 from twin.state import (QUALITY_GOOD, QUALITY_STALE, OperationRecord, ZoneReading, ZoneState,
                         canonical_digest, r6)
 
 CONFIG_SCHEMA = "ot-twin-config/v1"
 MODEL_ID = "three-zone-rc-v1"
+#: The same zones and envelope with building services (twin/plant.py).
+HVAC_MODEL_ID = "three-zone-hvac-v1"
+MODEL_IDS = (MODEL_ID, HVAC_MODEL_ID)
 SNAPSHOT_SCHEMA = "ot-twin-snapshot/v1"
 
 
@@ -41,7 +46,7 @@ class OperationConflict(TwinError):
 
 def load_config(source: str | Path | dict[str, Any]) -> dict[str, Any]:
     cfg = json.loads(Path(source).read_text("utf-8")) if not isinstance(source, dict) else source
-    if cfg.get("schema") != CONFIG_SCHEMA or cfg.get("model") != MODEL_ID:
+    if cfg.get("schema") != CONFIG_SCHEMA or cfg.get("model") not in MODEL_IDS:
         raise TwinError("unsupported twin config")
     step = int(cfg["step_seconds"])
     obs = int(cfg["observation_step_seconds"])
@@ -61,6 +66,12 @@ def load_config(source: str | Path | dict[str, Any]) -> dict[str, Any]:
         if a not in ids or b not in ids or a == b:
             raise TwinError("invalid adjacency")
     GuardConfig.from_config(cfg)
+    if cfg["model"] == HVAC_MODEL_ID:
+        pc = plant_mod.PlantConfig.from_dict(cfg["plant"])
+        if {z.zone_id for z in pc.zones} != set(ids):
+            raise TwinError("plant zones must be the twin's zones")
+        if any(z["heater_gain_w_per_k"] for z in cfg["zones"]):
+            raise TwinError("hvac model: heat comes from the plant; heater_gain_w_per_k must be 0")
     return cfg
 
 
@@ -99,12 +110,57 @@ class Twin:
         self._lock = threading.RLock()
         self._snapshot_path = Path(snapshot_path) if snapshot_path else None
         self.config_digest = canonical_digest(config)
+        self.model_id = config["model"]
+        self.plant: plant_mod.PlantConfig | None = None
+        self.points: dict[str, float] = {}
+        self.district_heat_kwh = 0.0
+        self.electric_kwh = 0.0
+        if self.model_id == HVAC_MODEL_ID:
+            if not scenario.has_plant_inputs:
+                raise TwinError("hvac model needs scenario solar, humidity and precipitation")
+            self.plant = plant_mod.PlantConfig.from_dict(config["plant"])
+            init = config["initial_plant"]
+            self.plant_state = plant_mod.PlantState(
+                tank_c=float(init["tank_c"]),
+                co2_ppm={z: float(init["co2_ppm"]) for z in self._zcfg})
+            ds = config["default_setpoints"]
+            self.setpoints = plant_mod.Setpoints(
+                zones={z: plant_mod.ZoneSetpoints(**v) for z, v in ds["zones"].items()},
+                supply_air_c=float(ds["supply_air_c"]), tank_c=float(ds["tank_c"]),
+                hp_max_fraction=float(ds["hp_max_fraction"]), ahu_enabled=bool(ds["ahu_enabled"]),
+                cable_modes=dict(ds["cable_modes"]))
         if self._snapshot_path and self._snapshot_path.exists():
             self._restore(json.loads(self._snapshot_path.read_text("utf-8")))
         elif record_trace:
             self._trace_row()
 
     # -- physics --------------------------------------------------------------
+    def _plant_heat(self, t: int, temps: dict[str, float],
+                    dt: float) -> tuple[dict[str, float], float, float]:
+        """(heat into each zone, electric W, district heat W) from the plant."""
+        assert self.plant is not None
+        # The zone heating setpoint is the value the governed actuator writes.
+        zones = {zid: replace(self.setpoints.zones[zid], heating_c=z.setpoint_c)
+                 for zid, z in self.zones.items()}
+        self.setpoints = replace(self.setpoints, zones=zones)
+        occupied = self.scenario.occupied(t)
+        design = self.config["design_occupants"]
+        exo = plant_mod.Exogenous(
+            outdoor_c=self.scenario.outdoor_c(t), solar_w_m2=self.scenario.solar_w_m2(t),
+            outdoor_rh_pct=self.scenario.outdoor_rh_pct(t),
+            occupants={zid: int(design[zid]) if occupied else 0 for zid in self.zones},
+            icing_risk=self.scenario.icing_risk(t))
+        res = plant_mod.step(self.plant, self.plant_state, temps, self.setpoints, exo, dt)
+        self.plant_state = res.state
+        self.points = res.points
+        return res.zone_heat_w, res.electric_w, res.district_heat_w
+
+    def district_heat_price(self, t: int) -> float:
+        """Declared district-heating tariff: a spot-linked energy price (ASSUMPTION)."""
+        tariff = self.config["plant"].get("district_heating_tariff", {})
+        return (float(tariff.get("spot_factor", 1.0)) * self.scenario.price_per_kwh(t)
+                + float(tariff.get("adder_nok_per_kwh", 0.0)))
+
     def _step(self) -> None:
         t = self.clock.now_s
         dt = float(self.step_s)
@@ -115,21 +171,37 @@ class Twin:
         lo, hi = self.scenario.comfort_band()
         temps = {zid: z.temp_c for zid, z in self.zones.items()}
         total_w = 0.0
+        dh_w = 0.0
+        plant_heat: dict[str, float] | None = None
+        if self.plant is not None:
+            plant_heat, total_w, dh_w = self._plant_heat(t, temps, dt)
         for zid, z in self.zones.items():
             c = self._zcfg[zid]
-            q_heat = min(max(c["heater_gain_w_per_k"] * (z.setpoint_c - temps[zid]), 0.0), c["heater_max_w"])
-            q = c["ua_w_per_k"] * (t_out - temps[zid]) + q_heat + gain_m2 * c["area_m2"]
+            if plant_heat is not None:
+                # Internal gains (people, equipment, light) and solar are in the plant.
+                q_heat = plant_heat[zid]
+                q = c["ua_w_per_k"] * (t_out - temps[zid]) + q_heat
+            else:
+                q_heat = min(max(c["heater_gain_w_per_k"] * (z.setpoint_c - temps[zid]), 0.0),
+                             c["heater_max_w"])
+                q = c["ua_w_per_k"] * (t_out - temps[zid]) + q_heat + gain_m2 * c["area_m2"]
             q += sum(g * (temps[n] - temps[zid]) for n, g in self._neighbours[zid])
             z.temp_c = temps[zid] + dt * q / c["capacity_j_per_k"]
             z.heater_w = q_heat
-            elec_w = q_heat / c["heating_efficiency"]
-            total_w += elec_w
+            if plant_heat is None:
+                total_w += q_heat / c["heating_efficiency"]
             if occupied:
                 dev = max(lo - temps[zid], 0.0) + max(temps[zid] - hi, 0.0)
                 self.comfort_violation_dh += dev * dt / 3600.0
         kwh = total_w * dt / 3.6e6
+        self.electric_kwh += kwh
         self.energy_kwh += kwh
         self.cost += kwh * price
+        if dh_w:
+            dh_kwh = dh_w * dt / 3.6e6
+            self.district_heat_kwh += dh_kwh
+            self.energy_kwh += dh_kwh
+            self.cost += dh_kwh * self.district_heat_price(t)
         self.power_w = total_w
         now = self.clock.tick()
         if now % self.obs_step_s == 0:

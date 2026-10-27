@@ -1,0 +1,42 @@
+{
+  "schema": "ot-scenario/v1",
+  "scenario_id": "trondheim-week-2026w03-hvac-v1",
+  "comment": "Fictitious demo-building-001 at its declared coordinate (twin/fixtures/site-demo-building-001.json): real NO3 day-ahead spot prices and ERA5 outdoor temperature, shortwave radiation, relative humidity and precipitation for 2026-01-15..21, verified by runner.exogenous. Occupancy, gains and comfort are synthetic.",
+  "site_ref": "../twin/fixtures/site-demo-building-001.json",
+  "seed": 177,
+  "start_utc": "2026-01-15T00:00:00Z",
+  "duration_seconds": 604800,
+  "outdoor": {
+    "series_ref": "data/demo-building-001/outdoor-temperature-2026-01-15_2026-01-21.json",
+    "sha256": "96218c36af621aa4f486ced6d275e377df31ca9472d254fe192e3f8236b63c8c"
+  },
+  "occupancy": {
+    "weekday_hours_utc": [
+      7,
+      17
+    ],
+    "gain_w_per_m2": 8.0,
+    "unoccupied_gain_w_per_m2": 1.0
+  },
+  "price": {
+    "series_ref": "data/demo-building-001/price-NO3-2026-01-15_2026-01-21.json",
+    "sha256": "cde8dd904b7541f44ddf67f7787f2d5fb2caa627aaef6857b361ed0294e54cfb"
+  },
+  "comfort": {
+    "occupied_min_c": 20.0,
+    "occupied_max_c": 24.0
+  },
+  "disturbances": [],
+  "solar": {
+    "series_ref": "data/demo-building-001/solar-shortwave-2026-01-15_2026-01-21.json",
+    "sha256": "dedd5804634a28220d163b5dc2dc06bf7a59e23c4896ee1e2fd539603b5da6cf"
+  },
+  "humidity": {
+    "series_ref": "data/demo-building-001/humidity-rh-2026-01-15_2026-01-21.json",
+    "sha256": "c1a6a560207dfde54364d7234ac50600a72c93779cd4aab8fb0a66adb62d5287"
+  },
+  "precipitation": {
+    "series_ref": "data/demo-building-001/precipitation-precip-2026-01-15_2026-01-21.json",
+    "sha256": "f85b05d25e5d8a4a5b730fb480e69852ea04037461d731bcd5dff362d5d49f96"
+  }
+}
