@@ -49,7 +49,17 @@ SNAPSHOT_SCHEMA = "ot-exogenous-snapshot/v1"
 USER_AGENT = "autonomous-ot-control/0.1 (+https://github.com/darklordVirtual/autonomous-ot-control)"
 PRICE_URL = "https://www.hvakosterstrommen.no/api/v1/prices/{y}/{md}_{area}.json"
 WEATHER_URL = ("https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}"
-               "&start_date={start}&end_date={end}&hourly=temperature_2m&timezone=UTC")
+               "&start_date={start}&end_date={end}&hourly={var}&timezone=UTC")
+#: kind -> (Open-Meteo variable, unit as the API states it, snapshot unit, note).
+#: Open-Meteo's hourly radiation and precipitation are the mean or sum over the
+#: PRECEDING hour, labelled with the hour's end; temperature and humidity are
+#: instantaneous. The snapshot keeps the API's timestamps unchanged.
+WEATHER_KINDS = {
+    "outdoor": ("temperature_2m", "°C", "degC", "instantaneous at the timestamp"),
+    "solar": ("shortwave_radiation", "W/m²", "W/m2", "mean over the preceding hour"),
+    "humidity": ("relative_humidity_2m", "%", "%", "instantaneous at the timestamp"),
+    "precipitation": ("precipitation", "mm", "mm/h", "sum over the preceding hour"),
+}
 AREAS = ("NO1", "NO2", "NO3", "NO4", "NO5")
 STEP_S = 3600
 
@@ -104,13 +114,14 @@ def parse_prices(raw: bytes) -> list[tuple[datetime, float]]:
     return sorted(out)
 
 
-def parse_weather(raw: bytes) -> list[tuple[datetime, float]]:
+def parse_weather(raw: bytes, kind: str = "outdoor") -> list[tuple[datetime, float]]:
+    var, api_unit, _, _ = WEATHER_KINDS[kind]
     body = json.loads(raw.decode("utf-8"))
     hourly = body["hourly"]
-    if body.get("hourly_units", {}).get("temperature_2m") != "°C":
-        raise ExogenousError("weather unit is not °C")
+    if body.get("hourly_units", {}).get(var) != api_unit:
+        raise ExogenousError(f"{kind}: unit is not {api_unit}")
     out = []
-    for t, v in zip(hourly["time"], hourly["temperature_2m"], strict=True):
+    for t, v in zip(hourly["time"], hourly[var], strict=True):
         if v is None:
             raise ExogenousError(f"weather value missing at {t}")
         out.append((datetime.fromisoformat(t).replace(tzinfo=UTC), float(v)))
@@ -146,16 +157,21 @@ def price_urls(area: str, first: date, last: date) -> list[str]:
             for d in _days(first, last + timedelta(days=1))]
 
 
-def weather_urls(lat: float, lon: float, first: date, last: date) -> list[str]:
-    return [WEATHER_URL.format(lat=lat, lon=lon, start=first.isoformat(), end=last.isoformat())]
+def weather_urls(lat: float, lon: float, first: date, last: date, kind: str = "outdoor") -> list[str]:
+    return [WEATHER_URL.format(lat=lat, lon=lon, start=first.isoformat(), end=last.isoformat(),
+                               var=WEATHER_KINDS[kind][0])]
 
 
 def fetch_kind(kind: str, site: dict[str, Any], first: date, last: date,
                get: Fetch = http_get, now: datetime | None = None) -> dict[str, Any]:
     area = site["price_area"]["code"]
     lat, lon = float(site["location"]["lat"]), float(site["location"]["lon"])
-    urls = price_urls(area, first, last) if kind == "price" else weather_urls(lat, lon, first, last)
-    parse = parse_prices if kind == "price" else parse_weather
+    if kind == "price":
+        urls, parse = price_urls(area, first, last), parse_prices
+    else:
+        urls = weather_urls(lat, lon, first, last, kind)
+        def parse(raw: bytes) -> list[tuple[datetime, float]]:
+            return parse_weather(raw, kind)
     raws: dict[str, str] = {}
     points: list[tuple[datetime, float]] = []
     for url in urls:
@@ -177,15 +193,16 @@ def fetch_kind(kind: str, site: dict[str, Any], first: date, last: date,
                        "hourly as published by the source; whether an hour is an aggregate "
                        "of 15-minute day-ahead products is UNCERTAIN"]
     else:
+        var, _, _, timing = WEATHER_KINDS[kind]
         source = {"name": "Open-Meteo historical weather API", "upstream": "ERA5 reanalysis",
-                  "point": {"lat": lat, "lon": lon},
+                  "variable": var, "timing": timing, "point": {"lat": lat, "lon": lon},
                   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0)"}
         limitations = ["reanalysis at the grid cell nearest the coordinate, not a station "
                        "observation", "single source, re-fetch verified only"]
     return {
         "schema": SNAPSHOT_SCHEMA,
         "kind": kind,
-        "unit": "NOK/kWh" if kind == "price" else "degC",
+        "unit": "NOK/kWh" if kind == "price" else WEATHER_KINDS[kind][2],
         "site": site["building_id"],
         "start_utc": _iso(start),
         "step_seconds": STEP_S,
@@ -199,7 +216,8 @@ def fetch_kind(kind: str, site: dict[str, Any], first: date, last: date,
 
 def verify_snapshot(snap: dict[str, Any], get: Fetch = http_get) -> dict[str, Any]:
     kind = snap["kind"]
-    parse = parse_prices if kind == "price" else parse_weather
+    def parse(raw: bytes) -> list[tuple[datetime, float]]:
+        return parse_prices(raw) if kind == "price" else parse_weather(raw, kind)
     identical, points, problems = True, [], []
     for req in snap["provenance"]["requests"]:
         try:
@@ -241,6 +259,8 @@ def main(argv: list[str] | None = None) -> int:
     f.add_argument("--from", dest="first", required=True, type=date.fromisoformat)
     f.add_argument("--to", dest="last", required=True, type=date.fromisoformat)
     f.add_argument("--out", required=True)
+    f.add_argument("--kinds", nargs="+", default=["price", *WEATHER_KINDS],
+                   choices=["price", *WEATHER_KINDS])
     v = sub.add_parser("verify")
     v.add_argument("snapshots", nargs="+")
     a = p.parse_args(argv)
@@ -248,9 +268,11 @@ def main(argv: list[str] | None = None) -> int:
         site = load_site(a.site)
         out = Path(a.out)
         out.mkdir(parents=True, exist_ok=True)
-        for kind in ("price", "outdoor"):
+        tags = {"price": site["price_area"]["code"], "outdoor": "temperature",
+                "solar": "shortwave", "humidity": "rh", "precipitation": "precip"}
+        for kind in a.kinds:
             snap = fetch_kind(kind, site, a.first, a.last)
-            tag = site["price_area"]["code"] if kind == "price" else "temperature"
+            tag = tags[kind]
             name = f"{kind}-{tag}-{a.first.isoformat()}_{a.last.isoformat()}.json"
             digest = _write(out / name, snap)
             print(json.dumps({"file": str(out / name), "sha256": digest,

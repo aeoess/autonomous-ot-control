@@ -58,6 +58,9 @@ class Scenario:
     #: Verified snapshots (twin/series.py) replacing the synthetic curves.
     outdoor_series: Series | None = None
     price_series: Series | None = None
+    #: Optional inputs the building-services plant needs (three-zone-hvac-v1):
+    #: global horizontal irradiance, outdoor relative humidity, precipitation.
+    extra_series: dict[str, Series] = field(default_factory=dict)
 
     @property
     def digest(self) -> str:
@@ -93,6 +96,48 @@ class Scenario:
             if start_h <= hour < end_h:
                 return float(p["peak_nok_per_kwh"])
         return float(p["base_nok_per_kwh"])
+
+    # -- plant inputs (three-zone-hvac-v1) -----------------------------------
+    PLANT_INPUTS = ("solar", "humidity", "precipitation")
+
+    @property
+    def has_plant_inputs(self) -> bool:
+        return all(k in self.raw for k in self.PLANT_INPUTS)
+
+    def _posix(self, t_s: int) -> float:
+        return parse_utc(self.start_utc).timestamp() + t_s
+
+    def solar_w_m2(self, t_s: int) -> float:
+        if "solar" in self.extra_series:
+            return self.extra_series["solar"].at(self._posix(t_s))
+        s = self.raw["solar"]
+        rise, setting = s["day_hours_utc"]
+        h = self._hour_utc(t_s)
+        if not rise <= h < setting:
+            return 0.0
+        return float(s["peak_w_m2"]) * math.sin(math.pi * (h - rise) / (setting - rise))
+
+    def outdoor_rh_pct(self, t_s: int) -> float:
+        if "humidity" in self.extra_series:
+            return self.extra_series["humidity"].at(self._posix(t_s))
+        return float(self.raw["humidity"]["mean_pct"])
+
+    def precipitation_mm_h(self, t_s: int) -> float:
+        if "precipitation" in self.extra_series:
+            return self.extra_series["precipitation"].at(self._posix(t_s))
+        return float(self.raw["precipitation"]["mm_per_h"])
+
+    def icing_risk(self, t_s: int) -> bool:
+        """Outdoor -6..+2 degC with precipitation within three hours either side.
+
+        Reads the scenario's own (verified) precipitation, so "the next three
+        hours" is what happened, as an icing controller with a moisture sensor
+        would see on the ground; a strategy deciding ahead sees only forecasts.
+        """
+        if not -6.0 <= self.outdoor_c(t_s) <= 2.0:
+            return False
+        span = range(max(0, t_s - 3 * 3600), min(self.duration_seconds, t_s + 3 * 3600) + 1, 1800)
+        return any(self.precipitation_mm_h(u) > 0.0 for u in span)
 
     def comfort_band(self) -> tuple[float, float]:
         c = self.raw["comfort"]
@@ -157,9 +202,28 @@ def load_scenario(source: str | Path | dict[str, Any], *, base_dir: str | Path |
         dist.append(Disturbance(kind=d["kind"], zone_id=_req(d, "zone_id", str),
                                 from_s=_req(d, "from_s", int), to_s=_req(d, "to_s", int)))
 
+    extra: dict[str, Series] = {}
+    for kind in ("solar", "humidity", "precipitation"):
+        if kind not in raw:
+            continue
+        block = _req(raw, kind, dict)
+        series = _verified(block, root, kind, start_posix, duration)
+        if series is not None:
+            extra[kind] = series
+        elif kind == "solar":
+            hours = _req(block, "day_hours_utc", list)
+            _req(block, "peak_w_m2", (int, float))
+            if len(hours) != 2 or not 0 <= hours[0] < hours[1] <= 24:
+                raise ScenarioError("solar.day_hours_utc must be [rise, set) hours")
+        elif kind == "humidity":
+            _req(block, "mean_pct", (int, float))
+        else:
+            _req(block, "mm_per_h", (int, float))
+
     sc = Scenario(raw=raw, scenario_id=sid, seed=seed, start_utc=start,
                   duration_seconds=duration, disturbances=tuple(dist),
-                  outdoor_series=outdoor_series, price_series=price_series)
+                  outdoor_series=outdoor_series, price_series=price_series,
+                  extra_series=extra)
     rng = random.Random(seed)
     n = duration // sc._noise_step + 2
     std = 0.0 if outdoor_series is not None else float(o["noise_std_c"])

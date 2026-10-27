@@ -23,7 +23,8 @@ from typing import Any
 from twin.clock import parse_utc
 
 SNAPSHOT_SCHEMA = "ot-exogenous-snapshot/v1"
-UNITS = {"price": "NOK/kWh", "outdoor": "degC"}
+UNITS = {"price": "NOK/kWh", "outdoor": "degC", "solar": "W/m2", "humidity": "%",
+         "precipitation": "mm/h"}
 
 
 class SeriesError(ValueError):
