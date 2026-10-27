@@ -1,8 +1,9 @@
 # Integration contracts — REMORA governed dispatch (PR 2, OT-003 + OT-004)
 
 This records the seams between `autonomous-ot-control` and the pinned REMORA
-upstream, reconciled against the real source (first at `2594d08b`, now pinned at
-`9b1763ca`), and the custody/fencing boundary. Since OT-005 slice 1 the governed
+upstream, reconciled against the real source (first at `2594d08b`, re-checked
+at `9b1763ca`, now pinned at `123a5fd0`, see `upstream/remora.lock.json`), and
+the custody/fencing boundary. Since OT-005 slice 1 the governed
 path runs end to end in Docker; the acceptance results are in the README and in
 each run's `artifacts/<run-id>/` evidence bundle. See
 `docs/SDD-OT-001.md` for the full spec and invariants (INV-01..12).

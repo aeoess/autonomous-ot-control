@@ -16,11 +16,21 @@ request is your consent record, and you can leave the same way.
 | Boundary | Mode | You receive | You answer |
 |---|---|---|---|
 | `effect_evidence` | offline | one decision trail per case: the proposal, REMORA's decision, its envelope and evidence manifest, the twin's operation record, the observed effect | is the claimed effect backed by the evidence? |
-| `corpus_adequacy` | offline | the whole fixture set, including the negative controls | which seeded faults would a check miss? |
-| `runner_validity` | offline | the fixture set and a deliberately failing verifier | does a runner report the failure, never a pass? |
+| `corpus_adequacy` | offline | the whole fixture set, including the negative controls, and the reference verifier in `federation/edges/_template/adapter.py` as the checker to mutate | which seeded faults would a checker miss? |
+| `runner_validity` | offline | the fixture set and the scorer `runner.edge_check`; you supply the deliberately failing verifier (empty, lazy, wrong fixture set, crashing) | does the scorer report the failure, never a pass? |
 | `admission_runtime` | inline | the exact call and its context, before dispatch | `permit` or `refuse`, with a reason |
 | `tool_definition` | inline | the served tool definition (after the MCP gateway exists) | does it match the approved one? |
 | `authority_fixture` | inline | a synthetic signed work order | what does it authorize? |
+
+The scorer (`runner.edge_check`) reads one verdict per case, so a green CI run
+today means an `effect_evidence` result. A `corpus_adequacy` edge reports which
+seeded faults its mutations survived, and a `runner_validity` edge reports what
+the scorer did with each broken result; put that report in your edge directory
+and link it from the pull request. It is reviewed, not auto-scored. The
+scorer's own negative paths (empty result, lazy verifier, wrong fixture set,
+missing case) are exercised in `tests/unit/test_federation_kit.py`; it does not
+yet have a fixture for a verifier that crashes or writes corrupt output, so a
+`runner_validity` edge that covers those adds something.
 
 **2. Scaffold or copy the template.**
 
@@ -66,6 +76,8 @@ whose entry point behaves the same way.
 ./deploy/scripts/run-edge.sh <your-edge-id>           # sandboxed Docker (CI mode)
 ./deploy/scripts/run-edge.sh <your-edge-id> --local   # fast local iteration without Docker
 ```
+
+The script calls `python3`; on Windows (Git Bash) set `PYTHON=python`.
 
 This runs your adapter in a container with no network, a read-only root
 filesystem and a non-root user, against the frozen fixtures in
@@ -138,6 +150,14 @@ stay there; nothing is removed because it looks bad. You can publish the same
 The manifest lists every case with its expected verdict and the fault it
 seeds. A new fixture version never replaces an old one; it gets a new
 directory.
+
+**Digest rule.** `evidence_sha256` is SHA-256 over the UTF-8 bytes of the
+canonical JSON of `remora_evidence`: keys sorted, separators `,` and `:` with
+no whitespace, non-ASCII kept as-is (Python:
+`json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`).
+`fixtures_sha256` in your result is SHA-256 over the raw bytes of
+`manifest.json`. Both are what the template computes; an independent
+implementation needs only these two rules.
 
 Questions go in an issue on this repository. The discussion that motivated
 the testbed is aeoess/agent-governance-vocabulary#177, but joining happens
