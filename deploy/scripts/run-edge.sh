@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 PY="${PYTHON:-python3}"
 EDGE="${1:?usage: run-edge.sh <edge-id> [fixture-set] [--local]}"
-SET="v1"
+SET="v2"   # the latest sealed set; name an older one as the second argument
 LOCAL=0
 for arg in "${@:2}"; do
   if [[ "$arg" == "--local" ]]; then

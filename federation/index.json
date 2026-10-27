@@ -13,6 +13,7 @@
     "results": "docs/federation/RESULTS.md",
     "registry": "docs/federation/edge-registry.yaml",
     "fixtures_v1": "federation/fixtures/v1/manifest.json",
+    "fixtures_v2": "federation/fixtures/v2/manifest.json",
     "template_edge": "federation/edges/_template/edge.json",
     "reference_verifier": "federation/edges/_template/adapter.py",
     "records": "federation/records",
@@ -152,6 +153,35 @@
       ]
     }
   ],
+  "revisions": {
+    "note": "Test against a revision at or after the latest entry, or against the pinned revision a fixture set's manifest names. Earlier revisions reproduce the findings listed here; that is expected, not a new result.",
+    "findings_fixed": [
+      {
+        "date": "2026-10-27",
+        "finding": "observer accepted one applied operation's id as proof of another tool's or zone's effect when the desired state already existed",
+        "fixed_in": "PR #20 (4b9f6ec)",
+        "pinned_by": "tests/unit/test_effect_observer_binding.py"
+      },
+      {
+        "date": "2026-10-27",
+        "finding": "attestor re-decided the observer's binding refusal by comparing the plant's current value; the real SDK returned EFFECT_VERIFIED",
+        "fixed_in": "commit 'fix(attestor): a binding refusal is never re-decided' on the branch after 4b9f6ec",
+        "pinned_by": "tests/sdk/test_attestor_binding_sdk.py, tests/unit/test_verifier_binding.py"
+      },
+      {
+        "date": "2026-10-27",
+        "finding": "restart lost the HVAC setpoints, plant state and point history while keeping the revision and operation log",
+        "fixed_in": "commit 'fix(twin): snapshot v2' on the branch after 4b9f6ec",
+        "pinned_by": "tests/unit/test_twin_restart_state.py"
+      },
+      {
+        "date": "2026-10-27",
+        "finding": "reference verifier answered ESTABLISHED for three missing-evidence mutations and a denied-but-applied trail",
+        "fixed_in": "commit 'fix(federation): the reference verifier requires the evidence each claim needs' on the branch after 4b9f6ec. Fixture set v2 is sealed against that verifier: federation/fixtures/v2/manifest.json sealed_against names the commit and the file digests, and runner.edge_check --check-provenance runs that verifier from git against v2. testbed_commit in the same manifest is the trails' revision (942ba37), not the verifier's.",
+        "pinned_by": "tests/unit/test_reference_verifier_evidence.py, tests/unit/test_fixture_set_v2.py, federation/fixtures/v2/manifest.json#sealed_against"
+      }
+    ]
+  },
   "licence": {
     "code": "NOT_DECIDED (SDD D-01)",
     "fixtures_and_contracts": "NOT_DECIDED (SDD D-01)",

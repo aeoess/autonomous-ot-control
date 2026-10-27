@@ -513,6 +513,17 @@ def validate_record(rec: Any) -> list[str]:
         p.append(f"fixture set {fx.get('path')} is not in this repository")
     if rec["status"] == "PASS" and rec["result"].get("negatives_passed", 1) != 0:
         p.append("a PASS with a negative control ESTABLISHED")
+    prov = rec.get("provenance") or {}
+    commit = str(prov.get("testbed_commit_at_run", "UNKNOWN"))
+    if commit != "UNKNOWN":
+        # A record may only name a revision that exists in this history and is an
+        # ancestor of HEAD: a run on a commit that was later rewritten away names nothing.
+        head = _git("rev-parse", "HEAD")
+        if head is not None:
+            if not re.fullmatch(r"[0-9a-f]{40}", commit) or _git("cat-file", "-e", f"{commit}^{{commit}}") is None:
+                p.append(f"provenance.testbed_commit_at_run {commit[:12]} is not a commit in this repository")
+            elif _git("merge-base", "--is-ancestor", commit, head) is None:
+                p.append(f"provenance.testbed_commit_at_run {commit[:12]} is not an ancestor of HEAD")
     return p
 
 
