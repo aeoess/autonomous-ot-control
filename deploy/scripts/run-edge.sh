@@ -16,8 +16,9 @@ RUN="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="artifacts/edges/${EDGE}/${RUN}"
 mkdir -p "$OUT"
 chmod 777 "$OUT"  # the sandboxed edge runs as nobody (65534) and writes only here
-IMAGE="$("$PY" -c "import json,sys;print(json.load(open(sys.argv[1]))['entrypoint'].get('image','python:3.12-slim'))" "${EDGE_DIR}/edge.json")"
-mapfile -t CMD < <("$PY" -c "import json,sys;[print(x) for x in json.load(open(sys.argv[1]))['entrypoint']['command']]" "${EDGE_DIR}/edge.json")
+IMAGE="$("$PY" -c "import json,sys;print(json.load(open(sys.argv[1]))['entrypoint'].get('image','python:3.12-slim'))" "${EDGE_DIR}/edge.json" | tr -d '\r')"
+# tr -d '\r': a Windows Python prints CRLF, which would end up inside the argv.
+mapfile -t CMD < <("$PY" -c "import json,sys;[print(x) for x in json.load(open(sys.argv[1]))['entrypoint']['command']]" "${EDGE_DIR}/edge.json" | tr -d '\r')
 
 # Sandbox: no network, read-only root, no capabilities, non-root, bounded
 # resources; the edge sees only its own directory, the fixtures and an output dir.

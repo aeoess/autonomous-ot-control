@@ -129,3 +129,9 @@ directory.
 Questions go in an issue on this repository. The discussion that motivated
 the testbed is aeoess/agent-governance-vocabulary#177, but joining happens
 here, by pull request.
+
+## Fixture sets
+
+| Set | Cases | Built from | Template result |
+|---|---|---|---|
+| `v1` | 12 positive, 6 negative (one per fault) | governed demo week 2026-01-15..21, testbed `942ba37` | 12/12 established, 6/6 faults caught |
