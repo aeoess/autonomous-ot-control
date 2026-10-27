@@ -96,6 +96,29 @@ verdict is the expected one; `ESTABLISHED` on any negative fails the run.
 
 ## In five steps
 
+Keep your own commit author identity. External names and GitHub noreply
+addresses are accepted; do not impersonate the repository owner to pass CI.
+See [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
+### Choose the submission path
+
+**One bounded report, without enrolling.** Add
+`federation/reports/<report-id>.md`, using
+[REPORT_TEMPLATE.md](REPORT_TEMPLATE.md). Link the evaluator's own immutable
+source and logs; include the testbed SHA, agreed inputs, exact commands,
+outcomes, negative controls and claim ceiling. No edge directory, runtime
+adapter, registry entry, credentials or ongoing maintenance is required.
+`runner_validity` and `corpus_adequacy` reports are reviewed by a maintainer;
+CI does not execute them as effect verifiers or manufacture a PASS record.
+A report alone is not an auto-scored row in `RESULTS.md`.
+
+**Repeatable effect-evidence edge.** Follow the steps below. The checker may
+remain entirely in the contributor's repository and public container image.
+Only its metadata and run records need to be committed here. A pull request
+adding the edge and registry entry is the consent record for that edge only.
+For a report-reviewed boundary that also wants an edge manifest, an empty
+`entrypoint: {}` is accepted; no per-case adapter is required or run.
+
 **1. Scaffold.**
 
 ```bash
@@ -120,6 +143,18 @@ independence level of every run. Nobody declares the level. Validate at any time
 python -m runner.edge_check --validate federation/edges/<your-edge-id>
 ```
 
+**Keep the agreed fixture scope.** Set `"fixture_sets": ["v1"]` in
+`edge.json` for a v1-only evaluation, or `["v2"]` for a v2-only one.
+CI runs only these versions, while its reference self-test still checks
+every sealed set. Empty, duplicate, unknown or path-like names are refused.
+Omitting the field preserves the previous behavior: CI tests every sealed
+set. Adding a version is an opt-in change, never an automatic upgrade to an
+earlier report. List the selection with:
+
+```bash
+python -m runner.edge_check --list-fixture-sets federation/edges/<your-edge-id>
+```
+
 **2. Implement one entry point.**
 
 - **Offline:** `adapter run --fixtures <dir> --out <result.json>`. Read every
@@ -130,6 +165,33 @@ python -m runner.edge_check --validate federation/edges/<your-edge-id>
   answers `{verdict: "permit" | "refuse", reason}` within 2 s. A timeout or an
   error counts as `refuse` and is reported as `edge_unavailable`, never as a
   catch. No harness runs this yet.
+
+**Keep external implementations external.** Instead of copying a verifier or
+library here, publish the checker in its own repository/image. Remove the
+scaffolded `adapter.py` from your contribution and set, for example:
+
+```json
+{
+  "pin": {"kind": "image_digest", "value": "ghcr.io/<owner>/<checker>@sha256:<64-hex-digest>"},
+  "fixture_sets": ["v1"],
+  "entrypoint": {
+    "image": "ghcr.io/<owner>/<checker>@sha256:<64-hex-digest>",
+    "command": ["python", "/opt/checker/adapter.py", "run", "--fixtures", "/fixtures", "--out", "/out/result.json"]
+  }
+}
+```
+
+This is a fragment of `edge.json`, not a complete manifest. Replace the
+placeholders with the actual public image and full digest; the command must
+match that image. The image contains its dependencies before publication;
+there is no runtime `pip install` or network fetch. It must run as UID 65534
+with a read-only root and write only under `/out` or `/tmp`. Its external
+source pin and licence belong in `run.md`. Do not vendor its source or add a
+dependency-bump bot here. Check out the contributor's pinned source separately
+when reviewing its implementation.
+
+Use the Docker command below for an image-only edge. `--local` runs an
+on-disk entry point and cannot execute a checker that exists only in an image.
 
 **Digest rules** (the only two an independent implementation needs):
 `evidence_sha256` is SHA-256 over the UTF-8 bytes of the canonical JSON of
@@ -147,6 +209,10 @@ evaluated are the bytes the testbed sealed.
 ./deploy/scripts/run-edge.sh <your-edge-id> --local   # one process, standard library, no Docker
 ./deploy/scripts/run-edge.sh <your-edge-id>           # sandboxed container, exactly as CI
 ```
+
+For an agreed v1 run, pass `v1` explicitly:
+`./deploy/scripts/run-edge.sh <your-edge-id> v1`. The shell's default remains
+v2; `fixture_sets` controls CI, not a manual command's explicit input.
 
 Both verify the fixture set against its manifest, run your adapter in a fresh
 working directory, refuse to score a result that is missing or malformed,
@@ -180,6 +246,11 @@ and the testbed's (synthetic plant, one deployment, no physical write path).
 
 **4. Submit the record with the pull request.**
 
+Open a draft pull request first to obtain its number for `consent_ref`, then
+add the registry entry and record in that same branch. Do not use a guessed
+number or another participant's pull request. A report-only submission needs
+no registry entry.
+
 Copy `run-record.json` to `federation/records/<your-edge-id>/<started_at>.json`
 and add your entry to [`edge-registry.yaml`](edge-registry.yaml):
 
@@ -203,7 +274,7 @@ python -m runner.edge_check --check-records && python -m runner.edge_check --res
 `federation/records/<your-edge-id>/`, your registry entry and the regenerated
 `RESULTS.md`, and nothing else. CI validates every record (schema, digests
 against the sealed set, derived level), refuses a results table that differs
-from the records, and runs your edge in the sandbox at L0–L2 as a
+from the records, and runs your effect-evidence edge on its agreed sets in the sandbox at L0–L2 as a
 reproduction beside your own record. A maintainer reviews it. On merge, you
 are listed, with your own record and the CI record side by side.
 
@@ -226,7 +297,8 @@ are listed, with your own record and the CI record side by side.
 
 - **May add:** files under `federation/edges/<your-edge-id>/` and
   `federation/records/<your-edge-id>/`, your registry entry, the regenerated
-  `RESULTS.md`.
+  `RESULTS.md`. A report-only submission may instead add only
+  `federation/reports/<report-id>.md` and its sanitized evidence references.
 - **May not change:** the REMORA image, the adapter in `deploy/ot/`, the twin's
   interlock, any policy, the fixtures, the scorer, or another edge's files.
   Those belong in a separate pull request with its own review.

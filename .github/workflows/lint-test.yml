@@ -7,9 +7,9 @@ permissions:
   contents: read
 jobs:
   commit-identity:
-    # The owner's CLI identity and GitHub profile identity are both accepted.
-    # The profile spelling is bound to the owner's exact GitHub noreply email.
-    # No co-author trailer; contributors join by pull request.
+    # Contributors keep their own authorship. Only reserved owner identities
+    # are checked for inconsistent name/email pairs; this is metadata hygiene,
+    # not authentication. Maintainer review remains the authorization boundary.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -25,9 +25,11 @@ jobs:
           head="${{ github.event.pull_request.head.sha }}"
           bad=0
           while IFS=$'\t' read -r sha author email; do
-            if [[ "$author" != "darklordVirtual" ]] &&
-               [[ "$author" != "Stian Skogbrott" || "$email" != "36493828+darklordVirtual@users.noreply.github.com" ]]; then
-              echo "::error::commit $sha does not use a recognized owner identity"; bad=1
+            if { [[ "$author" == "Stian Skogbrott" ]] &&
+                 [[ "$email" != "36493828+darklordVirtual@users.noreply.github.com" ]]; } ||
+               { [[ "$email" == "36493828+darklordVirtual@users.noreply.github.com" ]] &&
+                 [[ "$author" != "Stian Skogbrott" && "$author" != "darklordVirtual" ]]; }; then
+              echo "::error::commit $sha has an inconsistent reserved owner identity"; bad=1
             fi
           done < <(git log --format='%H%x09%an%x09%ae' "$base".."$head")
           if git log --format='%B' "$base".."$head" | grep -iE '^(Co-authored-by|Claude-Session):'; then
