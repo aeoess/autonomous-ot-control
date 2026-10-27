@@ -100,10 +100,14 @@ fixtures do not establish (a synthetic plant, one deployment).
 
 **Where the edges end up.** Every offline edge already runs beside a governed
 run (`runner.edge_pass`): its verdicts on the run's real trails are reported
-next to the run and never change its outcome. The final A/B/C report of
-ADR-004, ungoverned versus REMORA versus REMORA plus an edge on one episode
-with an oracle written before any run, is not built yet; the roadmap says
-what exists, what is missing and in which order.
+next to the run and never change its outcome. The demo week is also pinned
+as an episode (`scenarios/episodes/`), every proposal judged `permitted` or
+`forbidden:<rule>` by an oracle written from the work orders and the plant's
+limits before any run, and every governed run accounts for arm B against
+it: forbidden and permitted effects over their denominators, refusals by
+layer. The final A/B/C report of ADR-004, ungoverned versus REMORA versus
+REMORA plus an edge, is not built yet; the roadmap says what exists, what is
+missing and in which order.
 
 External contributors keep their own authorship. A bounded report can be
 submitted without joining or providing an adapter. External verifier source
