@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ot-caretaker-profile-catalog/v1",
+  "title": "Caretaker profile catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "engine", "implemented_in", "site_policy", "fallback", "assumptions", "selection",
+               "overlays", "profiles", "algorithms", "kpis"],
+  "properties": {
+    "schema": {"const": "ot-caretaker-profile-catalog/v1"},
+    "engine": {"type": "string"},
+    "implemented_in": {"type": "string"},
+    "site_policy": {"type": "string"},
+    "fallback": {"type": "string"},
+    "assumptions": {"type": "object", "required": ["autonomous_physical_control", "governed_today"],
+                    "properties": {"autonomous_physical_control": {"const": false}}},
+    "selection": {"type": "object", "required": ["model", "order", "deterministic"],
+                  "properties": {"deterministic": {"const": true}}},
+    "overlays": {"type": "array", "items": {"$ref": "#/$defs/entry"}},
+    "profiles": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/entry"},
+                 {"required": ["algorithms"], "properties": {"algorithms": {"type": "array", "items": {"type": "string"}}}}]}},
+    "algorithms": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["id", "setpoint", "family", "rule"],
+      "properties": {"id": {"type": "string", "pattern": "^[a-z_]+$"}, "setpoint": {"type": "string"},
+                     "family": {"type": "string"}, "rule": {"type": "string"},
+                     "status": {"enum": ["disabled"]}, "note": {"type": "string"}}}},
+    "kpis": {"type": "object"}
+  },
+  "$defs": {
+    "entry": {
+      "type": "object", "required": ["id", "priority", "trigger", "status"],
+      "properties": {"id": {"type": "string", "pattern": "^[a-z_]+$"}, "priority": {"type": "integer"},
+                     "trigger": {"type": "string"}, "effect": {"type": "string"}, "note": {"type": "string"},
+                     "algorithms": {"type": "array"},
+                     "status": {"enum": ["active_offline", "not_applicable", "not_implemented"]}},
+      "additionalProperties": false
+    }
+  }
+}
