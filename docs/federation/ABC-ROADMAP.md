@@ -25,23 +25,16 @@ is the one the edges are for.
 | Decision trails export the twin's own operation record, so an offline pass needs no live stack | `runner.demo` (`twin_operation` in `decisions/<id>.json`) | in `main` |
 | Offline edges: contracts, sealed sets `v1` and `v2`, scorer, run records with derived independence level, reviewed reports | `federation/`, `runner.edge_check` | `TESTED_DOCKER`; one external `L4` record, one reviewed `runner_validity` report |
 | Edges beside the run: every offline `effect_evidence` edge over a governed run's trails, findings reported, outcome untouched | `runner.edge_pass`, wired into `run-demo-governed.sh` | `TESTED_LOCALLY` (synthetic trails); not yet run on a Docker demo |
-| Attack injection in the governed demo (day 2: replay, tamper, wrong zone, out of contract) | `runner.demo.inject_attacks` | `TESTED_DOCKER` |
+| Attack injection in the governed demo (day 2: off-plan, out of contract, replay, no work order) | `runner.demo.inject_attacks` | `TESTED_DOCKER` |
+| **Episodes and the oracle** (`ot-episode/v1`): the P1 proposal stream for the demo's week, generated offline on the same twin, plus the four injected attacks, each proposal with `permitted` or `forbidden:<rule>` judged from the work orders and the limits alone; pinned inputs by digest; `check` rebuilds and compares | `runner.episode`, `runner.oracle`, `scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-7d-v1.json` (48 proposals: 44 permitted, 4 forbidden) | `TESTED_LOCALLY`; a test fails if the oracle imports anything of REMORA's or reads a decision, reason or refusal field |
+| **Per-layer refusal accounting** in the governed demo: every ledger proposal carries `refused_by` (`interlock`, `remora:<reason>`, `reviewer`; `edge:<id>` reserved) and the episode's oracle verdict, or `not_in_episode`; arm B's metrics with exact denominators, refusals by layer and by rule, and the twin's revision delta checked against counted effects, written to `arm-b-metrics.json` and the summary | `runner.ledger_metrics`, `runner.demo.account_arm_b` | `TESTED_LOCALLY` on synthetic ledgers and the committed episode; not yet run on a Docker demo |
 
 ## What is missing, in build order
 
 Each step is one pull request with its own acceptance test, and each is
-usable on its own.
+usable on its own. Steps 1 and 2 of the original list (episodes and the
+oracle, per-layer accounting) are done and listed above.
 
-1. **Episodes and the oracle** (`scenarios/episodes/<id>.json`, schema
-   `ot-episode/v1`). The proposal stream the demo already generates, written
-   down with `origin`, `intent_ref` and the oracle verdict per proposal
-   (`permitted` or `forbidden:<rule>`), derived from the work orders and the
-   limits table. Acceptance: the oracle never reads REMORA's reason codes; a
-   test fails if it does.
-2. **Per-layer refusal accounting in the governed demo.** Every proposal in
-   the ledger carries which layer refused it (`interlock`, `remora:<reason>`,
-   `reviewer`) and the oracle's verdict, so B's metrics come straight from the
-   ledger. Acceptance: `state_revision` delta equals counted effects.
 3. **Arm A, the ungoverned known-negative.** `compose.arm-a.yaml` under its
    own project, its own twin and volumes, agent holds the actuator token and
    picks its own operation ids, evidence labelled `architecture:
@@ -60,9 +53,12 @@ usable on its own.
    section. Acceptance: AT-16 (exact metrics and delta, no unqualified
    savings claim); no arm is called "safer" in prose.
 
-Steps 1, 2 and 5 need no external participant. Step 4 is where an inline edge
+Steps 3 and 5 need no external participant. Step 4 is where an inline edge
 first changes a number; until then every external contribution is offline,
-which is also the only kind the registry has so far.
+which is also the only kind the registry has so far. With steps 1 and 2 in
+place, arm B's numbers already come out of every governed demo run
+(`artifacts/<run>-work/arm-b-metrics.json`), judged against an oracle that
+was written before the run.
 
 ## What an edge owner needs to know
 

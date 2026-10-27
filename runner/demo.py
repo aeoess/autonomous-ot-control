@@ -223,6 +223,7 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
     last_item: dict[str, Any] | None = None
     end_s = min(days * 86400, sc.duration_seconds)
     s.wait_ready(True)
+    rev0 = revision(s)
     started = time.monotonic()
     plan_ref = None
     day = ""
@@ -266,7 +267,8 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
     audit = body(s.step("audit_verify"))
     return {"ledger": ledger, "counts": dict(counts), "applied_ops": applied_ops,
             "live_energy": energy, "live_status": status, "audit": audit,
-            "simulated_s": end_s, "wall_s": round(time.monotonic() - started, 1)}
+            "simulated_s": end_s, "wall_s": round(time.monotonic() - started, 1),
+            "revision_before": rev0, "revision_after": revision(s)}
 
 
 def executed_read(r: dict[str, Any]) -> bool:
@@ -470,6 +472,7 @@ def run_p3(s: Stack, out: Path, days: int) -> dict[str, Any]:
     last_item: dict[str, Any] | None = None
     end_s = min(days * 86400, sc.duration_seconds)
     s.wait_ready(True)
+    rev0 = revision(s)
     started = time.monotonic()
     plan_ref: str | None = None
     day = ""
@@ -533,7 +536,7 @@ def run_p3(s: Stack, out: Path, days: int) -> dict[str, Any]:
     return {"ledger": ledger, "counts": dict(counts), "applied_ops": applied_ops,
             "live_energy": energy, "live_status": status, "audit": audit,
             "simulated_s": end_s, "wall_s": round(time.monotonic() - started, 1),
-            "strategy": "P3"}
+            "revision_before": rev0, "revision_after": revision(s), "strategy": "P3"}
 
 
 # -- offline replay and savings ---------------------------------------------------------
@@ -661,6 +664,35 @@ def render(summary: dict[str, Any], live: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def account_arm_b(live: dict[str, Any], work: Path, strategy: str, days: int) -> dict[str, Any]:
+    """Per-layer refusal accounting against the episode's oracle (ADR-004, runner.ledger_metrics).
+
+    The episode for this strategy and span, if committed, supplies the oracle
+    verdict per proposal; otherwise every proposal is accounted without one
+    (`unjudged`), never guessed. Imported lazily: runner.episode imports this module.
+    """
+    import hashlib
+    from runner import episode as episode_mod
+    from runner import ledger_metrics
+    ep = None
+    ep_path = episode_mod.EPISODES_DIR / f"{SCENARIO.stem}-p1-{days}d-v1.json"
+    if strategy == "P1" and ep_path.is_file():
+        ep = episode_mod.load(ep_path)
+    ledger_metrics.attach(live["ledger"], ep)
+    m = ledger_metrics.metrics(live["ledger"], revision_before=live.get("revision_before"),
+                               revision_after=live.get("revision_after"))
+    m["episode"] = ({"id": ep["episode_id"], "path": ep_path.relative_to(ROOT).as_posix(),
+                     "sha256": hashlib.sha256(ep_path.read_bytes()).hexdigest()} if ep else None)
+    m["reviewer_model"] = "careful"
+    (work / "arm-b-metrics.json").write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
+    return m
+
+
+def ledger_md(m: dict[str, Any]) -> str:
+    from runner import ledger_metrics
+    return ledger_metrics.render_md(m, arm="B", reviewer=m.get("reviewer_model", "careful"))
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="runner.demo")
     p.add_argument("--run-id", required=True)
@@ -677,9 +709,10 @@ def main(argv: list[str] | None = None) -> int:
     work.mkdir(parents=True, exist_ok=False)
     live = run_p3(s, work, a.days) if a.strategy == "P3" else run(s, work, a.days)
     summary = summarize(live)
+    summary["arm_B"] = account_arm_b(live, work, a.strategy, a.days)
     (work / "ledger.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in live["ledger"]),
                                        encoding="utf-8")
-    (work / "summary.md").write_text(render(summary, live), encoding="utf-8")
+    (work / "summary.md").write_text(render(summary, live) + "\n" + ledger_md(summary["arm_B"]), encoding="utf-8")
     (work / "summary.json").write_text(json.dumps({"summary": summary, "counts": live["counts"],
                                                    "audit": live["audit"]}, indent=2), encoding="utf-8")
     c = live["counts"]

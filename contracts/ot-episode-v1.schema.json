@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ot-episode-v1",
+  "title": "A federation A/B/C episode (ADR-004): one workload for every arm, with the oracle written before any run",
+  "type": "object",
+  "required": [
+    "schema",
+    "episode_id",
+    "twin_config",
+    "twin_config_sha256",
+    "scenario",
+    "scenario_sha256",
+    "strategy",
+    "days",
+    "simulated_s",
+    "step_seconds",
+    "reviewer_models",
+    "work_orders",
+    "tables",
+    "rules",
+    "totals",
+    "proposals",
+    "oracle_note"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-episode/v1"
+    },
+    "episode_id": {
+      "type": "string"
+    },
+    "twin_config": {
+      "type": "string"
+    },
+    "twin_config_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scenario": {
+      "type": "string"
+    },
+    "scenario_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "strategy": {
+      "type": "string"
+    },
+    "days": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "simulated_s": {
+      "type": "integer"
+    },
+    "step_seconds": {
+      "type": "integer"
+    },
+    "reviewer_models": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "careful",
+          "rubber_stamp"
+        ]
+      }
+    },
+    "attack_at_sim_s": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "work_orders": {
+      "type": "object",
+      "description": "intent_ref -> what it permits: zones with their permitted values. The oracle reads only this.",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "zones"
+        ],
+        "properties": {
+          "zones": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tables": {
+      "type": "object",
+      "description": "The plant's declared limits the oracle judges against: signed contract bounds and step, cumulative budgets.",
+      "required": [
+        "zones",
+        "setpoint_min_c",
+        "setpoint_max_c",
+        "max_delta_c",
+        "budgets"
+      ]
+    },
+    "rules": {
+      "type": "object",
+      "description": "rule id -> meaning (ADR-004).",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "totals": {
+      "type": "object",
+      "required": [
+        "proposals",
+        "permitted",
+        "forbidden",
+        "by_rule",
+        "by_origin"
+      ]
+    },
+    "proposals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "at_sim_s",
+          "origin",
+          "call",
+          "oracle"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at_sim_s": {
+            "type": "integer"
+          },
+          "origin": {
+            "type": "string",
+            "pattern": "^(schedule|injected:[a-z_]+)$"
+          },
+          "intent_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "call": {
+            "type": "object",
+            "required": [
+              "tool_name",
+              "arguments"
+            ]
+          },
+          "from_c": {
+            "type": "number"
+          },
+          "replay_of": {
+            "type": "string"
+          },
+          "approved_call": {
+            "type": "object"
+          },
+          "plant_interlock": {
+            "type": "string"
+          },
+          "strategy_reason": {
+            "type": "string"
+          },
+          "oracle": {
+            "type": "object",
+            "required": [
+              "verdict",
+              "rule",
+              "reason"
+            ],
+            "properties": {
+              "verdict": {
+                "enum": [
+                  "permitted",
+                  "forbidden"
+                ]
+              },
+              "rule": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  null,
+                  "unauthorized",
+                  "outside_work_order",
+                  "outside_contract",
+                  "over_authority_budget",
+                  "duplicate_effect",
+                  "not_the_approved_call",
+                  "stale_basis",
+                  "basis_not_verified_data"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "oracle_note": {
+      "type": "string"
+    }
+  }
+}
