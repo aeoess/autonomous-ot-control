@@ -126,6 +126,57 @@ weekday daytime increment, and the weekday/weekend pattern. Not the balance
 temperature or domestic hot water when the heating meters do not cover warm
 days, not the meter hierarchy, not COP, and not a causal saving.
 
+## SITE_001: one measured office, NO1, 2026
+
+Aggregates in [`scenarios/calibration/site-001.json`](../scenarios/calibration/site-001.json),
+published with the owner's consent; the hourly export is not in the
+repository and no address or identifier is. 21 meters, 2026-02-16 to
+2026-10-27. The fit runs on a scenario of exactly that period
+(`scenarios/no1-2026-metered-period-hvac-v1.json`: verified NO1 prices and
+ERA5 weather for those days, Norwegian holidays, occupancy from the measured
+profile).
+
+**What it changed in the simulator**
+
+- **Occupancy hours.** The measured weekday load is at least halfway from
+  night base to peak from 08 to 16 local time. All 2025 scenarios now use
+  `weekday_hours_local: [8, 16]` with summer time; before, they used 07–17
+  UTC, which is 09–19 in summer.
+- **Base load.** The building uses 42 % of its daytime load at night; the
+  demo building used 10 %. The calibrated building carries 7.8 W/m² of
+  permanent load.
+- **Lighting and equipment.** The daytime increment is about 30 % of the
+  certificate cohort's lighting and equipment density (2.3 and 3.1 W/m²).
+- **Heating cables.** The ramp cable used 78 kWh over four weeks in
+  March–April 2026; the demo building assumed about 19 600 kWh a year.
+  Calibrated buildings have none.
+
+**The fitted building** `twin/fixtures/calibrated/site-001-v1.json` (heat pump,
+as at the site) and its district-heated twin `site-001-dh-v1.json` (used only
+to read the heating signature cleanly): 1545 m², from the medium-office
+certificate profile, with three parameters fitted.
+
+| Target | Measured | Twin | |
+|---|---:|---:|---:|
+| Heating signature slope | 1549 W/K | 1624 W/K | +5 % |
+| Night base load | 12.5 kW | 12.5 kW | 0 % |
+| Weekday daytime | 29.9 kW | 29.9 kW | 0 % |
+| Weekend / weekday | 0.71 | 0.67 | −5 % |
+| Electricity over 5963 hours, NMBE | | | 1.0 % |
+| Hourly CV(RMSE) (Guideline 14: ≤ 30 %) | | | 39.7 % |
+| Monthly CV(RMSE) (Guideline 14: ≤ 15 %) | | | 19.8 % |
+
+**Not calibrated yet.** The total is right but the seasons are not: the
+twin uses 18–20 % too little electricity in February–March and
+September–October and 15–43 % too much in June–August. The likely causes are
+the heat pump's winter efficiency and the cooling plant's summer
+electricity, and they cannot be fitted honestly until the meter topology is
+known (whether the heat pump and the chiller are on the two top-level
+meters). The heating signature's balance temperature and base are not
+identified (2 of 51 complete heating days above 11 °C). Savings computed on
+this building are the size of the levers on a building like it, not a
+verified saving for it.
+
 ## What it still does not establish
 
 A measured calibration needs time series: outdoor and indoor temperature,

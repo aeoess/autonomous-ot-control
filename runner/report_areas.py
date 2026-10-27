@@ -226,6 +226,14 @@ def abc_html(res: dict[str, Any]) -> str:
 
 #: Floor area of the synthetic building, for intensity checks (kWh per m²).
 BUILDING_CONFIG = Path(__file__).resolve().parents[1] / "twin" / "fixtures" / "three-zone-hvac-seasonal-v2.json"
+ROOT_DIR = Path(__file__).resolve().parents[1]
+
+
+def use_building(res: dict[str, Any]) -> None:
+    """Point the intensity and cable checks at the building the results were run on."""
+    global BUILDING_CONFIG
+    if res.get("config"):
+        BUILDING_CONFIG = ROOT_DIR / res["config"]
 
 
 def floor_area_m2() -> float | None:
@@ -286,6 +294,29 @@ def drivers_md(res: dict[str, Any]) -> list[str]:
         return []
     best = ds[0]["best"]
     a, kw = floor_area_m2(), cable_rating_kw()
+    if not kw:
+        it = intensities(res)
+        cal = {}
+        try:
+            cal = json.loads(BUILDING_CONFIG.read_text("utf-8")).get("calibration") or {}
+        except (OSError, ValueError):
+            pass
+        src = cal.get("source") or {}
+        L = ["## What drives the number", "",
+             f"This building has no heating cables, so every kWh {best} saves comes from the HVAC and lighting levers. "
+             + (f"It is calibrated against a measured office ({src.get('site_id')}): size from the measured heating "
+                "signature, base load and daytime level from the measured weekday electricity profile, occupancy hours "
+                "from the measured profile (docs/calibration.md). Over the metered period its electricity is within "
+                "about 1 % of the measured total, but its seasonal shape is not yet within the Guideline 14 monthly "
+                "limits; read the percentages as the size of the levers on a building like this, not as a promise."
+                if src.get("kind") == "measured_site" else
+                "Its parameters are priors from energy certificates (docs/calibration.md), not a measurement."), "",
+             f"| Area | {best} saves (NOK %) | {best} saves (kWh %) |", "|---|---:|---:|"]
+        L += [f"| {d['area']} {d['name']} | {d['saving_pct']:.1f} | {d['kwh_pct']:.1f} |" for d in ds]
+        if it:
+            L += ["", f"P0 energy intensity ({a:.0f} m²): " + ", ".join(f"{ar} {tot:.0f} kWh/m²" for ar, tot, *_ in it) +
+                  ". The equipment base load is constant in every strategy and dilutes every percentage.", ""]
+        return L
     L = ["## What drives the number", "",
          f"The headline saving of {best} is dominated by one lever: the heating cables. As found (P0) they run on "
          "an air thermostat and heat the ramp and gutter through most of the winter; with the ground moisture "
@@ -647,6 +678,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--html")
     a = p.parse_args(argv)
     res = json.loads(Path(a.results).read_text("utf-8"))
+    use_building(res)
     if a.md:
         Path(a.md).write_text(render_md(res) + "\n", encoding="utf-8", newline="\n")
     if a.html:

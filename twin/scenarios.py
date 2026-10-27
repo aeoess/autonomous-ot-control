@@ -9,7 +9,7 @@ import json
 import math
 import random
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,15 @@ from twin.state import canonical_digest
 SCENARIO_SCHEMA = "ot-scenario/v1"
 _DISTURBANCE_KINDS = frozenset({"sensor_freeze", "sensor_offset"})
 
+
+
+def _oslo_offset_h(d: datetime) -> int:
+    """Europe/Oslo UTC offset by the EU summer-time rule (last Sunday of March to last Sunday of
+    October, 01:00 UTC), without tz data so the result is the same on every platform."""
+    def last_sunday(month: int) -> datetime:
+        return max(datetime(d.year, month, day, 1, tzinfo=UTC) for day in range(25, 32)
+                   if datetime(d.year, month, day).weekday() == 6)
+    return 2 if last_sunday(3) <= d < last_sunday(10) else 1
 
 class ScenarioError(ValueError):
     pass
@@ -83,10 +92,19 @@ class Scenario:
         idx = min(t_s // self._noise_step, len(self._noise) - 1)
         return base + self._noise[idx]
 
+    def _occupancy_clock(self, t_s: int) -> tuple[datetime, tuple[int, int]]:
+        """(the time occupancy is judged in, [start, end) hours). weekday_hours_local (Europe/Oslo,
+        with summer time) wins over the older weekday_hours_utc, which has no summer time."""
+        occ = self.raw["occupancy"]
+        d = datetime.fromtimestamp(parse_utc(self.start_utc).timestamp() + t_s, UTC)
+        if "weekday_hours_local" in occ:
+            start_h, end_h = occ["weekday_hours_local"]
+            return d + timedelta(hours=_oslo_offset_h(d)), (start_h, end_h)
+        start_h, end_h = occ["weekday_hours_utc"]
+        return d, (start_h, end_h)
+
     def occupied(self, t_s: int) -> bool:
-        start_h, end_h = self.raw["occupancy"]["weekday_hours_utc"]
-        dt = parse_utc(self.start_utc).timestamp() + t_s
-        d = datetime.fromtimestamp(dt, UTC)
+        d, (start_h, end_h) = self._occupancy_clock(t_s)
         if d.date().isoformat() in self._holidays:
             return False
         return d.weekday() < 5 and start_h <= d.hour < end_h
@@ -133,8 +151,7 @@ class Scenario:
     def scheduled_open(self, t_s: int) -> bool:
         """The building's fixed opening schedule: weekdays in the occupancy hours,
         holidays included (the as-found schedule many buildings run on)."""
-        start_h, end_h = self.raw["occupancy"]["weekday_hours_utc"]
-        d = datetime.fromtimestamp(parse_utc(self.start_utc).timestamp() + t_s, UTC)
+        d, (start_h, end_h) = self._occupancy_clock(t_s)
         return d.weekday() < 5 and start_h <= d.hour < end_h
 
     def mean_outdoor_24h(self, t_s: int) -> float:
@@ -242,9 +259,10 @@ def load_scenario(source: str | Path | dict[str, Any], *, base_dir: str | Path |
         for k in ("mean_c", "amplitude_c", "coldest_hour_utc", "noise_std_c"):
             _req(o, k, (int, float))
     occ = _req(raw, "occupancy", dict)
-    hours = _req(occ, "weekday_hours_utc", list)
+    key = "weekday_hours_local" if "weekday_hours_local" in occ else "weekday_hours_utc"
+    hours = _req(occ, key, list)
     if len(hours) != 2 or not all(isinstance(h, int) and 0 <= h <= 24 for h in hours) or hours[0] >= hours[1]:
-        raise ScenarioError("occupancy.weekday_hours_utc must be [start, end) integer hours")
+        raise ScenarioError(f"occupancy.{key} must be [start, end) integer hours")
     _req(occ, "gain_w_per_m2", (int, float))
     _req(occ, "unoccupied_gain_w_per_m2", (int, float))
     p = _req(raw, "price", dict)

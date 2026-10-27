@@ -101,6 +101,12 @@ def test_the_committed_calibrated_fixtures_rebuild_byte_for_byte():
         if src["kind"] == "profile":
             rebuilt = cal.build_from_profile(PRIORS, src["category"], src["size"], building_id=cfg["building_id"],
                                              cables_kw=(cfg["plant"]["cables"][0]["rated_w"] / 1000 if cfg["plant"]["cables"] else 0.0))
+        elif src["kind"] == "measured_site":
+            # Fitted against a measured site: the fit's parameters are recorded, so the fixture rebuilds from them.
+            p = cfg["calibration"]["params"]
+            rebuilt = cal.build_fixture(p, building_id=cfg["building_id"], source=src)
+            assert {"bra_m2", "equipment_base_w_per_m2", "lighting_w_per_m2", "equipment_w_per_m2"} <= set(p)
+            assert cfg["plant"]["cables"] == []
         else:
             rebuilt = cal.build_from_building(PRIORS, src["id"], building_id=cfg["building_id"])
         assert rebuilt == cfg, f.name

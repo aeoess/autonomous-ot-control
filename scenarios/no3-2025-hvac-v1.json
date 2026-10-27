@@ -27,10 +27,12 @@
     "sha256": "7f53eef7b46cda7e2b49fac464979ea7dfd92424fe73d4d2d3ebc6b7b36ebef0"
   },
   "occupancy": {
-    "weekday_hours_utc": [
-      7,
-      17
+    "weekday_hours_local": [
+      8,
+      16
     ],
+    "timezone": "Europe/Oslo",
+    "hours_note": "Derived from the measured weekday electricity profile of an anonymised office (SITE_001, NO1, 2026): hours whose median load is at least halfway between the night base and the peak, local time with summer time. Replaces the earlier fixed 07-17 UTC, which ran two hours late in summer.",
     "gain_w_per_m2": 8.0,
     "unoccupied_gain_w_per_m2": 1.0,
     "holidays": [
