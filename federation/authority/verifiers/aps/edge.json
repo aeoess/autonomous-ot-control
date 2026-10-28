@@ -9,7 +9,7 @@
   "delegation_format": "aps:authority-delegation:v1 chain (agent-passport-system 8.0.1), scope grants in ot-scope/v1",
   "pin": {
     "kind": "image_digest",
-    "value": "ghcr.io/agent-passport-system/aps-ot-authority-verifier@sha256:edbb29f9c509f2b198899881f14d1d602c5f0d18ca8df7d7305a85a3b916a092"
+    "value": "ghcr.io/agent-passport-system/aps-ot-authority-verifier@sha256:b9e8e1ec5ad0c6dd89119ee92865afd4699015daec51b3972ed45974e3247bcf"
   },
   "licence": "Apache-2.0",
   "claim_ceiling": "Decides only the delegation side of the authority-fixture contract: the APS chain is valid at the call's decision_time and its leaf grants the call's building, asset, parameter and operation. It does not check the value, the unit or the work order, and a pass never authorizes a control action. Keys are test-only and derived from public labels. Revocation is not exercised: every member is treated as active.",
@@ -31,7 +31,7 @@
     "runtime": "node >= 20, single file, no install step"
   },
   "entrypoint": {
-    "image": "ghcr.io/agent-passport-system/aps-ot-authority-verifier@sha256:edbb29f9c509f2b198899881f14d1d602c5f0d18ca8df7d7305a85a3b916a092",
+    "image": "ghcr.io/agent-passport-system/aps-ot-authority-verifier@sha256:b9e8e1ec5ad0c6dd89119ee92865afd4699015daec51b3972ed45974e3247bcf",
     "command": [
       "node",
       "/opt/aps/verify.mjs",
