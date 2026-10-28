@@ -79,6 +79,11 @@ the oracle) and `edges/edges.md` (offline edges beside the run) in its work dire
 cases processed, findings, tied to the edge's version digest and the input digest).
 `python -m runner.edge_usage --root artifacts --out <dir>` adds the passes up per edge
 and contributor, counting a repeated input once for findings and distinct cases.
+`python -m runner.edge_mutations --work artifacts/<run>-work --out <dir> --bench 100 1000`
+mutates that run's fully recorded trails (case and pipeline layer, expected verdicts
+written before any edge runs), scores every offline edge and times it.
+A governed demo needs `DAYS=2` or more: its attacks are injected on day 2, and a run
+without them fails its acceptance check (and the script then skips the edge pass).
 What the report is and what it does not establish: [federation/ABC-ROADMAP.md](federation/ABC-ROADMAP.md).
 
 ## Trust boundary

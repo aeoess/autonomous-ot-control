@@ -87,6 +87,8 @@ result is reported three ways:
 | Verdicts on a governed run's trails | `artifacts/<run>-work/edges/edges.json` and `edges.md`; in an A/B/C run, `artifacts/<run-id>/edges/<arm>/` | no |
 | Use in one pass: one verifier run, exit, runtime, cases sent and processed, verdicts, findings by case digest, agreement with the reference verifier, all tied to the edge's version digest, the input digest and the run id | `usage.json`, next to `edges.json` | no |
 | Use across passes, per edge and contributor | `python -m runner.edge_usage --root <dir>` prints it; `--out` writes `usage-summary.json` and `.md` (`run-abc.sh` does this per run) | no |
+| End-to-end check of the observer export on Docker (14 new trails) | [`docs/results/2026-10-28/observer-e2e-edges.md`](../../results/2026-10-28/observer-e2e-edges.md) and `.json` | yes |
+| Mutation scores (case and pipeline layer) and benchmark | [`docs/results/2026-10-28/edge-mutations.md`](../../results/2026-10-28/edge-mutations.md) and `.json`; regenerate with `python -m runner.edge_mutations` | yes |
 
 ### How to read the numbers
 
@@ -133,8 +135,15 @@ python -m runner.edge_usage --root /tmp/pass
 
 # 6. Tests
 python -m pytest -q tests/unit/test_agent_evidence_vectors_edge.py tests/unit/test_edge_pass.py \
-  tests/unit/test_edge_usage.py tests/unit/test_federation_runner_contract.py tests/unit/test_ab_compare.py
-#    Result: 59 passed
+  tests/unit/test_edge_usage.py tests/unit/test_federation_runner_contract.py tests/unit/test_ab_compare.py \
+  tests/unit/test_edge_mutations.py
+#    Result: 62 passed
+
+
+# 7. End to end on Docker, then mutations and a benchmark on the new trails
+DAYS=2 ./deploy/scripts/run-demo-governed.sh        # DAYS=1 has no attacks, so the demo exits 1 (see below)
+python -m runner.edge_mutations --work artifacts/<run>-work --out /tmp/mut --bench 100 1000 5000
+#    Result on observer-e2e-20261028T012704Z: see "End to end" and "Mutations" below
 ```
 
 **Why 0/44 on that run.** The trails of `abc-20261027T204956Z` were exported
@@ -145,15 +154,76 @@ every trail.
 - This is correct, and it is not a fault in the edge.
 - The earlier 44/44 rested on values the pass had filled in itself (fixed in
   `runner.edge_pass` on 2026-10-28).
-- A governed run made after that change exports the record. That export path
-  is covered by synthetic tests. It has not yet been run on a Docker stack,
-  because Docker was not available on the maintainer host on 2026-10-28.
+- A governed run made after that change exports the record. See "End to end"
+  below for the Docker check.
+
+## End to end on Docker (2026-10-28)
+
+Run `observer-e2e-20261028T012704Z` covered one simulated day of the governed
+demo on Docker (REMORA in the loop, careful reviewer). The chain is: REMORA →
+execution in the twin → effect observer → exported trail → both edges →
+report.
+
+- **Both edges established all 14 new trails on recorded inputs.** Every
+  claim came from a recorded source.
+- **Strict vantage:** 0/14 established, as expected for `same_deployment`
+  observations.
+- **Use:** one run per edge, under 100 ms each, with 14/14 agreement.
+- **Why the demo itself exited 1.** Its attacks are injected on day 2, so a
+  one-day run has none to block, and its acceptance check cannot hold. Use
+  `DAYS=2` or more. The edge pass, which the script skips after a failed
+  demo, was run by hand.
+
+Details: [`observer-e2e-edges.md`](../../results/2026-10-28/observer-e2e-edges.md).
+
+## Mutations and benchmark (2026-10-28)
+
+`runner.edge_mutations` builds mutants from the 14 trails above. Each mutant's
+expected verdict follows from its operator and the case contract, never from a
+verifier, and is written before any edge runs. The mutants come in two layers:
+
+- **Case layer:** 37 operators, 518 mutants of what an edge reads. They cover
+  every claim, boundaries down to 0.0001 °C and one simulated second,
+  canonicalisation traps, malformed input, and positive controls that must
+  stay `ESTABLISHED`.
+- **Pipeline layer:** 10 operators on the raw trail and ledger before the
+  pass builds the cases. They remove or alter the evidence the pass reads:
+  the observer record, REMORA's readback and lifecycle, the twin record, and
+  the capture digest.
+
+| | Reference verifier | `agent-evidence-vectors-axes` |
+|---|---|---|
+| Mutants killed (not `ESTABLISHED`) | 420/420 | 406/420 |
+| Exact verdict | 100 % | 97.3 % |
+| Missing evidence accepted | 0 | 0 |
+| False refusals of positive controls | 0/98 | 0/98 |
+| Pipeline layer | 140/140 | 140/140 |
+| Throughput at 5,000 cases (indicative, contended host) | about 3,000 cases/s | about 2,200 cases/s |
+
+**Finding.** The edge's adapter crashes (`KeyError: 'observed_setpoint_c'` in
+`adapter.py`) on a case whose observation lacks `observed_setpoint_c`. The
+contract makes such a case `NOT_ESTABLISHED`. A single such case stops the
+whole run, so no trail in it gets an answer.
+
+- The harness then runs each operator on its own. The 14 mutants of that
+  operator are counted as unanswered, never as killed.
+- Everything else matched the contract, including every
+  `NOT_ESTABLISHED`-for-missing-evidence case.
+- There were no mutants that only this edge judged correctly. This edge's
+  value here is independent agreement, not extra catches.
+- The finding is in the adapter, not in Probity's reader. It has not been
+  changed here: the fix belongs with the edge's maintainer.
+
+Details: [`edge-mutations.md`](../../results/2026-10-28/edge-mutations.md).
 
 ## What is open
 
-- **A Docker A/B/C run** with the new export, to show established live
-  trails end to end.
-- **Seeded mutation sets of live trails.** These give a ground truth for
-  confirmed, unique and false findings outside the sealed sets.
+- **A full Docker A/B/C run** with the new export (`DAYS=7`, a new
+  `RUN_ID`).
+- **The adapter crash above**, to be reported to the maintainer.
+- **More seeds and operators.** The mutation set is generated, not sealed in
+  the repository: re-running it on a new governed run gives new seeds under
+  the same operators. Adding an operator needs its expected verdict to follow
+  from the contract.
 - **A v2 run**, if Probity opts in. It would be a new record, and the v1
   record stays as it is.
