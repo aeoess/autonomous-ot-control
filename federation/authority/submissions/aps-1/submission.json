@@ -1,0 +1,86 @@
+{
+  "schema": "ot-authority-submission/v1",
+  "set_id": "aps-1",
+  "source": {
+    "project": "Agent Passport System",
+    "repository": "https://github.com/agent-passport-system/aps-ot-authority",
+    "revision": "853a274906c3ef9df19ac6e27f6bd58d5e4a0f94"
+  },
+  "delegation_format": "aps:authority-delegation:v1 (agent-passport-system 8.0.1, npm integrity sha512-g9/AlzqX+L/fKzdsFQICGj59rYnXgeFxZcnmwD8WFNOK8aPSxT8FZEQe/PzGpnpG31xTLeLuMyrInX2B/Id5oA==). Each file is the complete signed chain, a JSON array root to leaf; delegation_id is the leaf's. Scope: aps-hierarchical-v1 grants in ot-scope/v1, one exact grant ot:<building_id>:<asset>:<parameter>:<operation> per tuple, no wildcards. Validity: authority.time, not_before inclusive, not_after exclusive, UTC milliseconds.",
+  "scope": "The five cases of issue #27 as APS authority-delegation chains on the simulated building. Synthetic; TEST-ONLY keys derived from public labels (mint/mint.mjs); no physical control.",
+  "building_id": "demo-building-001",
+  "delegation_root_keys": {
+    "aps-test:building-owner#key-1": "6RG6ABmNUgm6SaVZ_Ys2BphSQVuyDkwObl-xd69bPfk"
+  },
+  "delegation_signer_keys": {
+    "aps-test:building-owner#key-1": "6RG6ABmNUgm6SaVZ_Ys2BphSQVuyDkwObl-xd69bPfk",
+    "aps-test:operator#key-1": "c5P8WKPwah0BkEttd2zJsLiiD8pvKwAXA7mIwUXRFrs"
+  },
+  "cases": [
+    {
+      "case_id": "af-1-valid",
+      "construction": "owner grants operator ZONE-01 and ZONE-02; operator grants agent ZONE-01 until 18:00; call ZONE-01 at 07:00, 20.5 degC",
+      "delegation_fault": null,
+      "delegation_file": "delegations/af-1-valid.json",
+      "delegation_id": "sha256:f5cbee1f860f7f58423b2ccdecb4143143dc816942763dc32cebdeb3a3cedd6e",
+      "call": {
+        "asset": "ZONE-01",
+        "value": 20.5,
+        "decision_time": "2026-01-15T07:00:00Z"
+      },
+      "expected_work_order": "pass"
+    },
+    {
+      "case_id": "af-2-widened",
+      "construction": "operator holds ZONE-01 and ZONE-02 but grants the agent ZONE-01 and ZONE-03 (signed directly; the SDK issuer refuses to widen)",
+      "delegation_fault": "widened",
+      "delegation_file": "delegations/af-2-widened.json",
+      "delegation_id": "sha256:3d82edbe46fe8956a777928657c47083fedd858124dea214b8014e13010eefb2",
+      "call": {
+        "asset": "ZONE-01",
+        "value": 20.5,
+        "decision_time": "2026-01-15T07:00:00Z"
+      },
+      "expected_work_order": "pass"
+    },
+    {
+      "case_id": "af-3-expired",
+      "construction": "the agent's grant for ZONE-01 ends at 06:00 (not_after, exclusive); the decision time is 07:00",
+      "delegation_fault": "expired",
+      "delegation_file": "delegations/af-3-expired.json",
+      "delegation_id": "sha256:cc660515db7a1ac4830a7522f13707c1f527e4846d4c2fee42d1e0cb9ffbc64d",
+      "call": {
+        "asset": "ZONE-01",
+        "value": 20.5,
+        "decision_time": "2026-01-15T07:00:00Z"
+      },
+      "expected_work_order": "pass"
+    },
+    {
+      "case_id": "af-4-out-of-scope",
+      "construction": "a valid, narrowed chain grants the agent ZONE-02 only; the call is on ZONE-01",
+      "delegation_fault": "out_of_scope",
+      "delegation_file": "delegations/af-4-out-of-scope.json",
+      "delegation_id": "sha256:3f1868e184a5b8ba1e6709554bc3461296ddfca00eb10e33457861edfb7b2439",
+      "call": {
+        "asset": "ZONE-01",
+        "value": 20.5,
+        "decision_time": "2026-01-15T07:00:00Z"
+      },
+      "expected_work_order": "pass"
+    },
+    {
+      "case_id": "af-5-value-out-of-range",
+      "construction": "valid chain granting ZONE-01; the value 22.5 is outside the work order's 19.0..21.0, which the delegation does not carry",
+      "delegation_fault": null,
+      "delegation_file": "delegations/af-5-value-out-of-range.json",
+      "delegation_id": "sha256:4208956f10743a127a3ebd2387839132077e08c04a4ae457c8ab4a4c48adf6e8",
+      "call": {
+        "asset": "ZONE-01",
+        "value": 22.5,
+        "decision_time": "2026-01-15T07:00:00Z"
+      },
+      "expected_work_order": "refuse"
+    }
+  ]
+}

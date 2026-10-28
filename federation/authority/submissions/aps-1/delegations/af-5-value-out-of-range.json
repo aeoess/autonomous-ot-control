@@ -1,0 +1,87 @@
+[
+  {
+    "record_type": "aps:authority-delegation:v1",
+    "version": "1.0",
+    "parent_delegation_id": null,
+    "issuer": "aps-test:building-owner",
+    "subject": "aps-test:operator",
+    "verification_method": "aps-test:building-owner#key-1",
+    "issued_at": "2026-01-15T00:00:00.000Z",
+    "nonce": "4683832339816af75723b7ce780fdabe",
+    "authority": {
+      "scope": {
+        "profile": "aps-hierarchical-v1",
+        "grants": [
+          "ot:demo-building-001:ZONE-01:setpoint_c:set_zone_setpoint",
+          "ot:demo-building-001:ZONE-02:setpoint_c:set_zone_setpoint"
+        ]
+      },
+      "spend": {
+        "mode": "unbounded"
+      },
+      "depth": {
+        "remaining": 1
+      },
+      "time": {
+        "not_before": "2026-01-15T00:00:00.000Z",
+        "not_after": "2026-01-15T23:59:59.000Z"
+      },
+      "reputation": {
+        "profile": "aps-score-0-100-v1",
+        "ceiling": 100
+      },
+      "values": {
+        "profile": "aps-values-identifiers-v1",
+        "required": []
+      },
+      "reversibility": {
+        "profile": "aps-tci-v1",
+        "ceiling": "compensable"
+      }
+    },
+    "delegation_id": "sha256:f43dde8e67b14e50635081677fff04e08412402611aa1fab287ddeccbfac9b4d",
+    "signature": "42a429463f8ac762eb8f00792e7f3de15abe5adfa0f404e755e89fa2a7e3e136853b5bf120a3ecc32e0e58f581627f9a755ed00b3ae9cfb31467f146e51e6909"
+  },
+  {
+    "record_type": "aps:authority-delegation:v1",
+    "version": "1.0",
+    "parent_delegation_id": "sha256:f43dde8e67b14e50635081677fff04e08412402611aa1fab287ddeccbfac9b4d",
+    "issuer": "aps-test:operator",
+    "subject": "aps-test:agent",
+    "verification_method": "aps-test:operator#key-1",
+    "issued_at": "2026-01-15T00:00:00.000Z",
+    "nonce": "71b36309a1f8c276ba545c356ce9a7ba",
+    "authority": {
+      "scope": {
+        "profile": "aps-hierarchical-v1",
+        "grants": [
+          "ot:demo-building-001:ZONE-01:setpoint_c:set_zone_setpoint"
+        ]
+      },
+      "spend": {
+        "mode": "unbounded"
+      },
+      "depth": {
+        "remaining": 0
+      },
+      "time": {
+        "not_before": "2026-01-15T00:00:00.000Z",
+        "not_after": "2026-01-15T18:00:00.000Z"
+      },
+      "reputation": {
+        "profile": "aps-score-0-100-v1",
+        "ceiling": 100
+      },
+      "values": {
+        "profile": "aps-values-identifiers-v1",
+        "required": []
+      },
+      "reversibility": {
+        "profile": "aps-tci-v1",
+        "ceiling": "compensable"
+      }
+    },
+    "delegation_id": "sha256:4208956f10743a127a3ebd2387839132077e08c04a4ae457c8ab4a4c48adf6e8",
+    "signature": "314730d4d058e6aab9b1be0bb9ce90490d9ef58ac5c248a93641ed1e7ee91733009863a172540ea7831df28499a315c7973edf2b78e0dcef565463f3c6e1c30d"
+  }
+]

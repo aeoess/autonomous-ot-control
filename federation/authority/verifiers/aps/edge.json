@@ -1,0 +1,45 @@
+{
+  "schema": "ot-edge-manifest/v1",
+  "edge_id": "aps",
+  "project": "Agent Passport System",
+  "maintainer": "aeoess",
+  "repository": "https://github.com/agent-passport-system/aps-ot-authority",
+  "boundary": "authority_fixture",
+  "mode": "offline",
+  "delegation_format": "aps:authority-delegation:v1 chain (agent-passport-system 8.0.1), scope grants in ot-scope/v1",
+  "pin": {
+    "kind": "image_digest",
+    "value": "ghcr.io/agent-passport-system/aps-ot-authority-verifier@sha256:edbb29f9c509f2b198899881f14d1d602c5f0d18ca8df7d7305a85a3b916a092"
+  },
+  "licence": "Apache-2.0",
+  "claim_ceiling": "Decides only the delegation side of the authority-fixture contract: the APS chain is valid at the call's decision_time and its leaf grants the call's building, asset, parameter and operation. It does not check the value, the unit or the work order, and a pass never authorizes a control action. Keys are test-only and derived from public labels. Revocation is not exercised: every member is treated as active.",
+  "claims": [
+    {
+      "claim_id": "delegation_valid_at_decision_time",
+      "claim_ceiling": "pass means only that the chain verifies under agent-passport-system 8.0.1 at the case's decision_time against the test-only root in trust.json: signatures, parent links, narrowing on every facet, time window. Revocation is not consulted."
+    },
+    {
+      "claim_id": "scope_covers_call",
+      "claim_ceiling": "pass means only that the leaf grant equals ot:<building_id>:<asset>:<parameter>:<operation> for the normalized call by string equality. The value, the unit and the work order are not read."
+    }
+  ],
+  "evaluator": {
+    "kind": "reference",
+    "imports_reference_verifier": true,
+    "imports_testbed_code": false,
+    "language": "javascript",
+    "runtime": "node >= 20, single file, no install step"
+  },
+  "entrypoint": {
+    "image": "ghcr.io/agent-passport-system/aps-ot-authority-verifier@sha256:edbb29f9c509f2b198899881f14d1d602c5f0d18ca8df7d7305a85a3b916a092",
+    "command": [
+      "node",
+      "/opt/aps/verify.mjs",
+      "run",
+      "--fixtures",
+      "/fixtures",
+      "--out",
+      "/out/result.json"
+    ]
+  }
+}
