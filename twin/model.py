@@ -52,6 +52,13 @@ class OperationConflict(TwinError):
     """An operation ID was reused with a different request."""
 
 
+class OperationLogFull(StateStoreFailed):
+    """SR-15 (F-17): the operation log holds ``Twin.MAX_OPERATIONS`` records. Nothing was applied or recorded.
+
+    Records are never evicted, since an evicted operation id could be replayed; the twin refuses new
+    operations instead, and a replay of a known one is still answered."""
+
+
 def load_config(source: str | Path | dict[str, Any]) -> dict[str, Any]:
     cfg = json.loads(Path(source).read_text("utf-8")) if not isinstance(source, dict) else source
     if cfg.get("schema") != CONFIG_SCHEMA or cfg.get("model") not in MODEL_IDS:
@@ -84,6 +91,9 @@ def load_config(source: str | Path | dict[str, Any]) -> dict[str, Any]:
 
 
 class Twin:
+    #: SR-15 (F-17): the most operation records one twin keeps; set per instance in tests.
+    MAX_OPERATIONS = 100_000
+
     def __init__(self, config: dict[str, Any], scenario: Scenario, *,
                  snapshot_path: str | Path | None = None, record_trace: bool = False,
                  snapshot_key: str | None = None) -> None:
@@ -117,7 +127,7 @@ class Twin:
         self.comfort_violation_dh = 0.0
         self.power_w = 0.0
         self.stop_switch = False
-        self.operations: dict[str, OperationRecord] = {}
+        self.operations: dict[str, OperationRecord] = {}  # bounded by MAX_OPERATIONS (SR-15)
         self.point_history_s: dict[str, list[int]] = {}
         self.events: list[dict[str, Any]] = []
         self.record_trace = record_trace
@@ -431,7 +441,7 @@ class Twin:
                 return prior, True
             self._refuse_if_store_failed()
             reason = guard_mod.check(self, cmd)
-            zone_id = cmd.get("zone_id") if isinstance(cmd.get("zone_id"), str) else ""
+            zone_id = cmd.get("zone_id")[:64] if isinstance(cmd.get("zone_id"), str) else ""
             zone = self.zones.get(zone_id)
             stamp = self.clock.stamp()
             sp = cmd.get("setpoint_c")
@@ -560,11 +570,13 @@ class Twin:
                     tool_name=tool, target=target, requested_value=new,
                     previous_value=prev, new_value=new)
             else:
-                zid = str(args.get("zone_id") or args.get("circuit") or tool)
+                # SR-15 (F-17): a refusal keeps the request digest, not the caller's arguments, and only
+                # bounded names, so a stream of refused operations cannot grow the log by what it sends.
+                zid = str(args.get("zone_id") or args.get("circuit") or tool)[:64]
                 rec = OperationRecord(
                     op_id, digest, "REJECTED", reason, zid, None, None, None,
                     before, before, stamp["sim_time_s"], stamp["sim_utc"],
-                    tool_name=tool, target=zid, requested_value=args,
+                    tool_name=tool[:64], target=zid, requested_value=None,
                     previous_value=None, new_value=None)
             self.operations[op_id] = rec
 
@@ -743,6 +755,9 @@ class Twin:
     def _refuse_if_store_failed(self) -> None:
         if self._store_failed:
             raise StateStoreFailed(f"state_store_failed: {self._store_failed}; no write until the twin is restarted")
+        if len(self.operations) >= self.MAX_OPERATIONS:
+            raise OperationLogFull(f"operation_log_full: {self.MAX_OPERATIONS} operations recorded; "
+                                   "this one was not applied")
 
     def _persist_or_rollback(self, op_id: str, rollback: Any) -> None:
         """SR-14: an effect exists only together with its durable record. If the record cannot be persisted, the

@@ -14,15 +14,17 @@ listener finds no route, and a wrong token is refused on every route.
 from __future__ import annotations
 
 import hmac
+import json
 import os
 from dataclasses import dataclass
 from typing import Any, Callable
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, Strict
+from pydantic import BaseModel, ConfigDict, Field, Strict, StrictBool, StrictInt, StrictStr, model_validator
 
 from twin.model import OperationConflict, StateStoreFailed, Twin, TwinError
 
@@ -33,6 +35,8 @@ TOKEN_ENV = {
 }
 _MIN_TOKEN_LEN = 24
 _OP_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:\-]{7,127}$"
+#: SR-15 (F-17): the largest request body any listener reads. A command is a few hundred bytes.
+MAX_BODY_BYTES = 16 * 1024
 
 
 class TokenConfigError(RuntimeError):
@@ -72,8 +76,146 @@ def _bearer(expected: str) -> Callable[[Request], None]:
     return dep
 
 
+class _Gate:
+    """SR-15 (F-17): authenticate before the body is read, and never read more than ``MAX_BODY_BYTES``.
+
+    FastAPI parses the body before it runs a route's dependencies, so a malformed or oversized body from
+    an unauthenticated caller would be read and answered 422. The gate runs first: on this app's own
+    path prefix a request without the right bearer token gets 401 with its body unread; a body over
+    the cap gets 413. Paths outside the prefix and the open paths fall through, so a request on the
+    wrong listener still finds no route. The route dependency ``_bearer`` stays as a second check.
+    """
+
+    def __init__(self, app: Any, token: str, prefix: str, open_paths: tuple[str, ...] = ()) -> None:
+        self.app, self.token, self.prefix, self.open_paths = app, token.encode(), prefix, open_paths
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        headers = {k.lower(): v for k, v in scope.get("headers", [])}
+        path = scope.get("path", "")
+        if path.startswith(self.prefix) and path not in self.open_paths:
+            scheme, _, presented = headers.get(b"authorization", b"").partition(b" ")
+            if scheme.lower() != b"bearer" or not presented or not hmac.compare_digest(presented, self.token):
+                return await _reply(send, 401, "unauthorized", [(b"www-authenticate", b"Bearer")])
+        declared = headers.get(b"content-length")
+        if declared is not None:
+            try:
+                too_big = int(declared) > MAX_BODY_BYTES
+            except ValueError:
+                return await _reply(send, 400, "invalid_content_length")
+            if too_big:
+                return await _reply(send, 413, "body_too_large")
+        body, more = b"", True
+        while more:  # chunked bodies are counted too
+            msg = await receive()
+            if msg["type"] == "http.disconnect":
+                return
+            body += msg.get("body", b"")
+            more = msg.get("more_body", False)
+            if len(body) > MAX_BODY_BYTES:
+                return await _reply(send, 413, "body_too_large")
+        sent = False
+
+        async def replay() -> dict[str, Any]:
+            nonlocal sent
+            if sent:
+                return await receive()
+            sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        await self.app(scope, replay, send)
+
+
+async def _reply(send: Any, status: int, detail: str, extra: list[tuple[bytes, bytes]] | None = None) -> None:
+    data = json.dumps({"detail": detail}).encode()
+    await send({"type": "http.response.start", "status": status,
+                "headers": [(b"content-type", b"application/json"),
+                            (b"content-length", str(len(data)).encode()), *(extra or [])]})
+    await send({"type": "http.response.body", "body": data})
+
+
+async def _invalid(_: Request, exc: RequestValidationError) -> JSONResponse:
+    """SR-15 (F-17): a 422 names the fields, never echoes what was sent: an echoed NaN cannot be encoded
+    as JSON (a 500 instead of a 422), and an echoed body would hand its size back to the caller."""
+    return JSONResponse(status_code=422, content={"detail": [
+        {"loc": [str(p) for p in e.get("loc", ())][:8], "type": str(e.get("type", ""))[:64]}
+        for e in exc.errors()[:16]]})
+
+
+def _app(title: str, token: str, prefix: str, open_paths: tuple[str, ...] = ()) -> FastAPI:
+    app = FastAPI(title=title, docs_url=None, redoc_url=None, openapi_url=None)
+    app.add_exception_handler(RequestValidationError, _invalid)
+    app.add_middleware(_Gate, token=token, prefix=prefix, open_paths=open_paths)
+    return app
+
+
+_Name = Annotated[StrictStr, Field(min_length=1, max_length=64)]
+_Number = Annotated[float, Strict()]  # an int or a float, never a string; NaN and the infinities refused
+
+
+class _Args(BaseModel):
+    """SR-15: each plant tool's arguments, typed. Shape only: bounds, steps and interlocks stay in
+    ``twin.guard``, which answers them with a REJECTED record."""
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+
+class _ZoneCooling(_Args):
+    zone_id: _Name
+    cooling_c: _Number
+
+
+class _ZoneCo2(_Args):
+    zone_id: _Name
+    co2_ppm: StrictInt
+
+
+class _ZoneLux(_Args):
+    zone_id: _Name
+    lux: StrictInt
+
+
+class _ZoneLightingMode(_Args):
+    zone_id: _Name
+    mode: _Name
+    daylight_harvesting: StrictBool
+
+
+class _SupplyAir(_Args):
+    supply_air_c: _Number
+
+
+class _Tank(_Args):
+    tank_c: _Number
+
+
+class _HeatPumpLimit(_Args):
+    max_fraction: _Number
+
+
+class _AhuEnabled(_Args):
+    enabled: StrictBool
+
+
+class _CableMode(_Args):
+    circuit: _Name
+    mode: _Name
+
+
+PLANT_ARGUMENT_MODELS: dict[str, type[_Args]] = {
+    "set_zone_cooling_setpoint": _ZoneCooling,
+    "set_zone_co2_setpoint": _ZoneCo2,
+    "set_zone_lighting_setpoint": _ZoneLux,
+    "set_zone_lighting_mode": _ZoneLightingMode,
+    "set_supply_air_setpoint": _SupplyAir,
+    "set_tank_setpoint": _Tank,
+    "set_heat_pump_limit": _HeatPumpLimit,
+    "set_ahu_enabled": _AhuEnabled,
+    "set_heating_cable_mode": _CableMode,
+}
+
+
 class SetpointCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=True)
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     schema_: str = Field(alias="schema", pattern=r"^ot-actuation-command/v1$")
     operation_id: str = Field(pattern=_OP_ID_PATTERN)
@@ -84,13 +226,23 @@ class SetpointCommand(BaseModel):
 
 
 class PlantCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=True)
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     schema_: str = Field(alias="schema", pattern=r"^ot-plant-command/v1$")
     operation_id: str = Field(pattern=_OP_ID_PATTERN)
     tool_name: str = Field(min_length=1, max_length=64)
     arguments: dict[str, Any]
     expected_state_revision: Annotated[int, Strict()] = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _typed_arguments(self) -> "PlantCommand":
+        # Validated against the tool's own model; the arguments are passed on as sent, so the request
+        # digest is the one the adapter computed.
+        model = PLANT_ARGUMENT_MODELS.get(self.tool_name)
+        if model is None:
+            raise ValueError("unknown_tool")
+        model.model_validate(self.arguments)
+        return self
 
 
 class AdvanceRequest(BaseModel):
@@ -109,7 +261,7 @@ def _health(twin: Twin) -> dict[str, Any]:
 
 
 def build_read_app(twin: Twin, tokens: Tokens) -> FastAPI:
-    app = FastAPI(title="twin-read", docs_url=None, redoc_url=None, openapi_url=None)
+    app = _app("twin-read", tokens.read, "/v1/", ("/v1/health",))
     auth = Depends(_bearer(tokens.read))
 
     @app.get("/v1/health")
@@ -150,7 +302,7 @@ def build_read_app(twin: Twin, tokens: Tokens) -> FastAPI:
 
 
 def build_actuator_app(twin: Twin, tokens: Tokens) -> FastAPI:
-    app = FastAPI(title="twin-actuator", docs_url=None, redoc_url=None, openapi_url=None)
+    app = _app("twin-actuator", tokens.actuator, "/internal/v1/", ("/internal/v1/health",))
     auth = Depends(_bearer(tokens.actuator))
 
     @app.get("/internal/v1/health")
@@ -193,7 +345,7 @@ def build_actuator_app(twin: Twin, tokens: Tokens) -> FastAPI:
 
 
 def build_control_app(twin: Twin, tokens: Tokens) -> FastAPI:
-    app = FastAPI(title="twin-control", docs_url=None, redoc_url=None, openapi_url=None)
+    app = _app("twin-control", tokens.control, "/control/v1/")
     auth = Depends(_bearer(tokens.control))
 
     @app.post("/control/v1/clock/advance", dependencies=[auth])
