@@ -204,7 +204,8 @@ def test_asi03_privilege_escalation_by_widening_a_delegation_is_refused():
 # Every dependency, image, upstream and contributed verifier is pinned by digest and refused when changed.
 
 def test_asi04_every_locked_dependency_is_pinned_by_hash():
-    for lock in (ROOT / "requirements.lock", ROOT / "requirements-dev.lock", ROOT / "deploy" / "ot" / "requirements-adapter.lock"):
+    for lock in (ROOT / "requirements.lock", ROOT / "requirements-dev.lock", ROOT / "deploy" / "ot" / "requirements-adapter.lock",
+                 ROOT / "deploy" / "ot" / "requirements-remora.lock", ROOT / "deploy" / "requirements-build.lock"):
         entries = re.findall(r"^([A-Za-z0-9_.-]+)==\S+((?:\s*\\\n\s*--hash=sha256:[0-9a-f]{64})+)", lock.read_text("utf-8"), re.M)
         names = re.findall(r"^([A-Za-z0-9_.-]+)==", lock.read_text("utf-8"), re.M)
         assert names and len(entries) == len(names), lock.name

@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           persist-credentials: false
       - name: Run demo (build, boundary smoke, baseline, evidence)
@@ -25,7 +25,7 @@ jobs:
           c = m["counts"]
           sys.exit(0 if c["cases"] > 0 and c["failed"] == 0 and c["skipped"] == 0 else 1)
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         if: always()
         with:
           name: evidence-${{ github.run_id }}

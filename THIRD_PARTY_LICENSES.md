@@ -34,9 +34,22 @@ state another OSI-approved licence and stay in their own directory.
 
 ## 3. Python packages
 
-Pinned with hashes in `requirements.lock` (runtime), `requirements-dev.lock`
-(tests) and `deploy/ot/requirements-adapter.lock` (the subset installed into
-the REMORA image). Installed from PyPI at build time, **not vendored**.
+Pinned with hashes in these files, installed from PyPI at build time and
+**not vendored**:
+
+- `requirements.lock`: the runtime set.
+- `requirements-dev.lock`: the test set.
+- `deploy/ot/requirements-adapter.lock`: the adapter's client.
+- `deploy/ot/requirements-remora.lock`: everything the REMORA image installs.
+  That is REMORA's own `[api,postgres,security]` extras at the pinned
+  commit, the adapter's `httpx` and REMORA's build backend.
+- `deploy/requirements-build.lock`: the build backend that turns REMORA's
+  source into a wheel for the governed image.
+
+Every image installs with `--require-hashes` (SDD-OT-002 SR-21). REMORA's own
+extras pull in more packages than the table below lists (for example
+psycopg, uvicorn's standard extras and hatchling). Their licences are those
+in their published metadata. The REMORA lock lists them all.
 
 | Package | Version | Licence | Used for |
 |---|---|---|---|
@@ -87,7 +100,7 @@ installed by the sandbox, which has no network.
 
 | Item | Licence | Use |
 |---|---|---|
-| `python:3.12-slim` (Docker Official Image) | Python: PSF-2.0; Debian base: various free licences per package | base of every image built here |
+| `python:3.12-slim` (Docker Official Image), pinned by digest `sha256:2f17fc04…` | Python: PSF-2.0; Debian base: various free licences per package | base of every image built here |
 | `postgres:16-alpine` (Docker Official Image) | PostgreSQL Licence; Alpine: various | REMORA's store in the governed stack |
 | GitHub Actions `actions/checkout@v4`, `actions/setup-python@v5`, `actions/upload-artifact@v4` | MIT | CI only |
 

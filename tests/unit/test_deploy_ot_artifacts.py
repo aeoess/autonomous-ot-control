@@ -34,12 +34,15 @@ def test_remora_image_runs_the_real_server_and_registry():
     df = (ROOT / "deploy" / "Dockerfile.remora-ot").read_text()
     assert 'CMD ["uvicorn", "servers.api:app"' in df
     assert "REMORA_TOOL_REGISTRY_MODULE=ot_registry" in df
-    assert 'pip install -e "/opt/remora[api,postgres,security]"' in df
+    # Hash-locked (SDD-OT-002 SR-21, F-04): REMORA's extras come from the lock, the editable install fetches nothing.
+    assert "pip install --require-hashes --no-deps -r /tmp/requirements-remora.lock" in df
+    assert "pip install --no-deps --no-build-isolation -e /opt/remora" in df
 
 
 def test_governed_image_installs_the_sdk():
     df = (ROOT / "deploy" / "Dockerfile.governed").read_text()
-    assert "pip install --no-deps /opt/remora" in df
+    assert "pip wheel --no-deps --no-build-isolation -w /wheels /opt/remora" in df
+    assert "pip install --no-deps /tmp/wheels/*.whl" in df
     assert "runner.governed" in df
 
 

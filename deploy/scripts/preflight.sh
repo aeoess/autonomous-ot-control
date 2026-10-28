@@ -34,8 +34,13 @@ PY
 
 if git rev-parse --git-dir >/dev/null 2>&1; then
   if git ls-files --error-unmatch .env >/dev/null 2>&1; then fail ".env is tracked by git"; fi
-  if git grep -nIE "(TWIN_(READ|ACTUATOR|CONTROL)_TOKEN|TWIN_SNAPSHOT_KEY)=[A-Za-z0-9_-]{24,}" -- ':!.env.example' ':!deploy/scripts/*' >/dev/null; then
-    fail "a twin token value appears in tracked files"
+  # Every secret the bootstrap generates (SDD-OT-002 SR-20, F-20), not only the twin's tokens.
+  SECRET_NAMES="TWIN_(READ|ACTUATOR|CONTROL)_TOKEN|TWIN_SNAPSHOT_KEY|REMORA_PG_PASSWORD|REMORA_(OPERATOR|APPROVER|SUPERVISOR|VIEWER|VERIFIER)_TOKEN|REMORA_(PDP|LEASE|AUDIT|ENVELOPE)_SIGNING_KEY"
+  if git grep -nIE "(${SECRET_NAMES})=[A-Za-z0-9_-]{24,}" -- ':!.env.example' ':!deploy/scripts/*' >/dev/null; then
+    fail "a generated secret value appears in tracked files"
   fi
+  for f in .env.tmp deploy/.keys deploy/.generated; do
+    if [[ -n "$(git ls-files -- "$f")" ]]; then fail "$f is tracked by git"; fi
+  done
 fi
 echo "preflight: ok"

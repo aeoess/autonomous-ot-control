@@ -15,7 +15,7 @@
 ARG REMORA_REPO=https://github.com/darklordVirtual/REMORA-research
 ARG REMORA_COMMIT=123a5fd033bd1192fad05d366ec5263eb66c17b7
 
-FROM python:3.12-slim AS remora-src
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS remora-src
 ARG REMORA_REPO
 ARG REMORA_COMMIT
 RUN apt-get update && apt-get install -y --no-install-recommends git \
@@ -28,22 +28,23 @@ RUN git init -q remora \
     && git checkout -q FETCH_HEAD \
     && test "$(git rev-parse HEAD)" = "${REMORA_COMMIT}"
 
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
 WORKDIR /app
 
-# Install the pinned REMORA with the execution-surface extras, matching the
-# upstream OT pilot image (API server, PostgreSQL authority store, crypto).
+# Install the pinned REMORA with the execution-surface extras (API server,
+# PostgreSQL authority store, crypto), matching the upstream OT pilot image.
+# Everything comes from one hash-locked file (SDD-OT-002 SR-21, F-04): REMORA's
+# declared extras at the pinned commit, the OT registry's httpx client (without
+# it the registry fails to import at the first dispatch, after the approval was
+# spent), and REMORA's build backend, so the editable install below runs without
+# build isolation and fetches nothing unpinned. This is the image that holds the
+# actuator credential; it was the one image that installed from PyPI unpinned.
+COPY deploy/ot/requirements-remora.lock /tmp/requirements-remora.lock
+RUN pip install --require-hashes --no-deps -r /tmp/requirements-remora.lock
 COPY --from=remora-src /src/remora /opt/remora
-RUN pip install --upgrade pip \
- && pip install -e "/opt/remora[api,postgres,security]"
-
-# The OT registry reaches the twin over httpx, which REMORA's extras do not
-# install. Without it the registry fails to import at the first dispatch, after
-# the approval was already spent (found by the first live governed run).
-COPY deploy/ot/requirements-adapter.lock /tmp/requirements-adapter.lock
-RUN pip install --require-hashes --no-deps -r /tmp/requirements-adapter.lock \
- && python -c "import httpx"
+RUN pip install --no-deps --no-build-isolation -e /opt/remora \
+ && python -c "import httpx, fastapi, uvicorn, psycopg, cryptography, remora, servers.api"
 
 # Deployment-owned modules (not shipped package code): the OT tool registry,
 # the semantic bundle, the intent (work-order) source, and the reference
@@ -74,7 +75,8 @@ ENV REMORA_TOOL_REGISTRY_MODULE=ot_registry \
 
 RUN useradd --create-home --uid 10002 remora \
  && mkdir -p /var/lib/remora/artifacts \
- && chown -R remora:remora /var/lib/remora /app
+ && chown -R remora:remora /var/lib/remora
+# /app stays root-owned (SR-22): the runtime user can write its state, never its own code.
 USER remora
 
 EXPOSE 8000

@@ -1,6 +1,19 @@
 version: 2
+# SDD-OT-002 SR-21: updates are proposed for every pinned surface; each still goes through review and CI.
 updates:
   - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
     directory: /federation/edges/agent-evidence-vectors-axes
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /deploy
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
       interval: weekly
