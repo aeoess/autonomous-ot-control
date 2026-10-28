@@ -50,7 +50,7 @@ append_if_missing REMORA_PG_USER remora
 
 mkdir -p deploy/.keys deploy/.generated
 chmod 700 deploy/.keys
-for seed in toolspec limits; do
+for seed in toolspec limits work_order; do
   f="deploy/.keys/${seed}.seed"
   if [[ ! -s "$f" ]]; then
     ( umask 077; "$PY" -c "import secrets;print(secrets.token_hex(32))" > "$f" )
@@ -66,12 +66,17 @@ docker build -q -f deploy/Dockerfile.remora-ot \
   --build-arg REMORA_COMMIT="$commit" \
   -t autonomous-ot-control/remora-ot:local . >/dev/null
 
+# The signed work-order table is rewritten from the shipped one on every bootstrap; a previous run's table
+# (written by the authority container's user) is removed first.
+rm -f deploy/.generated/ot_intents.json deploy/.generated/work_order_keys.json
+
 # Sign with the image's own REMORA, offline: no network, none of the runtime's
 # environment (docker run, not compose run, so no service env is injected).
 out="$(docker run --rm --network none \
   --user "$(id -u):$(id -g)" \
   -e OT_TOOLSPEC_SIGNING_SEED="$(cat deploy/.keys/toolspec.seed)" \
   -e OT_LIMITS_SIGNING_SEED="$(cat deploy/.keys/limits.seed)" \
+  -e OT_WORK_ORDER_SIGNING_SEED="$(cat deploy/.keys/work_order.seed)" \
   -v "$PWD/deploy/.generated:/out" \
   --entrypoint python autonomous-ot-control/remora-ot:local \
   /app/sign_deployment.py --out /out --limits "/app/${LIMITS_POLICY:-ot_limits.policy.json}")"
@@ -84,7 +89,8 @@ while IFS='=' read -r key val; do
   esac
 done <<< "$out"
 
-# Work-order source REMORA reads on every assess (the demo appends day plans).
-cp deploy/ot/ot_intents.json deploy/.generated/ot_intents.json
+# Work orders REMORA reads on every assess: the shipped ones, signed above by the work-order authority key
+# (SR-05). Day plans are added by the authority container; an entry nobody signed is not a work order.
+chmod 644 deploy/.generated/ot_intents.json deploy/.generated/work_order_keys.json
 
 echo "governed-bootstrap: .env, deploy/.keys/ and deploy/.generated/ are ready (all gitignored)."

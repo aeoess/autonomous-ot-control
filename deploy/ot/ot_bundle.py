@@ -126,6 +126,18 @@ def build_semantic_bundle() -> SemanticBundle:
                                 validators=None, state=state)
 
 
+def _trusted_work_order_keys() -> dict[str, str] | None:
+    """The work-order authority's public keys (SR-05), or None when this deployment has none configured."""
+    path = os.environ.get("REMORA_OT_WORK_ORDER_KEYS", "").strip()
+    if not path:
+        return None
+    from adapter.work_orders import load_trusted
+    try:
+        return load_trusted(Path(path))
+    except (OSError, ValueError):
+        return {}  # configured but unreadable: no entry verifies, so no write is grounded (fail closed)
+
+
 def resolve_intent(intent_ref: str) -> ResolvedIntent | None:
     cfg = os.environ.get("REMORA_INTENT_SOURCE_FILE", "").strip()
     if not cfg or not intent_ref:
@@ -138,7 +150,16 @@ def resolve_intent(intent_ref: str) -> ResolvedIntent | None:
     e = table.get(intent_ref)
     if not isinstance(e, dict) or not e.get("task_text"):
         return None
-    auth = f"signed_work_order:{hashlib.sha256(raw).hexdigest()}"
+    trusted = _trusted_work_order_keys()
+    if trusted is None:
+        # No authority key configured: the entry is a line of an unsigned table, and is labelled so (SR-05, F-05).
+        auth = f"intent_table:{hashlib.sha256(raw).hexdigest()}"
+    else:
+        from adapter.work_orders import entry_digest, verify_entry
+        kid, _why = verify_entry(intent_ref, e, trusted)
+        if kid is None:
+            return None  # unsigned, forged or signed by an unknown key: not a work order
+        auth = f"signed_work_order:{kid}:{entry_digest(intent_ref, e)}"
     return ResolvedIntent(
         intent=TaskIntent(
             operation=str(e.get("operation", "")),

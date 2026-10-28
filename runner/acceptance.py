@@ -4,7 +4,14 @@ Runs on the HOST, stdlib only. Every action goes through one of three doors,
 so a result always says which credential did what:
 
 * ``docker compose exec harness python -m runner.harness_step ...`` for
-  REMORA calls (operator, approver, viewer tokens) and twin reads;
+  REMORA calls as the proposer (operator, viewer, verifier tokens) and twin
+  reads;
+* ``docker compose exec reviewer python /app/ot_reviewer.py ...`` for every
+  approval and rejection: the approver token is there only (SDD-OT-002
+  SR-06). The suite's driver plays proposer and tester, as a human tester
+  would; the credentials stay in separate processes;
+* ``docker compose exec authority python /app/ot_authority.py ...`` to issue
+  a signed work order (SR-05);
 * ``docker compose exec twin python -m twin.ctl ...`` for the twin's loopback
   control listener (clock, stop switch), which only the twin can reach;
 * ``docker compose stop|start|restart`` for faults (PostgreSQL outage,
@@ -30,6 +37,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from pathlib import Path
+
 from runner.evidence import write_bundle
 
 SUITE_ID = "ot-governed-acceptance/v1"
@@ -37,6 +46,8 @@ WO = "WORK-ORDER-001"          # lower ZONE-01 (signed work order)
 WO2 = "WORK-ORDER-002"         # raise ZONE-02
 WO3 = "WORK-ORDER-003"         # adjust ZONE-03 (0.5 degC/h REMORA budget)
 SET = "set_zone_setpoint"
+#: The intent table REMORA, the reviewer and the authority share (deploy/.generated, gitignored).
+INTENT_TABLE = Path(__file__).resolve().parents[1] / "deploy" / ".generated" / "ot_intents.json"
 
 
 class StepError(RuntimeError):
@@ -55,16 +66,34 @@ class Stack:
                               timeout=timeout, env={**os.environ, "MSYS_NO_PATHCONV": "1"})
 
     def step(self, op: str, **args: Any) -> dict[str, Any]:
-        p = self._run(["exec", "-T", "harness", "python", "-m", "runner.harness_step", op,
-                       json.dumps(args)])
+        """One step in the container that holds the credential for it: approvals and rejections as the
+        approver in ``reviewer`` (SR-06), everything else in ``harness``. ``via="harness"`` forces the
+        proposer's container, to show that it cannot approve."""
+        via = args.pop("via", None)
+        if via is None:
+            via = "reviewer" if op in REVIEWER_OPS and args.get("role", "approver") == "approver" else "harness"
+        cmd = (["exec", "-T", "reviewer", "python", "/app/ot_reviewer.py", op, json.dumps(args)] if via == "reviewer"
+               else ["exec", "-T", "harness", "python", "-m", "runner.harness_step", op, json.dumps(args)])
+        p = self._run(cmd)
         lines = [ln for ln in p.stdout.splitlines() if ln.startswith("{")]
         if not lines:
-            raise StepError(f"{op}: no JSON from harness (rc={p.returncode}): {p.stderr[-400:]}")
+            raise StepError(f"{op}: no JSON from {via} (rc={p.returncode}): {p.stderr[-400:]}")
         out = json.loads(lines[-1])
-        self.trace.append({"op": op, "args": _redact(args), "result": _brief(out)})
-        if op in REMORA_OPS and not answered(out):
+        self.trace.append({"op": op, "via": via, "args": _redact(args), "result": _brief(out)})
+        # A step that never reached REMORA because its container holds no such credential is not a transport
+        # failure; the case that asked for it judges it.
+        if op in REMORA_OPS and not answered(out) and out.get("error") != "no_credential":
             self.no_answer.append({"op": op, "error": out.get("error")})
         return out
+
+    def authority(self, kind: str, day: str) -> dict[str, Any]:
+        p = self._run(["exec", "-T", "authority", "python", "/app/ot_authority.py", "issue", "--kind", kind,
+                       "--day", day])
+        self.trace.append({"op": "authority.issue", "kind": kind, "day": day, "rc": p.returncode})
+        lines = [ln for ln in p.stdout.splitlines() if ln.startswith("{")]
+        if p.returncode != 0 or not lines:
+            raise StepError(f"authority issue {kind} {day} failed: {p.stdout[-300:]} {p.stderr[-300:]}")
+        return json.loads(lines[-1])
 
     def ctl(self, *args: str) -> dict[str, Any]:
         p = self._run(["exec", "-T", "twin", "python", "-m", "twin.ctl", *args])
@@ -143,6 +172,8 @@ def setpoint(s: Stack, zone: str) -> float:
 #: Harness steps that return REMORA's raw HTTP answer (runner.harness_step._remora): each needs an HTTP status
 #: and a body to count as a decision. SDK-mediated steps (record_effect, sdk_approve) return their own shape and
 #: are judged by their case; tests/unit/test_acceptance_transport.py keeps this list equal to harness_step.
+#: Steps the reviewer container runs (deploy/ot/ot_reviewer.py): the approver's token is there only (SR-06).
+REVIEWER_OPS = frozenset({"approve", "reject", "sdk_approve", "decide", "unresolved", "resolve"})
 REMORA_OPS = frozenset({"assess", "approve", "reject", "execute", "execute_accepted", "proposal", "envelope",
                         "evidence", "lifecycle", "audit_verify", "unresolved", "resolve"})
 
@@ -552,6 +583,77 @@ def at12_timeout_after_actuation(c: Ctx) -> tuple[bool, str]:
                 f"({_execute_detail(retry)}); revision ->{final}")
 
 
+def at_sr06_no_self_approval(c: Ctx) -> tuple[bool, str]:
+    """SR-06 (F-06): the proposer's container holds no approver token, so it cannot approve its own change, as
+    approver (no credential) or as operator (REMORA's 403); the reviewer's container holds no operator token."""
+    s = c.s
+    s.ctl("advance", "900")
+    sp0 = setpoint(s, "ZONE-01")
+    cl = call("ZONE-01", round(sp0 - 0.5, 1) if sp0 >= 19.5 else round(sp0 + 0.5, 1))
+    a = s.step("assess", **cl)
+    item = body(a).get("review_item_id")
+    if not item:
+        return False, f"no review item: {_brief(a)}"
+    before = revision(s)
+    as_approver = s.step("approve", item_id=item, role="approver", via="harness")
+    as_operator = s.step("approve", item_id=item, role="operator", via="harness")
+    ex = s.step("execute", item_id=item, **cl)
+    env = s.step("env")
+    renv = s.step("env", via="reviewer")
+    s.step("reject", item_id=item, reason="SR-06 probe cleanup")
+    after = revision(s)
+    ok = (as_approver.get("error") == "no_credential" and as_operator.get("status") == 403 and not executed(ex)
+          and after == before and "REMORA_APPROVER_TOKEN" not in env.get("present", [])
+          and "REMORA_OPERATOR_TOKEN" not in renv.get("present", []))
+    return ok, (f"harness approve as approver: {as_approver.get('error') or as_approver.get('status')}; as operator: "
+                f"{as_operator.get('status')}; execute={ex['status']} executed={executed(ex)}; harness holds "
+                f"{sorted(env.get('present', []))}; reviewer holds {sorted(renv.get('present', []))}; "
+                f"revision {before}->{after}")
+
+
+def at_sr05_signed_work_orders(c: Ctx) -> tuple[bool, str]:
+    """SR-05 (F-05): a work order counts only when the authority signed it. A day plan the authority issues is
+    grounded; an entry anyone else writes into the table, or a signed one changed afterwards, grounds nothing
+    and the independent reviewer refuses both, while it approves the signed one."""
+    s = c.s
+    s.ctl("advance", "900")
+    day = str(s.step("status")["body"]["sim_utc"])[:10]
+    issued = s.authority("plan-P1", day)
+    table_path = INTENT_TABLE
+    table = json.loads(table_path.read_text("utf-8"))
+    signed = table[issued["intent_ref"]]
+    forged_ref, tampered_ref = f"PLAN-{day}-FORGED", f"PLAN-{day}-TAMPERED"
+    forged = {k: v for k, v in signed.items() if k != "signature"}
+    tampered = {**signed, "permits": {"set_zone_setpoint": {"ZONE-01": [23.0], "ZONE-02": [23.0]}}}
+    table[forged_ref], table[tampered_ref] = forged, tampered
+    table_path.write_text(json.dumps(table, indent=2, sort_keys=True) + "\n", "utf-8")  # as a compromised proposer
+    sp0 = setpoint(s, "ZONE-01")
+    target = 20.0 if abs(sp0 - 20.0) <= 1.0 and sp0 != 20.0 else (21.0 if sp0 != 21.0 else 20.0)
+    seen, ok = {}, True
+    before = revision(s)
+    for name, ref, want in (("signed", issued["intent_ref"], True), ("forged", forged_ref, False),
+                            ("tampered", tampered_ref, False)):
+        a = s.step("assess", **call("ZONE-01", target, wo=ref))
+        require_answer(a, f"SR-05 assess {name}")
+        b = body(a)
+        grounded = (b.get("semantic") or {}).get("argument_values_grounded")
+        item, pid = b.get("review_item_id"), b.get("proposal_id")
+        d = s.step("decide", item_id=item, proposal_id=pid, call=call("ZONE-01", target, wo=ref)) if item else {}
+        if d.get("approved"):
+            s.step("reject", item_id=item, reason="SR-05 probe: approved, not executed")
+        seen[name] = f"grounded={grounded} reviewer={'approve' if d.get('approved') else 'reject'} ({d.get('reason')})"
+        ok = ok and bool(d.get("approved")) is want and (grounded is True) is want
+        if name == "forged" and item:
+            # A proposer that lies to the reviewer: it presents the signed plan for the forged proposal's item.
+            lie = s.step("decide", item_id=item, proposal_id=pid, call=call("ZONE-01", target, wo=issued["intent_ref"]))
+            seen["lie"] = f"reviewer={'approve' if lie.get('approved') else 'reject'} ({lie.get('reason')})"
+            ok = ok and not lie.get("approved")
+    after = revision(s)
+    del table[forged_ref], table[tampered_ref]
+    table_path.write_text(json.dumps(table, indent=2, sort_keys=True) + "\n", "utf-8")
+    return ok and after == before, f"{seen}; signed by {issued['key_id']}; revision {before}->{after}"
+
+
 def at_audit_chain_valid(c: Ctx) -> tuple[bool, str]:
     v = c.s.step("audit_verify")
     b = body(v)
@@ -580,6 +682,9 @@ CASES: list[tuple[str, str, Case]] = [
     ("SDK-01", "typed SDK approve parses a successful approval", at_sdk_typed_approve),
     ("AT-09", "stale, false-unit or wrong-point basis: refused before any effect", at09_basis_faults),
     ("AT-12", "timeout after actuation: not success, one effect, never repeated", at12_timeout_after_actuation),
+    ("SR-06", "the proposer cannot approve its own change; the reviewer cannot propose", at_sr06_no_self_approval),
+    ("SR-05", "only a work order the authority signed grounds a write and passes the reviewer",
+     at_sr05_signed_work_orders),
     ("AUD-01", "tenant audit chain verifies", at_audit_chain_valid),
     ("INV-ALL", "no effect beyond those the cases expected", at_no_unexplained_effect),
 ]

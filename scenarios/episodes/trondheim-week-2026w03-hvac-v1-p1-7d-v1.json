@@ -11,7 +11,7 @@
     "remora_lock_sha256": "e8886f57f6eeb73900125e01f08a1d05d5275e554e24fe3c7baa503d88e4ec5a",
     "remora_runtime": {
       "compose": "compose.governed.yaml",
-      "environment_sha256": "10469ab3540d339b29df4e22bb6bd310e4bbc1238a6977cfa51d6081ea8a2e1c",
+      "environment_sha256": "3aeee8b19b3671db615f99082fc229e443e13513b0550b7d69b35c860d2e3da0",
       "flags": {
         "REMORA_BINDING_POLICY": "unset",
         "REMORA_ENABLED_SURFACES": "execution",

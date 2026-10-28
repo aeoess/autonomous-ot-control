@@ -8,6 +8,8 @@
 #   A              runner.arm_a (ungoverned, known-negative), offline, no Docker
 #   B-careful      runner.demo, REMORA in the loop, careful reviewer
 #   B-rubber_stamp runner.demo, rubber-stamp reviewer (what REMORA enforces without a human)
+#   B-independent  runner.demo, the independent reviewer: it decides in its own container from the
+#                  signed work order and the twin's readings, never from the proposer (SR-06)
 #   C-rubber_stamp runner.demo, rubber-stamp reviewer plus the reference inline edge
 #                  (federation/edges/_inline_template, served on this host), so the
 #                  edge's contribution is visible
@@ -20,8 +22,11 @@ cd "$(dirname "$0")/../.."
 PY="${PYTHON:-python3}"
 DAYS="${DAYS:-7}"
 RUN_ID="${RUN_ID:-abc-$(date -u +%Y%m%dT%H%M%SZ)}"
-ATTACK_SET="${ATTACK_SET:-v1}"   # v1, or all-rules: one injected class per oracle rule (runner.attacks)
-SUFFIX="-v1"; [[ "$ATTACK_SET" == "all-rules" ]] && SUFFIX="-all-rules-v1"
+ATTACK_SET="${ATTACK_SET:-v1}"   # v1; all-rules: one injected class per oracle rule; full: plus authority (runner.attacks)
+case "$ATTACK_SET" in
+  v1) SUFFIX="-v1" ;; all-rules) SUFFIX="-all-rules-v1" ;; full) SUFFIX="-full-v1" ;;
+  *) echo "run-abc: unknown ATTACK_SET ${ATTACK_SET}" >&2; exit 2 ;;
+esac
 EPISODE="scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-${DAYS}d${SUFFIX}.json"
 OUT="artifacts/${RUN_ID}"
 EDGE_PORT="${EDGE_PORT:-8765}"
@@ -59,6 +64,7 @@ run_governed() {  # label, extra demo args...
 }
 run_governed B-careful --reviewer careful
 run_governed B-rubber_stamp --reviewer rubber_stamp
+run_governed B-independent --reviewer independent
 
 echo "== reference inline edge on this host, port ${EDGE_PORT}"
 "$PY" federation/edges/_inline_template/server.py --port "$EDGE_PORT" &
@@ -71,7 +77,7 @@ run_governed C-rubber_stamp --reviewer rubber_stamp --inline-edge federation/edg
 echo "== compare"
 "$PY" -m runner.ab_compare --episode "$EPISODE" --out "$OUT" \
   --arm "A=${OUT}/arm-a" --arm "B-careful=${OUT}/B-careful" --arm "B-rubber_stamp=${OUT}/B-rubber_stamp" \
-  --arm "C-rubber_stamp=${OUT}/C-rubber_stamp"
+  --arm "B-independent=${OUT}/B-independent" --arm "C-rubber_stamp=${OUT}/C-rubber_stamp"
 echo "report: ${OUT}/abc-report.md"
 # Use of each offline edge across the arms (runner.edge_usage): usage-summary.md beside the per-arm passes.
 "$PY" -m runner.edge_usage --root "${OUT}/edges" --out "${OUT}/edges" >/dev/null   && echo "edge usage: ${OUT}/edges/usage-summary.md" || echo "edge usage: no offline edge pass in this run"

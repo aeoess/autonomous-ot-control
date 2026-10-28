@@ -11,7 +11,7 @@ Order of work, as decided for this phase:
 1. SEC-01.
 2. SEC-02 and the critical twin interlocks of SEC-03.
 3. The A/B/C additions:
-   - attacks on authority, signed work orders and a separate reviewer (a bounded SEC-07);
+   - attacks on authority, signed work orders and a separate reviewer (a bounded SEC-07; **done**);
    - all eight oracle rules attacked;
    - AT-09 and AT-12 fault injection (**done**: both PASS on the governed stack).
 4. Simulator fidelity (PR #30 with holdout validation, the hourly model).
@@ -24,7 +24,7 @@ Order of work, as decided for this phase:
 | SEC-04 Supply chain and image hygiene (SR-21, SR-22) | G-A | **closed**, except SBOM and image signing | `tests/unit/test_supply_chain.py`, which fails on the old files (7 of 7). The REMORA image installs everything from `deploy/ot/requirements-remora.lock` with `--require-hashes`; ST-20 was checked by hand: with both of fastapi's hashes changed, the build fails. Base images and postgres are pinned by digest, Actions by commit SHA, and Dependabot covers pip, docker and actions. `remora` runs under `x-hardening` with a read-only root and root-owned `/app`; postgres is the documented exception, because its entrypoint switches user. The governed acceptance suite passes 14/14 with the hardened `remora`. Open: an SBOM and cosign signatures, which wait until images are published |
 | SEC-05 Signed run records (SR-04) | G-A | open | |
 | SEC-06 One source of truth for contracts (SR-07, SR-08, SR-18) | G-C | open | |
-| SEC-07 Signed work orders and separated approver (SR-05, SR-06, SR-12) | G-C | open; a bounded version is planned for the testbed | |
+| SEC-07 Signed work orders and separated approver (SR-05, SR-06, SR-12) | G-C | **SR-05 and SR-06 closed for the testbed**; SR-12 (signed evidence manifests) open | `tests/unit/test_sec07_authority.py`; governed acceptance SR-05 and SR-06 (18/18 PASS). SR-05: work orders are Ed25519-signed by a work-order authority whose seed is mounted only in its own container (`authority`, no network, no credential); it issues only the day plans and lab orders it builds from fixed templates (`deploy/ot/ot_authority.py`). REMORA's bundle grounds an entry only when its signature verifies, and labels it `signed_work_order:<key id>:<digest>`; without configured keys it says `intent_table:`, never `signed_work_order`. The shipped work orders are signed at bootstrap. SR-06: the approver token is only in the `reviewer` container; the harness (the proposer) answers `no_credential` and REMORA 403 when it tries to approve. The independent reviewer model (`decide`) believes the proposer's ids and call only where REMORA's own `assessed` record binds them (review item, `tool_call_hash`, `intent_authority_hash`, each recomputed with REMORA's code), then checks the signed work order, its day, the permitted value and the step from the twin's own reading. Not done: the proposer can still write the table file (an unsigned line it writes is ignored, but it can delete lines); on one host the host user can read every key; the careful and rubber-stamp reviewer models still decide in the proposer's process and only approve through the reviewer container, which every report states |
 | SEC-08 Service identity and secrets (SR-19, SR-20) | G-C | not now | mTLS and PKI wait for distributed staging |
 | SEC-09 Operations (SR-24) | G-C | not now | |
 | SEC-10 LLM proposer threat model | G-C | not now | No LLM proposer is planned before SEC-07 |
@@ -49,4 +49,6 @@ Order of work, as decided for this phase:
 | F-04 REMORA image installs unpinned | High | SEC-04 | **closed** |
 | F-20 Hardening gaps (remora without anchor, floating tags, Actions by tag, narrow Dependabot and preflight, `.env.tmp`) | Medium | SEC-04 | **closed**, except SBOM and image signing |
 | F-17 Twin robustness (unbounded refused-op records, body read before auth, no limits, NaN 500s) | Medium | SEC-03 (SR-15) | **closed** (ST-15) |
-| F-05, F-06, F-09, F-12 … F-14, F-16, F-19, F-21 … F-23, F-25 | | SEC-05 … SEC-13 | open (see [SDD-OT-002](../SDD-OT-002.md) §3) |
+| F-05 Unsigned work orders labelled signed | High | SEC-07 (SR-05) | **closed** for the testbed (see SEC-07) |
+| F-06 Approver in the proposer's process | High | SEC-07 (SR-06) | **closed** for the credential and for the independent reviewer model; careful and rubber-stamp still decide in the proposer's process |
+| F-09, F-12 … F-14, F-16, F-19, F-21 … F-23, F-25 | | SEC-05 … SEC-13 | open (see [SDD-OT-002](../SDD-OT-002.md) §3) |

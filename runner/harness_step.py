@@ -10,8 +10,12 @@ credential, so a judged result always names who did what. Errors come back as
 data (``ok: false`` with the error type and HTTP status), never as a crash, so
 a refusal is evidence rather than a broken step.
 
-The container holds the operator, approver and viewer tokens and the twin read
-token. It has no actuator or control token and no plant-private route.
+The container is the proposer: it holds the operator, viewer and verifier
+tokens and the twin read token, never the approver's (SDD-OT-002 SR-06; that
+one is in the ``reviewer`` container, deploy/ot/ot_reviewer.py). An op asked
+to act as a role whose token is absent answers ``error: no_credential``
+without calling REMORA. It has no actuator or control token and no
+plant-private route.
 """
 from __future__ import annotations
 
@@ -37,6 +41,8 @@ def _token(role: str) -> str:
 def _remora(method: str, path: str, role: str, body: dict[str, Any] | None = None,
             *, timeout: float = TIMEOUT_S) -> dict[str, Any]:
     started = time.monotonic()
+    if role in ROLES and not os.environ.get(ROLES[role]):
+        return {"ok": False, "status": None, "error": "no_credential", "role": role, "elapsed_ms": 0.0}
     try:
         r = httpx.request(method, os.environ["REMORA_URL"] + path, json=body, timeout=timeout,
                           headers={"Authorization": f"Bearer {_token(role)}"})
@@ -205,19 +211,6 @@ def op_direct_actuate(a: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "status": r.status_code, "reachable": True}
     except httpx.HTTPError as e:
         return {"ok": True, "status": None, "reachable": False, "error": type(e).__name__}
-
-
-def op_sdk_approve(a: dict[str, Any]) -> dict[str, Any]:
-    """Approve through remora.sdk, to check the typed client, not only REST."""
-    import remora.sdk as sdk
-
-    with sdk.RemoraClient(base_url=os.environ["REMORA_URL"], token=_token("approver")) as c:
-        try:
-            res = c.approve(a["item_id"])
-        except Exception as e:  # reported as data: the point is what the SDK does
-            return {"ok": False, "error": type(e).__name__, "detail": str(e)[:300]}
-    return {"ok": True, "status_text": res.status,
-            "audit_deferred": getattr(res.audit, "deferred", None)}
 
 
 def op_env(a: dict[str, Any]) -> dict[str, Any]:

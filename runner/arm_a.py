@@ -44,7 +44,7 @@ def run(ep: dict[str, Any]) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
     rev0 = twin.revision
     n = 0
-    all_rules = ep.get("attack_set") == attacks_mod.ALL_RULES
+    all_rules = attacks_mod.includes_all_rules(ep.get("attack_set", attacks_mod.V1))
     for t in range(0, int(ep["simulated_s"]), step):
         if all_rules and t == attacks_mod.FREEZE_FROM_S:  # the same sensor fault the episode was built with
             twin.inject_fault("sensor_freeze", attacks_mod.STALE_ZONE, actor="arm-a")
