@@ -42,6 +42,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import platform
 import re
 import shutil
@@ -386,6 +387,8 @@ def validate_edge_manifest(edge_dir: Path) -> list[str]:
         problems.append("evaluator must be {kind: reference|second_implementation, "
                         "imports_reference_verifier: bool, imports_testbed_code: bool}")
     ep = edge.get("entrypoint")
+    from runner import edge_sandbox
+    problems += edge_sandbox.manifest_problems(edge)
     if not isinstance(ep, dict):
         problems.append("entrypoint must be an object")
     elif edge.get("mode") == "offline" and edge.get("boundary") == "effect_evidence" \
@@ -424,13 +427,24 @@ def init_edge(edge_id: str, *, project: str, maintainer: str, boundary: str = "e
 
 def _refuse_existing_output(out: Path) -> None:
     for name in ("result.json", "report.md", "run-record.json", "score.json"):
-        if (out / name).exists():
+        if os.path.lexists(out / name):
             raise FileExistsError(f"{out / name} exists: a run never overwrites an earlier one")
 
 
 def run_adapter(edge_dir: Path, fixtures: Path, out: Path) -> tuple[int, str]:
-    """Execute the edge's entrypoint locally with a fresh working directory. Returns (exit code, stderr tail)."""
+    """Run the edge's entrypoint. Returns (exit code, stderr tail).
+
+    A contributed edge runs in the container sandbox (runner.edge_sandbox, SDD-OT-002 SR-01..SR-03), never as
+    a host process; only an edge id on the explicit trust list runs locally, with a fresh working directory.
+    """
+    from runner import edge_sandbox
     edge = json.loads((edge_dir / "edge.json").read_text("utf-8"))
+    if not edge_sandbox.trusted(str(edge.get("edge_id", ""))):
+        rc, tail = edge_sandbox.run(edge_dir, fixtures, out, edge, ADAPTER_TIMEOUT_S)
+        if rc != 0:
+            out.mkdir(parents=True, exist_ok=True)
+            edge_sandbox.write_new(out / f"adapter-stderr-{dt.datetime.now(dt.timezone.utc):%H%M%S%f}.txt", tail)
+        return rc, tail
     cmd: list[str] = []
     for arg in edge["entrypoint"]["command"]:
         if arg == "python":
@@ -449,7 +463,7 @@ def run_adapter(edge_dir: Path, fixtures: Path, out: Path) -> tuple[int, str]:
         shutil.rmtree(work, ignore_errors=True)
     tail = (proc.stderr or "")[-4000:]
     if proc.returncode != 0:
-        (out / "adapter-stderr.txt").write_text(tail, encoding="utf-8")
+        edge_sandbox.write_new(out / "adapter-stderr.txt", tail)
     return proc.returncode, tail
 
 
@@ -695,10 +709,11 @@ def score_and_write(edge_dir: Path, fixtures: Path, result_path: Path, out: Path
     rec = build_record(edge, fixtures, manifest, sha, s, operator=operator, host=host, command=command,
                        run_ref=run_ref, started_at=started_at, completed_at=_now(),
                        provenance=run_provenance(edge_dir))
-    (out / "score.json").write_text(json.dumps(s, indent=2) + "\n", encoding="utf-8")
-    (out / "run-record.json").write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8")
+    from runner.edge_sandbox import write_new
+    write_new(out / "score.json", json.dumps(s, indent=2) + "\n")
+    write_new(out / "run-record.json", json.dumps(rec, indent=2) + "\n")
     text = render(edge, manifest, sha, s, level, operator, host, command)
-    (out / "report.md").write_text(text, encoding="utf-8")
+    write_new(out / "report.md", text)
     print(text)
     return 0 if s["ok"] else 1
 
@@ -718,7 +733,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--check-fixtures", metavar="DIR", help="verify a sealed fixture set and exit")
     p.add_argument("--check-provenance", metavar="DIR",
                    help="fetch the verifier a set declares it was sealed against from git, run it, require the expected verdicts")
-    p.add_argument("--run", metavar="EDGE_DIR", help="run the edge's adapter locally, then score it")
+    p.add_argument("--run", metavar="EDGE_DIR",
+                   help="run the edge's adapter (in the container sandbox unless trusted), then score it")
+    p.add_argument("--trust-edge", action="append", default=[], metavar="EDGE_ID",
+                   help="run this edge's adapter on the host instead of the sandbox (repeatable; your own code only)")
     p.add_argument("--edge")
     p.add_argument("--fixtures")
     p.add_argument("--result")
@@ -806,6 +824,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{len(recs)} record(s) valid")
         return 0
 
+    from runner import edge_sandbox
+    edge_sandbox.EXTRA_TRUSTED.update(a.trust_edge)
     if a.run:
         if not (a.fixtures and a.out):
             p.error("--run needs --fixtures and --out")
@@ -831,7 +851,7 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     for name in ("report.md", "run-record.json", "score.json"):
-        if (out / name).exists():
+        if os.path.lexists(out / name):
             print(f"error: {out / name} exists: a run never overwrites an earlier one", file=sys.stderr)
             return 1
     return score_and_write(Path(a.edge), Path(a.fixtures), Path(a.result), out, operator=a.operator, host=a.host,

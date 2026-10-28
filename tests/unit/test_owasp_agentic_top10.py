@@ -279,11 +279,17 @@ def test_asi05_no_code_path_evaluates_data():
     assert found == []
 
 
-def test_asi05_verifiers_run_sandboxed_without_network_or_privileges():
-    sh = (ROOT / "deploy" / "scripts" / "run-edge.sh").read_text("utf-8")
+def test_asi05_verifiers_run_sandboxed_without_network_or_privileges(tmp_path):
+    """One sandbox for every edge (runner.edge_sandbox, SDD-OT-002 SEC-01); run-edge.sh goes through it."""
+    from runner import edge_sandbox
+    flags = " ".join(edge_sandbox.SANDBOX_FLAGS)
     for flag in ("--network none", "--read-only", "--cap-drop ALL", "no-new-privileges:true", "--user 65534:65534",
-                 "--pids-limit", "--memory", ":/edge:ro", ":/fixtures:ro"):
-        assert flag in sh, flag
+                 "--pids-limit", "--memory"):
+        assert flag in flags, flag
+    edge = {"entrypoint": {"command": ["python", "/edge/adapter.py"]}}
+    argv = edge_sandbox.docker_argv(tmp_path, tmp_path, tmp_path, edge)
+    assert any(a.endswith(":/edge:ro") for a in argv) and any(a.endswith(":/fixtures:ro") for a in argv)
+    assert "runner.edge_check --run" in (ROOT / "deploy" / "scripts" / "run-edge.sh").read_text("utf-8")
 
 
 def test_asi05_code_shaped_values_are_refused_as_data(twin):

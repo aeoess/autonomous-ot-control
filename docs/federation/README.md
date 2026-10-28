@@ -166,6 +166,18 @@ python -m runner.edge_check --list-fixture-sets federation/edges/<your-edge-id>
   case under `<dir>/cases/` and write one verdict per case with a reason
   (`claim_id` optional). Any language works if you ship a Dockerfile whose
   entry point behaves the same way; `entrypoint.image` names it.
+  **The image must be pinned by digest**, as `name[:tag]@sha256:<64 hex>`
+  (SDD-OT-002 SR-01). A tag alone, or anything that starts with `-`, fails
+  `--validate`. With `pin.kind: image_digest` it must equal `pin.value`.
+- **Your adapter always runs in the testbed's container sandbox**
+  (`runner.edge_sandbox`). The sandbox has no network, a read-only root, no
+  capabilities, and runs as nobody. The edge and the fixtures are mounted
+  read-only. The sandbox writes to a private directory, from which the host
+  takes `result.json` alone and refuses links. This also holds when the edge
+  runs beside a governed run (`runner.edge_pass`), and without Docker the edge
+  does not run at all. Only `--trust-edge <id>` (or `run-edge.sh --local`,
+  which passes it) runs an adapter on the host. Use it for your own code on
+  your own machine.
 - **Inline:** an HTTP endpoint `POST /decide` that takes `{call, context}` and
   answers `{verdict: "permit" | "refuse", reason}` within 2 s. A timeout, an
   error or a malformed answer counts as `refuse` and is reported as

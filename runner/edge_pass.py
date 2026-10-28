@@ -484,7 +484,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--run-id", default=None)
     p.add_argument("--edge", action="append", default=None,
                    help="edge directory to run (repeatable); default: every offline effect_evidence edge")
+    p.add_argument("--trust-edge", action="append", default=[], metavar="EDGE_ID",
+                   help="run this edge on the host instead of the container sandbox (your own code only)")
     a = p.parse_args(argv)
+    from runner import edge_sandbox
+    edge_sandbox.EXTRA_TRUSTED.update(a.trust_edge)
     work = Path(a.work)
     if not (work / "decisions").is_dir():
         print(f"error: {work}/decisions not found", file=sys.stderr)

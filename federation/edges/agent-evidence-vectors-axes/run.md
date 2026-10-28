@@ -72,6 +72,13 @@ require. On the mutation set the edge now kills 420/420 mutants with 100 % exact
 verdicts; before the repair it was 406/420 and 97.3 %. The historical v1 record
 is unchanged.
 
+On 2026-10-28 (SDD-OT-002 SEC-01) the maintainer pinned this edge's
+`entrypoint.image` by digest
+(`python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9`,
+the image every sandboxed run of it used), because a tag can move. The edge now
+always runs in the container sandbox (`runner.edge_sandbox`), including beside
+governed runs. Its v1 result in the sandbox is unchanged.
+
 Dependabot proposes package updates only. A requirements-only bump fails
 the integration test: version, vendored bytes, digest and current edge pin
 must be reviewed and updated together. No dependency is installed at runtime;
