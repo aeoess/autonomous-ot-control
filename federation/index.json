@@ -83,6 +83,37 @@
       "note": "No harness yet. Blocked on a signed work-order format: the testbed's work orders are intent-table entries (deploy/ot/ot_intents.json), not signed artifacts. Planned after tool_definition, with the testbed's own Ed25519 signer as the interim format and the episode's work_orders as the oracle; a pinned federation authority format (APS) is preferred when one is available."
     }
   ],
+  "registered_edges": {
+    "note": "Edges whose maintainers joined by pull request (the consent record). A boundary stays OPEN while further projects may join it; this list says who has delivered on it. Mirrors docs/federation/edge-registry.yaml and each edge.json; a test keeps them in step (tests/unit/test_federation_runner_contract.py::test_registered_edges_match_registry_manifests_and_records).",
+    "edges": [
+      {
+        "edge_id": "agent-evidence-vectors-axes",
+        "project": "agent-evidence-vectors (invocation axes)",
+        "maintainer": "astrogilda",
+        "boundary": "effect_evidence",
+        "mode": "offline",
+        "manifest": "federation/edges/agent-evidence-vectors-axes/edge.json",
+        "consent_ref": "https://github.com/darklordVirtual/autonomous-ot-control/pull/22",
+        "pin": "agent-evidence-vectors==0.28.0 (invocation_axes/reader.py, sha256 a86c2c4830af011f3707c8164ca1350c9b965d2a960967bff83c79532df54938)",
+        "licence": "Apache-2.0",
+        "fixture_sets": [
+          "v1"
+        ],
+        "records": "federation/records/agent-evidence-vectors-axes",
+        "results": "docs/federation/RESULTS.md",
+        "best_record": {
+          "record": "federation/records/agent-evidence-vectors-axes/20261027T171310Z.json",
+          "fixture_set": "v1",
+          "status": "PASS",
+          "independence_level": "L4_INDEPENDENT_HOST_RUN",
+          "positives": "12 / 12",
+          "negatives_caught": "6 / 6"
+        },
+        "runs_beside_live_trails": "runner.edge_pass runs it over every governed arm's exported trails (offline, outcome untouched)",
+        "source_in_repository": "an unchanged, hash-verified copy of the upstream invocation_axes reader (agent-evidence-vectors 0.28.0) plus the adapter, accepted as an exception in PR #22; other edges keep their checker in their own repository or image"
+      }
+    ]
+  },
   "result_vocabulary": [
     "ESTABLISHED",
     "CONTRADICTED",

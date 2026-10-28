@@ -67,6 +67,38 @@
         "type": "string"
       }
     },
+    "registered_edges": {
+      "type": "object",
+      "description": "Edges whose maintainers joined by pull request; mirrors docs/federation/edge-registry.yaml and each edge.json.",
+      "required": ["edges"],
+      "properties": {
+        "note": {"type": "string"},
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["edge_id", "project", "maintainer", "boundary", "mode", "manifest", "consent_ref", "fixture_sets", "records", "results"],
+            "properties": {
+              "edge_id": {"type": "string"},
+              "project": {"type": "string"},
+              "maintainer": {"type": "string"},
+              "boundary": {"type": "string"},
+              "mode": {"enum": ["offline", "inline"]},
+              "manifest": {"type": "string"},
+              "consent_ref": {"type": "string"},
+              "pin": {"type": "string"},
+              "licence": {"type": "string"},
+              "fixture_sets": {"type": "array", "items": {"type": "string"}},
+              "records": {"type": "string"},
+              "results": {"type": "string"},
+              "best_record": {"type": "object"},
+              "runs_beside_live_trails": {"type": "string"},
+              "source_in_repository": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
     "boundaries": {
       "type": "array",
       "items": {

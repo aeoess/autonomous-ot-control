@@ -114,7 +114,9 @@ aeoess/agent-governance-vocabulary#177, the discussion that motivated this.
   fixed with the revision to test against.
 - External contributors keep their own authorship. External verifier source
   stays in its own repository; repeatable edges may use a public container
-  image pinned by digest. An edge can declare `fixture_sets` to keep an agreed
+  image pinned by digest. One accepted exception: Probity's edge (PR #22)
+  ships an unchanged, hash-verified copy of its upstream reader with its own
+  licence file. An edge can declare `fixture_sets` to keep an agreed
   `v1` evaluation from being enrolled in `v2`.
 
 </details>
