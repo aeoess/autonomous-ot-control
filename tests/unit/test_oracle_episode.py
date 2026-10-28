@@ -204,3 +204,46 @@ def test_episode_pins_what_a_scored_run_holds_fixed_and_check_catches_drift(tmp_
     del drifted["pins"]
     p.write_text(json.dumps(drifted), "utf-8")
     assert "no pins: rebuild the episode" in episode.check(p)
+
+
+def test_remora_mode_flags_are_pinned_so_ws1_off_and_on_never_share_pins(tmp_path):
+    """The hole closed here: pins without REMORA's mode flags let a run with WS1 off and one with WS1
+    enforce + atomic admission look comparable."""
+    rt = episode.load(COMMITTED)["pins"]["remora_runtime"]
+    assert rt == episode.remora_runtime()
+    f = rt["flags"]
+    assert f["REMORA_WS1_MODE"] == "unset (default off)" and f["REMORA_WS1_ADMISSION"] == "unset (default legacy)"
+    assert f["REMORA_FLOW_CONTROL"] == "unset (default off)" and f["REMORA_REQUIRE_LIMITS"] == "1"
+    # Every KEY of the remora environment block is read, folded values included, and nothing secret is pinned.
+    env = episode.remora_environment()
+    assert "REMORA_API_TOKENS" in env and env["REMORA_API_TOKENS"].startswith('{"${REMORA_OPERATOR_TOKEN')
+    assert "TWIN_ACTUATOR_TOKEN" in env and "postgres" not in env
+    assert not any("${" in v for v in f.values())
+    # Turning WS1 on in a copy of the compose file changes the flags and the digest, and check reports drift.
+    src = episode.GOVERNED_COMPOSE.read_text("utf-8")
+    on = src.replace("      REMORA_ENV: production\n",
+                     "      REMORA_ENV: production\n      REMORA_WS1_MODE: enforce\n      REMORA_WS1_ADMISSION: atomic\n", 1)
+    assert on != src
+    c = tmp_path / "compose.governed.yaml"
+    c.write_text(on, "utf-8")
+    rt_on = episode.remora_runtime(c)
+    assert rt_on["flags"]["REMORA_WS1_MODE"] == "enforce" and rt_on["flags"]["REMORA_WS1_ADMISSION"] == "atomic"
+    assert rt_on["environment_sha256"] != rt["environment_sha256"]
+    ep = episode.load(COMMITTED)
+    now = episode.current_pins(ROOT / ep["twin_config"], ROOT / ep["scenario"], compose=c)
+    assert now["remora_runtime"] != ep["pins"]["remora_runtime"]
+    # A comment or blank line does not move the digest; a value does.
+    c.write_text(src.replace("      REMORA_ENV: production\n", "      # note\n\n      REMORA_ENV: production\n", 1), "utf-8")
+    assert episode.remora_runtime(c)["environment_sha256"] == rt["environment_sha256"]
+
+
+def test_resolved_flags_are_allow_listed_and_never_carry_secrets():
+    cfg = {"services": {"remora": {"environment": {"REMORA_WS1_MODE": "shadow", "REMORA_API_TOKENS": "secret-tokens",
+                                                   "REMORA_PG_DSN": "postgresql://u:pw@h/db", "REMORA_ENV": "production"}}}}
+    got = episode.resolved_mode_flags(cfg)
+    assert set(got) == set(episode.REMORA_MODE_FLAGS)
+    assert got["REMORA_WS1_MODE"] == "shadow" and got["REMORA_WS1_ADMISSION"] == "unset (default legacy)"
+    assert "secret-tokens" not in json.dumps(got) and "pw@" not in json.dumps(got)
+    as_list = {"services": {"remora": {"environment": ["REMORA_WS1_MODE=enforce", "REMORA_API_TOKENS=x"]}}}
+    assert episode.resolved_mode_flags(as_list)["REMORA_WS1_MODE"] == "enforce"
+    assert episode.resolved_mode_flags({})["REMORA_WS1_MODE"] == "unset (default off)"

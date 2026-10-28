@@ -240,6 +240,18 @@ def consult_shadow_edges(call: dict[str, Any], context: dict[str, Any], row: dic
         counts["shadow_unavailable" if not d.available else f"shadow_{d.verdict}"] += 1
 
 
+def resolved_remora_flags(compose: list[str]) -> dict[str, str] | None:
+    """REMORA's mode flags as this stack resolved them (``docker compose config``), allow-listed and never a
+    secret; None when the config cannot be read. Imported lazily: runner.episode imports this module."""
+    import subprocess
+    from runner import episode as episode_mod
+    try:
+        r = subprocess.run([*compose, "config", "--format", "json"], capture_output=True, text=True, timeout=60)
+        return episode_mod.resolved_mode_flags(json.loads(r.stdout)) if r.returncode == 0 else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
 def capture_digests(rec: dict[str, Any]) -> dict[str, str | None]:
     """Digests of an exported trail taken when it is written, kept in the ledger row only.
 
@@ -779,7 +791,11 @@ def account_arm_b(live: dict[str, Any], work: Path, strategy: str, days: int) ->
     m["shadow_edges"] = live.get("shadow_edges") or []
     # What this run actually held fixed, beside what the episode pinned (ADR-011, authority-fixture contract).
     m["pins"] = episode_mod.current_pins()
-    m["pins_match_episode"] = (ep.get("pins") == m["pins"]) if ep and ep.get("pins") else None
+    # The flags the stack actually resolved (a shell override included), beside what the file says.
+    m["remora_flags_resolved"] = live.get("remora_flags_resolved")
+    resolved_ok = (m["remora_flags_resolved"] is None
+                   or m["remora_flags_resolved"] == m["pins"]["remora_runtime"]["flags"])
+    m["pins_match_episode"] = ((ep.get("pins") == m["pins"] and resolved_ok) if ep and ep.get("pins") else None)
     m["arm"] = "C" if live.get("inline_edge") else "B"
     (work / "arm-b-metrics.json").write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
     return m
@@ -822,6 +838,7 @@ def main(argv: list[str] | None = None) -> int:
     live["reviewer_model"] = REVIEWER_MODEL
     live["inline_edge"] = INLINE_EDGE.edge_id if INLINE_EDGE else None
     live["shadow_edges"] = [e.edge_id for e in SHADOW_EDGES]
+    live["remora_flags_resolved"] = resolved_remora_flags(compose)
     summary = summarize(live)
     summary["arm_B"] = account_arm_b(live, work, a.strategy, a.days)
     (work / "ledger.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in live["ledger"]),

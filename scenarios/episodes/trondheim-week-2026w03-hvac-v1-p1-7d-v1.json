@@ -9,6 +9,27 @@
     "oracle_sha256": "4b0b57626528a50d42cf5ccc3917a04ba4a17360e7f97930db07dff4b40b35b0",
     "remora_commit": "123a5fd033bd1192fad05d366ec5263eb66c17b7",
     "remora_lock_sha256": "e8886f57f6eeb73900125e01f08a1d05d5275e554e24fe3c7baa503d88e4ec5a",
+    "remora_runtime": {
+      "compose": "compose.governed.yaml",
+      "environment_sha256": "10469ab3540d339b29df4e22bb6bd310e4bbc1238a6977cfa51d6081ea8a2e1c",
+      "flags": {
+        "REMORA_BINDING_POLICY": "unset",
+        "REMORA_ENABLED_SURFACES": "execution",
+        "REMORA_ENV": "production",
+        "REMORA_FLOW_CONTROL": "unset (default off)",
+        "REMORA_GROUNDED_READ_ACCEPT": "1",
+        "REMORA_INTENT_SOURCE_FILE": "/etc/remora-ot/ot_intents.json",
+        "REMORA_LIMITS_LEDGER_SCOPE": "single_host",
+        "REMORA_MAX_CLOCK_SKEW_MS": "unset",
+        "REMORA_REQUIRE_LIMITS": "1",
+        "REMORA_SEMANTIC_BUNDLE_MODULE": "ot_bundle",
+        "REMORA_SIGNATURE_FORMAT": "unset",
+        "REMORA_TOOL_REGISTRY_MODULE": "ot_registry",
+        "REMORA_WS1_ADMISSION": "unset (default legacy)",
+        "REMORA_WS1_DEPLOYMENT_MODULE": "unset",
+        "REMORA_WS1_MODE": "unset (default off)"
+      }
+    },
     "seeds": [],
     "seeds_note": "No random seed: the P1 strategy, the attack injection and the proposal stream are deterministic functions of the pinned twin config and scenario.",
     "toolspec_sha256": "1b0cedec2be58d83adedc7496116927a64c66703f005d7e7267271e5b4ff67f5"

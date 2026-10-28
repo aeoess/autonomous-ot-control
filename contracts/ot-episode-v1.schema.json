@@ -79,6 +79,7 @@
       "required": [
         "remora_commit",
         "remora_lock_sha256",
+        "remora_runtime",
         "toolspec_sha256",
         "limits_policy_sha256",
         "oracle_sha256",
@@ -94,6 +95,31 @@
         "remora_lock_sha256": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        },
+        "remora_runtime": {
+          "type": "object",
+          "description": "REMORA's mode flags as the governed stack sets them (WS1, admission, flow control, ...; unset ones named with their default) and a digest of the remora service's environment block.",
+          "additionalProperties": false,
+          "required": [
+            "compose",
+            "flags",
+            "environment_sha256"
+          ],
+          "properties": {
+            "compose": {
+              "type": "string"
+            },
+            "flags": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "environment_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
         },
         "toolspec_sha256": {
           "type": "string",

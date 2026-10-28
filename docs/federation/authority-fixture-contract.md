@@ -138,7 +138,7 @@ pins the work-order column.)
 4. Pin before any scored run:
    - the workload (episode digest)
    - the oracle
-   - the REMORA revision
+   - the REMORA revision and its mode flags (WS1 off and WS1 enforce with atomic admission are different runs)
    - the policy and ToolSpec hashes
    - the initial twin state digest
    - the seeds
@@ -235,6 +235,6 @@ delegation check.
 | The five cases as a sealed set (`federation/authority/fixtures/t1`, built by `runner/authority_fixtures.py`) and a stand-in delegation verifier (`federation/authority/template-verifier`) | done; **the delegation format and verifier are the testbed's stand-ins, not APS's** |
 | Oracle: value-range support, pre-registered `delegation_invalid` rule and precedence (`runner/oracle.py`) | done, tested |
 | Shadow evaluation on every proposal (`runner.demo --shadow-edge`, `SHADOW_EDGES` in `run-abc.sh`; four-cell matrix, false refusals, unavailable and latency in the A/B/C report) | done, tested on simulated stacks; not yet run on Docker with an APS verifier |
-| Pins in the episode and run manifest: REMORA commit and lock, ToolSpec, limits policy and oracle digests, initial twin state, seeds (none; the stream is deterministic). `runner.episode check` fails on drift; each governed arm records its own pins and whether they match the episode | done, tested |
+| Pins in the episode and run manifest: REMORA commit and lock, **REMORA's mode flags** (WS1 mode and admission, flow control, clock skew, signature and binding policy, limits, registry and bundle modules, intent source; unset ones named with their default, e.g. WS1 `off`, admission `legacy`) and a digest of the `remora` service's environment block, ToolSpec, limits policy and oracle digests, initial twin state, seeds (none; the stream is deterministic). `runner.episode check` fails on drift; each governed arm records its own pins, the flags its stack actually resolved (`docker compose config`, allow-listed, never a secret), and whether both match the episode | done, tested |
 | Schemas for sets, cases, submissions and verifier results; `assemble` for APS's delegations; harness answer problems (unknown, duplicate, malformed) and `--timeout` | done, tested |
 | Inline integration | after APS has reviewed the offline results |
