@@ -29,6 +29,10 @@ from twin.scenarios import load_scenario
 
 log = logging.getLogger("twin")
 
+#: SR-15 (F-17): bounded connections, idle keep-alive and header size on every listener.
+UVICORN_LIMITS = {"limit_concurrency": 64, "backlog": 128, "timeout_keep_alive": 5,
+                  "h11_max_incomplete_event_size": 16 * 1024}
+
 
 def _env(name: str, default: str) -> str:
     return os.environ.get(name, default).strip() or default
@@ -57,12 +61,12 @@ async def main() -> int:
                 snapshot_path=os.environ.get("TWIN_SNAPSHOT_PATH") or None)
     servers = [
         uvicorn.Server(uvicorn.Config(build_read_app(twin, tokens), host=_env("TWIN_READ_BIND", "0.0.0.0"),
-                                      port=int(_env("TWIN_READ_PORT", "8100")), log_level="info")),
+                                      port=int(_env("TWIN_READ_PORT", "8100")), log_level="info", **UVICORN_LIMITS)),
         uvicorn.Server(uvicorn.Config(build_actuator_app(twin, tokens), host=act_bind,
-                                      port=int(_env("TWIN_ACTUATOR_PORT", "8200")), log_level="info")),
+                                      port=int(_env("TWIN_ACTUATOR_PORT", "8200")), log_level="info", **UVICORN_LIMITS)),
         uvicorn.Server(uvicorn.Config(build_control_app(twin, tokens),
                                       host=_env("TWIN_CONTROL_BIND", "127.0.0.1"),
-                                      port=int(_env("TWIN_CONTROL_PORT", "8300")), log_level="info")),
+                                      port=int(_env("TWIN_CONTROL_PORT", "8300")), log_level="info", **UVICORN_LIMITS)),
     ]
     tasks = [s.serve() for s in servers]
     speed = os.environ.get("TWIN_AUTOPLAY_SPEEDUP", "").strip()
