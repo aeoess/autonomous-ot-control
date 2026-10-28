@@ -144,6 +144,7 @@ def test_v1_snapshot_without_plant_state_is_refused_for_the_hvac_model(tmp_path)
         "config_digest", "scenario_digest", "now_s", "revision", "energy_kwh", "cost",
         "comfort_violation_dh", "power_w", "stop_switch", "zones", "operations", "events")}
     legacy["schema"] = "ot-twin-snapshot/v1"
+    legacy.setdefault("operations", {})  # v1 carried the operation log inline; v2 keeps it in the journal
     snap.write_text(json.dumps(legacy), "utf-8")
     with pytest.raises(TwinError, match="v1"):
         hvac(snap)
@@ -159,6 +160,7 @@ def test_v1_snapshot_migrates_explicitly_for_the_simple_model(tmp_path):
         "config_digest", "scenario_digest", "now_s", "revision", "energy_kwh", "cost",
         "comfort_violation_dh", "power_w", "stop_switch", "zones", "operations", "events")}
     legacy["schema"] = "ot-twin-snapshot/v1"
+    legacy.setdefault("operations", {})  # v1 carried the operation log inline; v2 keeps it in the journal
     snap.write_text(json.dumps(legacy), "utf-8")
     b = Twin(config, load_scenario(BASELINE), snapshot_path=snap)
     assert b.clock.now_s == 900

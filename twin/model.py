@@ -52,6 +52,10 @@ class OperationConflict(TwinError):
     """An operation ID was reused with a different request."""
 
 
+class _JournalFailed(Exception):
+    """The snapshot is durable but the journal line was not written (internal to ``Twin._persist``)."""
+
+
 class OperationLogFull(StateStoreFailed):
     """SR-15 (F-17): the operation log holds ``Twin.MAX_OPERATIONS`` records. Nothing was applied or recorded.
 
@@ -134,6 +138,11 @@ class Twin:
         self.trace: list[dict[str, Any]] = []
         self._lock = threading.RLock()
         self._snapshot_path = Path(snapshot_path) if snapshot_path else None
+        # SR-15 (F-17): the operation log lives in an append-only journal next to the snapshot, one chained
+        # line per operation, so persisting an operation costs one line, not a rewrite of every record.
+        self._journal_path = Path(f"{snapshot_path}.journal") if snapshot_path else None
+        self._chain: list[str] = []      # chain MAC after each operation, in log order
+        self._journal_on_disk = 0        # lines known to be durable in the journal
         self.snapshot_migrated_from: str | None = None
         self.config_digest = canonical_digest(config)
         self.model_id = config["model"]
@@ -612,7 +621,7 @@ class Twin:
     _OPTIONAL_STATE = ("_wet_since", "_melt_s", "_dry_s", "_season_on", "_season_hour", "outdoor_mean_24h",
                        "grid_energy_cost", "monthly_peak_kw", "_hour_kwh", "_hour_key")
 
-    def snapshot(self) -> dict[str, Any]:
+    def snapshot(self, include_operations: bool = True) -> dict[str, Any]:
         """Everything a restart needs to continue as if it never happened (schema v2).
 
         v2 adds, to the v1 zones/operations/counters: the HVAC setpoints and
@@ -628,7 +637,8 @@ class Twin:
                 "comfort_violation_dh": self.comfort_violation_dh, "power_w": self.power_w,
                 "stop_switch": self.stop_switch,
                 "zones": {k: v.to_dict() for k, v in self.zones.items()},
-                "operations": {k: v.to_dict() for k, v in self.operations.items()},
+                **({"operations": {k: v.to_dict() for k, v in self.operations.items()}}
+                   if include_operations else {}),
                 "events": list(self.events),
                 "point_history_s": {k: list(v) for k, v in self.point_history_s.items()},
                 "district_heat_kwh": self.district_heat_kwh, "electric_kwh": self.electric_kwh,
@@ -655,7 +665,19 @@ class Twin:
             if not isinstance(mac, str) or not hmac.compare_digest(mac, self._mac(snap)):
                 raise TwinError("snapshot integrity check failed (HMAC missing or wrong); refusing to resume")
             authenticated = True
-        self._restore_unchecked({k: v for k, v in snap.items() if k != "integrity"})
+        body = {k: v for k, v in snap.items() if k != "integrity"}
+        if "operations" not in body and "journal" in body:
+            body["operations"] = self._load_journal(body["journal"])
+        else:  # the log inline (written before SR-15): the journal is rewritten from it on the next persist
+            self._chain, self._journal_on_disk = [], 0
+            if self._journal_path is not None and self._journal_path.exists():
+                self._journal_path.unlink()
+        self._restore_unchecked(body)
+        if len(self._chain) != len(self.operations):
+            self._chain, self._journal_on_disk = [], 0
+        if getattr(self, "_journal_recovered", None):
+            self.events.append({"event": "journal_recovered", "operation_id": self._journal_recovered,
+                                **self.clock.stamp()})
         problems = self._restored_state_problems()
         if problems:
             raise TwinError("snapshot does not hold a valid plant state; refusing to resume: " + "; ".join(problems))
@@ -663,6 +685,74 @@ class Twin:
                             "snapshot_sha256": hashlib.sha256(json.dumps(
                                 {k: v for k, v in snap.items() if k != "integrity"}, sort_keys=True)
                                 .encode("utf-8")).hexdigest(), **self.clock.stamp()})
+
+    def _link(self, prev: str, record: dict[str, Any]) -> str:
+        """One step of the journal's chain: keyed with the snapshot key when set, else an unkeyed hash chain."""
+        return hmac.new(self._snapshot_key, prev.encode("ascii") + json.dumps(record, sort_keys=True).encode("utf-8"),
+                        hashlib.sha256).hexdigest()
+
+    def _load_journal(self, meta: Any) -> dict[str, Any]:
+        """Rebuild the operation log from the journal and check it against the snapshot that names it.
+
+        The snapshot is written before the journal line, and carries the newest record itself (``tail``), so
+        a crash between the two leaves the journal exactly one line short; that line is recovered from the
+        snapshot. Any other mismatch (a line changed, removed or added, a chain that does not reach the head
+        the snapshot names) refuses the resume. A torn last line, from a crash mid-append, counts as absent.
+        """
+        if not isinstance(meta, dict) or not isinstance(meta.get("count"), int) or meta["count"] < 0:
+            raise TwinError("snapshot journal reference is malformed; refusing to resume")
+        count, head, tail = meta["count"], meta.get("head", ""), meta.get("tail")
+        lines: list[str] = []
+        if self._journal_path is not None and self._journal_path.exists():
+            raw = self._journal_path.read_bytes()
+            lines = raw.decode("utf-8").split("\n")
+            if lines and lines[-1] == "":
+                lines.pop()
+            elif lines:  # no newline after the last line: torn by a crash, never acknowledged
+                lines.pop()
+                with open(self._journal_path, "r+b") as f:
+                    f.truncate(raw.rfind(b"\n") + 1)
+        records: list[dict[str, Any]] = []
+        chain: list[str] = []
+        prev = ""
+        for i, line in enumerate(lines):
+            try:
+                entry = json.loads(line)
+                rec, mac = entry["record"], entry["mac"]
+            except (ValueError, KeyError, TypeError):
+                raise TwinError(f"journal line {i + 1} is malformed; refusing to resume") from None
+            prev = self._link(prev, rec)
+            if not isinstance(mac, str) or not hmac.compare_digest(mac, prev):
+                raise TwinError(f"journal line {i + 1} fails its chain check; refusing to resume")
+            records.append(rec)
+            chain.append(prev)
+        if len(records) == count - 1 and isinstance(tail, dict):
+            prev = self._link(prev, tail)
+            records.append(tail)
+            chain.append(prev)
+            recovered = True
+        else:
+            recovered = False
+        if len(records) != count or (count and not hmac.compare_digest(str(head), prev)):
+            raise TwinError(f"journal holds {len(lines)} operations but the snapshot names {count} with another "
+                            "head; refusing to resume")
+        self._chain, self._journal_on_disk = chain, len(lines)
+        if recovered:
+            self._append_journal(records, chain)
+            self._journal_recovered = tail.get("operation_id")
+        return {r["operation_id"]: r for r in records}
+
+    def _append_journal(self, records: list[dict[str, Any]], chain: list[str]) -> None:
+        """Make every record not yet on disk durable, in order, with one fsync."""
+        new = range(self._journal_on_disk, len(records))
+        if not new or self._journal_path is None:
+            return
+        data = "".join(json.dumps({"record": records[i], "mac": chain[i]}, sort_keys=True) + "\n" for i in new)
+        with open(self._journal_path, "ab") as f:
+            f.write(data.encode("utf-8"))
+            f.flush()
+            os.fsync(f.fileno())
+        self._journal_on_disk = len(records)
 
     def _restored_state_problems(self) -> list[str]:
         """What a resumed state must satisfy before any write is accepted from it."""
@@ -717,6 +807,8 @@ class Twin:
         self.power_w = float(snap["power_w"])
         self.stop_switch = bool(snap["stop_switch"])
         self.zones = {k: ZoneState(**v) for k, v in snap["zones"].items()}
+        if not isinstance(snap.get("operations"), dict):
+            raise TwinError("snapshot carries neither an operation log nor a journal; refusing to resume")
         self.operations = {k: OperationRecord(**v) for k, v in snap["operations"].items()}
         self.events = list(snap["events"])
         if schema == LEGACY_SNAPSHOT_SCHEMA:
@@ -765,8 +857,11 @@ class Twin:
         caller gets StateStoreFailed: the operation id stays unused, so a restart cannot replay a lost effect."""
         try:
             self._persist()
+        except _JournalFailed as e:  # the snapshot holds the operation as its tail: recorded, recovered on restart
+            self._store_failed = f"journal append failed: {e}"
         except Exception as e:
             self.operations.pop(op_id, None)
+            del self._chain[len(self.operations):]
             rollback()
             self._store_failed = f"{type(e).__name__}: {e}"
             raise StateStoreFailed(f"state_store_failed: the operation was not recorded and has no effect "
@@ -779,7 +874,15 @@ class Twin:
     def _persist(self) -> None:
         if not self._snapshot_path:
             return
-        snap = self.snapshot()
+        records = [r.to_dict() for r in list(self.operations.values())[len(self._chain):]]
+        prev = self._chain[-1] if self._chain else ""
+        for rec in records:
+            prev = self._link(prev, rec)
+            self._chain.append(prev)
+        snap = self.snapshot(include_operations=False)
+        last = next(reversed(self.operations.values()), None)
+        snap["journal"] = {"count": len(self.operations), "head": self._chain[-1] if self._chain else "",
+                           "tail": last.to_dict() if last is not None else None}
         if self._snapshot_key:
             snap["integrity"] = {"alg": "HMAC-SHA256", "mac": self._mac(snap)}
         data = json.dumps(snap, sort_keys=True).encode("utf-8")
@@ -796,3 +899,22 @@ class Twin:
             if os.path.exists(tmp):
                 os.unlink(tmp)
             raise
+        if self._journal_on_disk < len(self.operations):
+            all_records = [r.to_dict() for r in self.operations.values()] \
+                if self._journal_on_disk < len(self.operations) - 1 else None
+            try:
+                if all_records is None:  # the usual case: exactly one new line
+                    self._append_journal_one(last.to_dict())
+                else:
+                    self._append_journal(all_records, self._chain)
+            except OSError as e:
+                raise _JournalFailed(f"{type(e).__name__}: {e}") from None
+
+    def _append_journal_one(self, record: dict[str, Any]) -> None:
+        line = json.dumps({"record": record, "mac": self._chain[len(self.operations) - 1]}, sort_keys=True) + "\n"
+        assert self._journal_path is not None
+        with open(self._journal_path, "ab") as f:
+            f.write(line.encode("utf-8"))
+            f.flush()
+            os.fsync(f.fileno())
+        self._journal_on_disk = len(self.operations)
