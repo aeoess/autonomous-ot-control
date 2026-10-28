@@ -38,31 +38,204 @@ EDGES_DIR = ROOT / "federation" / "edges"
 TEMPLATE = EDGES_DIR / "_template"
 
 
-def trail_case(rec: dict[str, Any]) -> dict[str, Any]:
-    """One applied setpoint trail as an ot-federation-case/v1, twin record or not."""
+INDEPENDENT_VANTAGE_PREFIX = "independent"
+
+
+def _capture_rows(work: Path) -> dict[str, dict[str, Any]]:
+    """Capture digests from the ledger (ledger.jsonl), a separate file from the trails, by proposal id."""
+    path = work / "ledger.jsonl"
+    rows: dict[str, dict[str, Any]] = {}
+    if path.is_file():
+        for line in path.read_text("utf-8").splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if r.get("proposal_id") and isinstance(r.get("capture"), dict):
+                    rows[r["proposal_id"]] = r["capture"]
+    return rows
+
+
+def _is_num(v: Any) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _execution_results(evidence: Any, pid: str) -> tuple[int | None, str]:
+    """REMORA's own count of execution_result events for the proposal; None when the lifecycle is incomplete."""
+    lc = evidence.get("lifecycle") if isinstance(evidence, dict) else None
+    events = lc.get("events") if isinstance(lc, dict) else None
+    if not isinstance(events, list):
+        return None, "missing: no REMORA lifecycle in the exported evidence"
+    declared = (evidence.get("manifest") or {}).get("event_count")
+    if declared is not None and declared != len(events):
+        return None, f"missing: lifecycle holds {len(events)} of {declared} events"
+    n = sum(1 for e in events if isinstance(e, dict) and e.get("event") == "execution_result"
+            and (e.get("payload") or {}).get("proposal_id", pid) == pid)
+    return n, f"REMORA lifecycle: {n} execution_result event(s)"
+
+
+def _remora_readback(evidence: Any, pid: str) -> dict[str, Any] | None:
+    """The last effect observation REMORA recorded for the proposal (effect_verification history)."""
+    ev = evidence.get("effect_verification") if isinstance(evidence, dict) else None
+    hist = ev.get("history") if isinstance(ev, dict) else None
+    found = [h for h in hist or [] if isinstance(h, dict) and h.get("proposal_id") == pid
+             and isinstance(h.get("observed"), dict) and _is_num(h["observed"].get("setpoint_c"))]
+    return found[-1] if found else None
+
+
+def _observer_record(rec: dict[str, Any], capture: dict[str, Any] | None, pid: str,
+                     findings: list[dict[str, str]]) -> dict[str, Any] | None:
+    """The observer's own sealed record, used only when its seal and the ledger's capture digest hold."""
+    eo = rec.get("effect_observation")
+    if not isinstance(eo, dict):
+        return None
+    body = {k: v for k, v in eo.items() if k != "observation_digest"}
+    if eo.get("observation_digest") != "sha256:" + canonical_sha256(body):
+        findings.append({"claim_id": "observation_after_dispatch", "verdict": "CONTRADICTED",
+                         "reason": "the observer record does not match its own seal"})
+        return None
+    want = (capture or {}).get("effect_observation_sha256")
+    if want is not None and want != canonical_sha256(eo):
+        findings.append({"claim_id": "observation_after_dispatch", "verdict": "CONTRADICTED",
+                         "reason": "the observer record differs from the digest captured in the ledger"})
+        return None
+    if eo.get("operation_id") != pid:
+        findings.append({"claim_id": "observation_after_dispatch", "verdict": "CONTRADICTED",
+                         "reason": "the observer record belongs to another operation"})
+        return None
+    return eo
+
+
+def _evidence_digest(evidence: Any, capture: dict[str, Any] | None,
+                     findings: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
+    """evidence_sha256 for the case, and where it comes from.
+
+    Preferred: the digest the harness wrote into the ledger when it exported the
+    trail. Otherwise REMORA's own export manifest (one SHA-256 per section,
+    recorded by REMORA at export): when every section still matches, the
+    evidence is the one REMORA exported. With neither, the digest can only be
+    recomputed from the evidence itself, which proves nothing: the claim then
+    counts as NOT_ESTABLISHED whatever an edge answers. REMORA's observed_sha256
+    is a digest of one observed value, not of the evidence, and is not used here.
+    """
+    whole = canonical_sha256(evidence)
+    cap = (capture or {}).get("evidence_sha256")
+    if cap:
+        return cap, {"source": "ledger capture digest", "recorded": True}
+    sections = (evidence.get("manifest") or {}).get("section_sha256") if isinstance(evidence, dict) else None
+    if not isinstance(sections, dict) or not sections:
+        return whole, {"source": "missing: no capture digest and no REMORA export manifest", "recorded": False}
+    bad = sorted(n for n, d in sections.items() if n not in evidence or canonical_sha256(evidence[n]) != d)
+    if bad:
+        findings.append({"claim_id": "evidence_digest_integrity", "verdict": "CONTRADICTED",
+                         "reason": f"section(s) {', '.join(bad)} differ from REMORA's export manifest"})
+        return whole, {"source": "REMORA export manifest (mismatch)", "recorded": False}
+    uncovered = sorted(set(evidence) - set(sections) - {"manifest"})
+    if uncovered:
+        return whole, {"source": f"missing: section(s) {', '.join(uncovered)} not in REMORA's export manifest",
+                       "recorded": False}
+    return whole, {"source": "REMORA export manifest (per-section SHA-256)", "recorded": True}
+
+
+def trail_case(rec: dict[str, Any], capture: dict[str, Any] | None = None
+               ) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[dict[str, str]]]:
+    """One applied setpoint trail as an ot-federation-case/v1, with the source of every claim's input.
+
+    Nothing an edge checks is made up here: each member comes from a record
+    written when it happened (the ledger row, REMORA's lifecycle and effect
+    verification, the twin's operation record, the observer's sealed record).
+    A member with no such source is left out, and the case contract then makes
+    a verifier answer NOT_ESTABLISHED for that claim
+    (contracts/federation-case-v1.schema.json). Returns the case, the source
+    per claim, and input findings (a record that contradicts itself or its
+    capture digest).
+    """
     row = rec["ledger_row"]
     pid = rec["proposal_id"]
     op = rec.get("twin_operation")
     evidence = rec.get("evidence")
-    return {
+    findings: list[dict[str, str]] = []
+    basis: dict[str, dict[str, Any]] = {
+        "decision_correspondence": {"source": "ledger row: REMORA decision and reviewer", "recorded": True},
+        "call_binding": ({"source": "twin operation record", "recorded": True} if op
+                         else {"source": "missing: no twin operation record exported", "recorded": False})}
+
+    n, n_src = _execution_results(evidence, pid)
+    execution: dict[str, Any] = {"dispatched_at_sim_s": row.get("sim_time_s")}
+    if n is not None:
+        execution.update(executed=n > 0, executions=n)
+    else:
+        execution["executed"] = bool(row.get("applied")) and \
+            (row.get("execute") or {}).get("twin_status", "APPLIED") == "APPLIED"
+    basis["single_dispatch"] = {"source": n_src, "recorded": n is not None}
+
+    readback = _remora_readback(evidence, pid)
+    observation: dict[str, Any] | None = None
+    if readback is not None:
+        observation = {"observed_setpoint_c": readback["observed"]["setpoint_c"]}
+        basis["declared_effect_observed"] = {
+            "source": f"REMORA effect_verification readback (vantage {readback.get('vantage') or 'unrecorded'})",
+            "recorded": True}
+    else:
+        basis["declared_effect_observed"] = {"source": "missing: no readback in REMORA's effect verification",
+                                             "recorded": False}
+    eo = _observer_record(rec, capture, pid, findings)
+    if observation is not None and eo is not None and _is_num(eo.get("sim_time_s")):
+        observation["observed_at_sim_s"] = int(eo["sim_time_s"])
+        if _is_num(eo.get("observed_setpoint_c")) and eo["observed_setpoint_c"] != observation["observed_setpoint_c"]:
+            findings.append({"claim_id": "declared_effect_observed", "verdict": "CONTRADICTED",
+                             "reason": "the observer's record and REMORA's readback disagree"})
+        basis["observation_after_dispatch"] = {"source": "observer record sim_time_s (sealed)", "recorded": True}
+    else:
+        basis["observation_after_dispatch"] = {"source": "missing: no sealed observer record with a simulated time",
+                                               "recorded": False}
+
+    digest, basis["evidence_digest_integrity"] = _evidence_digest(evidence, capture, findings)
+    case = {
         "schema": "ot-federation-case/v1", "case_id": f"live-{pid}", "kind": "positive", "fault": None,
         "claim": {"proposal_id": pid, "tool": "set_zone_setpoint", "zone_id": row["zone_id"],
                   "setpoint_c": row["to_c"], "claimed_effect": "EFFECT_VERIFIED"},
         "decision": {"decision": row.get("decision"), "reasons": row.get("reasons") or [],
                      "approved": bool((row.get("reviewer") or {}).get("approved")),
                      "reviewer": row.get("reviewer")},
-        "execution": {"executed": True, "dispatched_at_sim_s": row.get("sim_time_s"), "executions": 1},
+        "execution": execution,
         "twin_operation": op,
-        "observation": ({"observed_setpoint_c": op["new_setpoint_c"], "observed_at_sim_s": int(op["sim_time_s"])}
-                        if op else None),
+        "observation": observation,
         "remora_evidence": evidence, "remora_envelope": rec.get("envelope"),
-        "evidence_sha256": canonical_sha256(evidence),
+        "evidence_sha256": digest,
     }
+    return case, basis, findings
+
+
+def vantage_of(case: dict[str, Any]) -> str:
+    env = case.get("remora_envelope") or {}
+    return ((env.get("effect") or {}).get("ledger_entry") or {}).get("effect_vantage") or "unrecorded"
+
+
+def counted_verdict(edge_verdict: str, basis: dict[str, dict[str, Any]], findings: list[dict[str, str]]) -> str:
+    """The verdict the pass counts: an edge's ESTABLISHED stands only on recorded inputs."""
+    if any(f["verdict"] == "CONTRADICTED" for f in findings):
+        return "CONTRADICTED"
+    if edge_verdict == "ESTABLISHED" and not all(b["recorded"] for b in basis.values()):
+        return "NOT_ESTABLISHED"
+    return edge_verdict
+
+
+def strict_verdict(counted: str, vantage: str) -> str:
+    """Strict vantage: an observation counts only when its recorded vantage is independent."""
+    if counted == "ESTABLISHED" and not vantage.startswith(INDEPENDENT_VANTAGE_PREFIX):
+        return "NOT_ESTABLISHED"
+    return counted
 
 
 def build_cases(work: Path) -> tuple[list[dict[str, Any]], Counter[str]]:
+    cases, _, skipped = build_cases_with_inputs(work)
+    return cases, skipped
+
+
+def build_cases_with_inputs(work: Path) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], Counter[str]]:
     cases: list[dict[str, Any]] = []
+    inputs: dict[str, dict[str, Any]] = {}
     skipped: Counter[str] = Counter()
+    captures = _capture_rows(work)
     for path in sorted((work / "decisions").glob("*.json")):
         rec = json.loads(path.read_text("utf-8"))
         row = rec.get("ledger_row") or {}
@@ -74,8 +247,10 @@ def build_cases(work: Path) -> tuple[list[dict[str, Any]], Counter[str]]:
             continue
         if rec.get("twin_operation") is None:
             skipped["no_twin_operation_exported"] += 1  # still a case: the edge says NOT_ESTABLISHED
-        cases.append(trail_case(rec))
-    return cases, skipped
+        case, basis, findings = trail_case(rec, captures.get(rec["proposal_id"]))
+        cases.append(case)
+        inputs[case["case_id"]] = {"basis": basis, "input_findings": findings, "vantage": vantage_of(case)}
+    return cases, inputs, skipped
 
 
 def write_case_set(cases: list[dict[str, Any]], run_id: str, dst: Path) -> str:
@@ -85,7 +260,9 @@ def write_case_set(cases: list[dict[str, Any]], run_id: str, dst: Path) -> str:
         (dst / "cases" / f"{c['case_id']}.json").write_text(json.dumps(c, indent=2, sort_keys=True) + "\n", "utf-8")
     manifest = {"schema": "ot-federation-fixtures/v1", "fixture_set": f"{run_id}-live", "kind": "live_run",
                 "scope": "Applied set_zone_setpoint trails of one governed run, with the twin's exported "
-                         "operation record. Positive by construction; any other verdict is a finding.",
+                         "operation record. Every member comes from a record written when it happened; a member "
+                         "with no such record is left out, so the claim it serves is NOT_ESTABLISHED. Expected "
+                         "ESTABLISHED; any other verdict is a finding about the run, its records or the edge.",
                 "claims": [{"claim_id": k, "statement": v} for k, v in CLAIMS.items()],
                 "cases": [{"case_id": c["case_id"], "kind": "positive", "fault": None, "claim_id": None,
                            "expected_verdict": "ESTABLISHED"} for c in cases]}
@@ -108,7 +285,7 @@ def offline_effect_edges() -> list[Path]:
 
 
 def run_pass(work: Path, out: Path, edges: list[Path], run_id: str) -> dict[str, Any]:
-    cases, skipped = build_cases(work)
+    cases, inputs, skipped = build_cases_with_inputs(work)
     case_dir = out / "cases"
     if case_dir.exists():
         shutil.rmtree(case_dir)
@@ -136,38 +313,77 @@ def run_pass(work: Path, out: Path, edges: list[Path], run_id: str) -> dict[str,
             results.append(entry)
             continue
         counts = Counter(v.get("verdict", "?") for v in verdicts.values())
+        counted: Counter[str] = Counter()
+        strict: Counter[str] = Counter()
+        for cid, v in verdicts.items():
+            i = inputs.get(cid)
+            if i is None:
+                continue
+            c = counted_verdict(v.get("verdict", "?"), i["basis"], i["input_findings"])
+            counted[c] += 1
+            strict[strict_verdict(c, i["vantage"])] += 1
         findings = [{"case_id": cid, "proposal_id": cid.removeprefix("live-"), "verdict": v.get("verdict"),
                      "reason": v.get("reason"), "claim_id": v.get("claim_id")}
                     for cid, v in sorted(verdicts.items()) if v.get("verdict") != "ESTABLISHED"]
         entry.update({"available": True, "fixtures_sha256_matches": result.get("fixtures_sha256") == manifest_sha,
                       "answered": len(expected & set(verdicts)), "unanswered": sorted(expected - set(verdicts)),
-                      "counts": dict(counts), "findings": findings})
+                      "counts": dict(counts), "counts_on_recorded_inputs": dict(counted),
+                      "counts_strict_vantage": dict(strict), "findings": findings})
         results.append(entry)
+    sources: dict[str, Counter[str]] = {}
+    for i in inputs.values():
+        for claim, b in i["basis"].items():
+            sources.setdefault(claim, Counter())[b["source"]] += 1
+    input_findings = [{"case_id": cid, "proposal_id": cid.removeprefix("live-"), **f}
+                      for cid, i in sorted(inputs.items()) for f in i["input_findings"]]
     summary = {"schema": "ot-edge-pass/v1", "run_id": run_id, "work": str(work), "cases": len(cases),
                "skipped": dict(skipped), "case_set_manifest_sha256": manifest_sha, "edges": results,
+               "inputs": {"by_claim": {k: dict(v) for k, v in sorted(sources.items())},
+                          "vantages": dict(Counter(i["vantage"] for i in inputs.values())),
+                          "findings": input_findings},
                "note": "Offline edges beside the run (ADR-004): their verdicts never change the run's outcome. "
-                       "A non-ESTABLISHED verdict on a live trail is a finding about the run or the edge."}
+                       "counts are the edges' own verdicts; counts_on_recorded_inputs counts an ESTABLISHED "
+                       "only when every claim's input was recorded when it happened, and an input that "
+                       "contradicts its record as CONTRADICTED; counts_strict_vantage also requires an "
+                       "independent observation vantage. A non-ESTABLISHED verdict on a live trail is a "
+                       "finding about the run, its records or the edge."}
     (out / "edges.json").write_text(json.dumps(summary, indent=2) + "\n", "utf-8")
     (out / "edges.md").write_text(render_md(summary), "utf-8")
     return summary
+
+
+def ecn_cell(c: dict[str, int]) -> str:
+    return f"{c.get('ESTABLISHED', 0)} / {c.get('CONTRADICTED', 0)} / {c.get('NOT_ESTABLISHED', 0)}"
 
 
 def render_md(s: dict[str, Any]) -> str:
     L = ["## Edges beside the run", "",
          f"{s['cases']} applied `set_zone_setpoint` trails handed to every offline `effect_evidence` edge; "
          f"skipped: " + (", ".join(f"{k} {v}" for k, v in sorted(s["skipped"].items())) or "none") + ". "
-         "Verdicts are the edges' own and never change the run's outcome.", "",
-         "| Edge | Evaluator | Ran | Established | Contradicted | Not established | Unanswered |",
-         "|---|---|---|---:|---:|---:|---:|"]
+         "Verdicts never change the run's outcome. *Edge* is each edge's own answer; *recorded inputs* "
+         "counts an ESTABLISHED only when every claim rests on a record written when it happened; "
+         "*strict vantage* also requires an independent observation.", "",
+         "| Edge | Evaluator | Ran | Edge E / C / N | Recorded inputs E / C / N | Strict vantage E / C / N | Unanswered |",
+         "|---|---|---|---|---|---|---:|"]
     for e in s["edges"]:
         ev = e.get("evaluator") or {}
         kind = ev.get("kind", "?")
         if not e.get("available"):
             L.append(f"| `{e['edge_id']}` | {kind} | no (exit {e.get('exit')}) | | | | |")
             continue
-        c = e["counts"]
-        L.append(f"| `{e['edge_id']}` | {kind} | yes | {c.get('ESTABLISHED', 0)} | {c.get('CONTRADICTED', 0)} | "
-                 f"{c.get('NOT_ESTABLISHED', 0)} | {len(e['unanswered'])} |")
+        L.append(f"| `{e['edge_id']}` | {kind} | yes | {ecn_cell(e['counts'])} | {ecn_cell(e['counts_on_recorded_inputs'])} | "
+                 f"{ecn_cell(e['counts_strict_vantage'])} | {len(e['unanswered'])} |")
+    inp = s.get("inputs") or {}
+    if inp.get("by_claim"):
+        L += ["", "Where each claim's input comes from (trails per source):", "", "| Claim | Source | Trails |",
+              "|---|---|---:|"]
+        L += [f"| `{claim}` | {src} | {n} |" for claim, srcs in inp["by_claim"].items()
+              for src, n in sorted(srcs.items())]
+        L += ["", "Observation vantage recorded: " + ", ".join(f"`{k}` {v}" for k, v in sorted(inp["vantages"].items()))]
+    if inp.get("findings"):
+        L += ["", "Input findings (a record that contradicts itself or its capture digest):", "",
+              "| Proposal | Claim | Reason |", "|---|---|---|"]
+        L += [f"| `{f['proposal_id'][:8]}` | `{f['claim_id']}` | {f['reason']} |" for f in inp["findings"]]
     findings = [(e["edge_id"], f) for e in s["edges"] if e.get("available") for f in e["findings"]]
     if findings:
         L += ["", "Findings (every verdict other than ESTABLISHED, one per edge and trail):", "",
@@ -175,7 +391,7 @@ def render_md(s: dict[str, Any]) -> str:
         L += [f"| `{eid}` | `{f['proposal_id'][:8]}` | {f['verdict']} | `{f.get('claim_id') or ''}` | {f.get('reason') or ''} |"
               for eid, f in findings]
     else:
-        L += ["", "No findings: every available edge established every trail."]
+        L += ["", "No edge findings: every available edge established every trail."]
     L.append("")
     return "\n".join(L)
 

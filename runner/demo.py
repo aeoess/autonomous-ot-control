@@ -36,6 +36,7 @@ same-test-deployment vantage.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -218,6 +219,22 @@ def edge_context(day: str, zone: str, current: float, intent_ref: str | None, t_
             "max_delta_c": MAX_STEP_C, "sim_time_s": t_s}
 
 
+def capture_digests(rec: dict[str, Any]) -> dict[str, str | None]:
+    """Digests of an exported trail taken when it is written, kept in the ledger row only.
+
+    The ledger (ledger.jsonl) and the trail file (decisions/<id>.json) are
+    separate files: an offline edge pass compares the trail against these, so
+    a trail changed after export no longer matches (runner.edge_pass).
+    """
+    def sha(v: Any) -> str | None:
+        if v is None:
+            return None
+        raw = json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return {"evidence_sha256": sha(rec.get("evidence")),
+            "effect_observation_sha256": sha(rec.get("effect_observation"))}
+
+
 def consult_inline_edge(call: dict[str, Any], context: dict[str, Any], row: dict[str, Any],
                         counts: Counter[str]) -> tuple[bool, str]:
     """After REMORA and the reviewer approved: ask the inline edge, which can only remove."""
@@ -337,6 +354,7 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
                grounded=(b.get("semantic") or {}).get("argument_values_grounded"))
     counts[f"write_{b.get('decision')}"] += 1
     applied = False
+    observation = None
     if item:
         ok, reason = review(sc, t, zone, value, current, intent_ref, day, room_c, learner)
         row["reviewer"] = {"model": REVIEWER_MODEL, "approved": ok, "reason": reason}
@@ -358,6 +376,7 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
                 eff = s.step("record_effect", proposal_id=pid, zone_id=zone, setpoint_c=value,
                              toolspec_hash=(body(ex).get("toolspec") or {}).get("hash", ""))
                 row["effect"] = {"status": eff.get("effect_status"), "recorded": eff.get("ok")}
+                observation = eff.get("observation")
                 counts[f"effect_{eff.get('effect_status')}"] += 1
         else:
             s.step("reject", item_id=item, reason=reason)
@@ -376,9 +395,11 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
         rec = {"proposal_id": pid, "ledger_row": row, "envelope": env.get("body"),
                "envelope_status": env.get("status"), "evidence": evd.get("body"),
                "evidence_status": evd.get("status"),
-               "twin_operation": op.get("body") if op.get("ok") else None}
+               "twin_operation": op.get("body") if op.get("ok") else None,
+               "effect_observation": observation}
         (ddir / f"{pid}.json").write_text(json.dumps(rec, indent=2, sort_keys=True), encoding="utf-8")
         row["evidence_file"] = f"decisions/{pid}.json"
+        row["capture"] = capture_digests(rec)
     return row
 
 
@@ -450,6 +471,7 @@ def governed_tool_write(s: Stack, sc: Scenario, t: int, day: str, tool_name: str
                grounded=(b.get("semantic") or {}).get("argument_values_grounded"))
     counts[f"write_{b.get('decision')}"] += 1
     applied = False
+    observation = None
     if item:
         ok = intent_ref == f"PLAN-{day}"
         reason = ("validated by caretaker P3 independent validator and matches today's plan"
@@ -473,6 +495,7 @@ def governed_tool_write(s: Stack, sc: Scenario, t: int, day: str, tool_name: str
                 row["effect"] = {"status": eff.get("effect_status"),
                                  "verdict_source": eff.get("verdict_source"),
                                  "recorded": eff.get("ok")}
+                observation = eff.get("observation")
                 counts[f"effect_{eff.get('effect_status')}"] += 1
                 if eff.get("verdict_source"):
                     counts[f"verdict_source_{eff.get('verdict_source')}"] += 1
@@ -489,9 +512,11 @@ def governed_tool_write(s: Stack, sc: Scenario, t: int, day: str, tool_name: str
         rec = {"proposal_id": pid, "ledger_row": row, "envelope": env.get("body"),
                "envelope_status": env.get("status"), "evidence": evd.get("body"),
                "evidence_status": evd.get("status"), "caretaker_decision": decision_record,
-               "twin_operation": op.get("body") if op.get("ok") else None}
+               "twin_operation": op.get("body") if op.get("ok") else None,
+               "effect_observation": observation}
         (ddir / f"{pid}.json").write_text(json.dumps(rec, indent=2, sort_keys=True), encoding="utf-8")
         row["evidence_file"] = f"decisions/{pid}.json"
+        row["capture"] = capture_digests(rec)
     return row
 
 
