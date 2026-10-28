@@ -110,7 +110,9 @@
           "negatives_caught": "6 / 6"
         },
         "runs_beside_live_trails": "runner.edge_pass runs it over every governed arm's exported trails (offline, outcome untouched)",
-        "source_in_repository": "an unchanged, hash-verified copy of the upstream invocation_axes reader (agent-evidence-vectors 0.28.0) plus the adapter, accepted as an exception in PR #22; other edges keep their checker in their own repository or image"
+        "source_in_repository": "an unchanged, hash-verified copy of the upstream invocation_axes reader (agent-evidence-vectors 0.28.0) plus the adapter, accepted as an exception in PR #22; other edges keep their checker in their own repository or image",
+        "usage_doc": "docs/federation/edges/agent-evidence-vectors-axes.md",
+        "usage_files": "usage.json beside edges.json per pass (runner.edge_pass); runner.edge_usage sums passes per edge and contributor"
       }
     ]
   },

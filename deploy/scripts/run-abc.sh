@@ -66,3 +66,5 @@ echo "== compare"
   --arm "A=${OUT}/arm-a" --arm "B-careful=${OUT}/B-careful" --arm "B-rubber_stamp=${OUT}/B-rubber_stamp" \
   --arm "C-rubber_stamp=${OUT}/C-rubber_stamp"
 echo "report: ${OUT}/abc-report.md"
+# Use of each offline edge across the arms (runner.edge_usage): usage-summary.md beside the per-arm passes.
+"$PY" -m runner.edge_usage --root "${OUT}/edges" --out "${OUT}/edges" >/dev/null   && echo "edge usage: ${OUT}/edges/usage-summary.md" || echo "edge usage: no offline edge pass in this run"

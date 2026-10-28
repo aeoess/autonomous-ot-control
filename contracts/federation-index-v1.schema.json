@@ -93,6 +93,8 @@
               "results": {"type": "string"},
               "best_record": {"type": "object"},
               "runs_beside_live_trails": {"type": "string"},
+              "usage_doc": {"type": "string"},
+              "usage_files": {"type": "string"},
               "source_in_repository": {"type": "string"}
             }
           }
