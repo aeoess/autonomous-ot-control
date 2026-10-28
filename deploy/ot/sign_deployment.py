@@ -15,6 +15,10 @@ Outputs, under ``--out``:
   module it calls refuses registration (``toolspec_callable_digest_mismatch``).
 * ``limits.signed.json`` — ``deploy/ot/ot_limits.policy.json`` signed by the
   limit authority key.
+* ``ot_intents.json`` — the shipped work orders (``deploy/ot/ot_intents.json``),
+  each signed by the work-order authority key (SDD-OT-002 SR-05); and
+  ``work_order_keys.json``, that key's public half, which REMORA's bundle trusts.
+  Day plans are added later by the authority container, with the same key.
 
 stdout carries ``KEY=value`` lines for the gitignored ``.env``:
 ``REMORA_TOOLSPEC_VERIFY_KEYS``, ``REMORA_TOOLSPEC_PINNED_DIGEST`` and
@@ -265,6 +269,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="sign_deployment")
     p.add_argument("--toolspec", type=Path, default=Path("/app/contracts/ot-toolspec-v1.json"))
     p.add_argument("--limits", type=Path, default=Path("/app/ot_limits.policy.json"))
+    p.add_argument("--intents", type=Path, default=Path("/app/ot_intents.json"))
     p.add_argument("--out", type=Path, required=True)
     a = p.parse_args(argv)
 
@@ -272,11 +277,14 @@ def main(argv: list[str] | None = None) -> int:
     from remora.enforcement.cumulative_limits import LimitPolicy, sign_policy
     from remora.toolcall.toolspec_sign import sign_with_seed
 
+    from adapter import work_orders
+
     toolspec_seed = os.environ.get("OT_TOOLSPEC_SIGNING_SEED", "").strip()
     limits_seed = os.environ.get("OT_LIMITS_SIGNING_SEED", "").strip()
-    if not toolspec_seed or not limits_seed:
-        print("sign_deployment: OT_TOOLSPEC_SIGNING_SEED and OT_LIMITS_SIGNING_SEED are required",
-              file=sys.stderr)
+    work_order_seed = os.environ.get("OT_WORK_ORDER_SIGNING_SEED", "").strip()
+    if not toolspec_seed or not limits_seed or not work_order_seed:
+        print("sign_deployment: OT_TOOLSPEC_SIGNING_SEED, OT_LIMITS_SIGNING_SEED and OT_WORK_ORDER_SIGNING_SEED "
+              "are required", file=sys.stderr)
         return 2
     stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -289,7 +297,15 @@ def main(argv: list[str] | None = None) -> int:
     limits_key = SigningKey.from_text(limits_seed, {SignatureDomain.LIMIT_POLICY})
     signed_limits = sign_policy(policy, limits_key, stamp.replace("+00:00", "Z"))
 
+    wo_key = work_orders.key_from_seed(work_order_seed)
+    shipped = json.loads(a.intents.read_text(encoding="utf-8"))
+    signed_intents = {ref: work_orders.sign_entry(ref, entry, wo_key) for ref, entry in shipped.items()}
+
     a.out.mkdir(parents=True, exist_ok=True)
+    (a.out / "ot_intents.json").write_text(json.dumps(signed_intents, indent=2, sort_keys=True) + "\n",
+                                           encoding="utf-8")
+    (a.out / "work_order_keys.json").write_text(
+        json.dumps(work_orders.trusted_document(wo_key), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (a.out / "toolspec-bundle.json").write_text(
         json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (a.out / "limits.signed.json").write_text(

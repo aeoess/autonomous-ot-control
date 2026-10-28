@@ -77,7 +77,8 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
     day_of = lambda t: (start + timedelta(seconds=t)).strftime("%Y-%m-%d")  # noqa: E731
     if attack_set not in attacks_mod.ATTACK_SETS:
         raise ValueError(f"unknown attack set {attack_set!r}")
-    all_rules = attacks and attack_set == attacks_mod.ALL_RULES
+    all_rules = attacks and attacks_mod.includes_all_rules(attack_set)
+    full = attacks and attack_set == attacks_mod.FULL
     proposals: list[dict[str, Any]] = []
     last_schedule: dict[str, Any] | None = None
     n = 0
@@ -131,6 +132,12 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
                 add(at_sim_s=t, origin=spec["origin"], intent_ref=spec["intent_ref"], call=attacks_mod.call_of(spec),
                     from_c=spec["from_c"], strategy_reason=spec["why"],
                     basis_age_s=twin.read_zone(spec["zone"]).age_seconds, **extra)
+            if full:
+                for spec in attacks_mod.authority_plan(t, day, setpoints, PLAN_VALUES):
+                    extra = {k: spec[k] for k in ("delegation_fault",) if k in spec}
+                    add(at_sim_s=t, origin=spec["origin"], intent_ref=spec["intent_ref"],
+                        call=attacks_mod.call_of(spec), from_c=spec["from_c"], strategy_reason=spec["why"],
+                        basis_age_s=twin.read_zone(spec["zone"]).age_seconds, **extra)
             if t == attacks_mod.FREEZE_CLEARED_AFTER_S:
                 twin.clear_faults("episode")
         twin.advance(STEP_S)
@@ -157,8 +164,7 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
               "by_origin": {o: sum(1 for p in proposals if p["origin"] == o) for o in sorted({p["origin"] for p in proposals})}}
     out: dict[str, Any] = {
         "schema": SCHEMA,
-        "episode_id": episode_id or (f"{scenario_path.stem}-p1-{days}d-all-rules-v1" if all_rules
-                                     else f"{scenario_path.stem}-p1-{days}d-v1"),
+        "episode_id": episode_id or f"{scenario_path.stem}-p1-{days}d{episode_suffix(attack_set if attacks else attacks_mod.V1)}",
         "twin_config": _rel(config_path), "twin_config_sha256": _sha(config_path),
         "scenario": _rel(scenario_path), "scenario_sha256": _sha(scenario_path),
         "strategy": "P1", "days": days, "simulated_s": end_s, "step_seconds": STEP_S,
@@ -171,9 +177,14 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
                         "It reads no decision, reason or refusal of REMORA, the reviewer or an edge."),
     }
     if all_rules:  # absent for v1, so the published v1 episode rebuilds unchanged
-        out["attack_set"] = attacks_mod.ALL_RULES
-        out["attack_times_sim_s"] = list(attacks_mod.TIMES)
+        out["attack_set"] = attack_set
+        out["attack_times_sim_s"] = list(attacks_mod.times(attack_set))
     return out
+
+
+def episode_suffix(attack_set: str) -> str:
+    """The file and id suffix of an episode built with this attack set."""
+    return {attacks_mod.V1: "-v1", attacks_mod.ALL_RULES: "-all-rules-v1", attacks_mod.FULL: "-full-v1"}[attack_set]
 
 
 UPSTREAM_LOCK = ROOT / "upstream" / "remora.lock.json"

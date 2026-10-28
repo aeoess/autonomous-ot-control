@@ -51,6 +51,7 @@ RUN pip install --no-deps --no-build-isolation -e /opt/remora \
 # cumulative-limits policy. Named like the upstream ot-pilot deployment files.
 COPY deploy/ot/ot_registry.py /app/ot_registry.py
 COPY deploy/ot/ot_bundle.py /app/ot_bundle.py
+COPY deploy/ot/ot_authority.py deploy/ot/ot_day_plans.py deploy/ot/ot_reviewer.py /app/
 COPY deploy/ot/ot_intents.json /app/ot_intents.json
 COPY deploy/ot/ot_limits.policy.json /app/ot_limits.policy.json
 COPY deploy/ot/ot_limits.demo-accelerated.policy.json /app/ot_limits.demo-accelerated.policy.json
@@ -64,7 +65,7 @@ COPY deploy/ot/sign_deployment.py /app/sign_deployment.py
 # The OT adapter helpers the registry closes over, plus the twin schema helpers
 # and the signed ToolSpec they bind. Only the pieces the execution side needs —
 # no effect_observer/server (those run on the proposing/observer side).
-COPY adapter/__init__.py adapter/contracts.py adapter/actuation.py /app/adapter/
+COPY adapter/__init__.py adapter/contracts.py adapter/actuation.py adapter/work_orders.py /app/adapter/
 COPY twin/__init__.py twin/state.py /app/twin/
 COPY contracts /app/contracts
 

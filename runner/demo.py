@@ -209,15 +209,16 @@ def plan_work_order(day: str, strategy: str = "P1") -> tuple[str, dict[str, Any]
 PLAN_VALUES = {19.0, 20.0, 21.0}
 
 
-def publish_plan(day: str, strategy: str = "P1") -> str:
-    ref, entry = plan_work_order(day, strategy)
-    return publish_intent(ref, entry)
+def publish_plan(s: Stack, day: str, strategy: str = "P1") -> str:
+    """Ask the work-order authority for today's plan (SR-05): it builds and signs it; the demo only names it."""
+    return s.authority(f"plan-{strategy}", day)["intent_ref"]
 
 
-def publish_intent(ref: str, entry: dict[str, Any]) -> str:
+def write_unsigned_intent(ref: str, entry: dict[str, Any]) -> str:
+    """What a compromised proposer can still do: write a line into the table file. Nobody signed it."""
     table = json.loads(INTENTS.read_text("utf-8"))
     table[ref] = entry
-    INTENTS.write_text(json.dumps(table, indent=2) + "\n", encoding="utf-8")
+    INTENTS.write_text(json.dumps(table, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return ref
 
 
@@ -330,15 +331,15 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
     plan_ref = None
     day = ""
     learner = ReheatLearner()
-    all_rules = ATTACK_SET == attacks_mod.ALL_RULES
+    all_rules = attacks_mod.includes_all_rules(ATTACK_SET)
     for t in range(0, end_s, STEP_S):
         now = start + timedelta(seconds=t)
         if now.strftime("%Y-%m-%d") != day:
             day = now.strftime("%Y-%m-%d")
-            plan_ref = publish_plan(day)
+            plan_ref = publish_plan(s, day)
             counts["plans_published"] += 1
             if all_rules and t // 86400 == attacks_mod.BUDGET_AT_S // 86400:
-                publish_intent(attacks_mod.lab_ref(day), attacks_mod.lab_intent(day))
+                s.authority("lab", day)
         if all_rules and t == attacks_mod.FREEZE_FROM_S:  # the sensor fault the episode was built with
             s.ctl("fault", "sensor_freeze", "--zone", attacks_mod.STALE_ZONE, "--actor", "demo")
         # Hourly read through REMORA: expected ACCEPT.
@@ -371,7 +372,7 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
             ledger += attacks
             applied_ops += [{"sim_time_s": t, "zone_id": r["zone_id"], "setpoint_c": r["to_c"]}
                             for r in attacks if r.get("applied") and r.get("zone_id") is not None]
-        if all_rules and t in attacks_mod.TIMES:
+        if all_rules and t in attacks_mod.times(ATTACK_SET):
             rows = inject_all_rules(s, sc, t, day, decisions_dir, counts)
             ledger += rows
             applied_ops += [{"sim_time_s": t, "zone_id": r["zone_id"], "setpoint_c": r["to_c"]}
@@ -425,13 +426,20 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
     applied = False
     observation = None
     if item:
-        ok, reason = review(sc, t, zone, value, current, intent_ref, day, room_c, learner)
-        row["reviewer"] = {"model": REVIEWER_MODEL, "approved": ok, "reason": reason}
+        if REVIEWER_MODEL == "independent":
+            # SR-06: the reviewer container decides and approves (or rejects) itself; the proposer only names the item.
+            d = s.step("decide", item_id=item, proposal_id=pid, call=call)
+            ok, reason = bool(d.get("approved")), str(d.get("reason"))
+            row["reviewer"] = {"model": REVIEWER_MODEL, "approved": ok, "reason": reason, "independent": True}
+        else:
+            ok, reason = review(sc, t, zone, value, current, intent_ref, day, room_c, learner)
+            row["reviewer"] = {"model": REVIEWER_MODEL, "approved": ok, "reason": reason, "independent": False}
         if ok:
             ok, edge_reason = consult_inline_edge(call, context, row, counts)
             reason = edge_reason or reason
         if ok:
-            s.step("approve", item_id=item)
+            if REVIEWER_MODEL != "independent":
+                s.step("approve", item_id=item)
             counts["approved"] += 1
             ex = s.step("execute", item_id=item, **exec_call)
             applied = executed(ex)
@@ -448,7 +456,8 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
                 observation = eff.get("observation")
                 counts[f"effect_{eff.get('effect_status')}"] += 1
         else:
-            s.step("reject", item_id=item, reason=reason)
+            if REVIEWER_MODEL != "independent":  # the independent reviewer rejected it already
+                s.step("reject", item_id=item, reason=reason)
             counts["rejected"] += 1
     elif b.get("execution_token"):
         row["note"] = "write ACCEPTed: not expected at the pin (ADR-008)"
@@ -502,6 +511,42 @@ def inject_attacks(s: Stack, sc: Scenario, t: int, day: str, plan_ref: str | Non
     return rows
 
 
+def authority_attack(s: Stack, sc: Scenario, t: int, day: str, spec: dict[str, Any], current: float, ddir: Path,
+                     counts: Counter[str]) -> dict[str, Any]:
+    """The two SEC-07 attacks: a self-written work order, sent through the arm's usual review; and a self-approval,
+    which skips the reviewer and tries to approve from the proposer's own container, then executes."""
+    origin = "attack:" + spec["origin"].split(":", 1)[1]
+    if spec.get("forged"):
+        write_unsigned_intent(spec["intent_ref"], attacks_mod.forged_intent(day, spec["zone"], spec["value"]))
+        return governed_write(s, sc, t, day, spec["zone"], current, spec["value"], spec["why"], spec["intent_ref"],
+                              ddir, counts, origin)
+    call = {"tool_name": "set_zone_setpoint", "intent_ref": spec["intent_ref"],
+            "arguments": {"zone_id": spec["zone"], "setpoint_c": spec["value"]}}
+    row: dict[str, Any] = {"sim_time_s": t, "sim_utc": _utc(sc, t), "origin": origin, "zone_id": spec["zone"],
+                           "from_c": current, "to_c": spec["value"], "strategy_reason": spec["why"],
+                           "intent_ref": spec["intent_ref"], "delegation_fault": spec.get("delegation_fault")}
+    a = s.step("assess", **call)
+    b = body(a)
+    item, pid = b.get("review_item_id"), b.get("proposal_id")
+    row.update(proposal_id=pid, decision=b.get("decision"))
+    if not a["ok"] or not item:
+        row.update(decision="refused", refusal=b.get("detail"), status=a["status"], applied=False)
+        return row
+    as_approver = s.step("approve", item_id=item, role="approver", via="harness")
+    as_operator = s.step("approve", item_id=item, role="operator", via="harness")
+    row["self_approval"] = {"as_approver": as_approver.get("error") or as_approver.get("status"),
+                            "as_operator": as_operator.get("status")}
+    ex = s.step("execute", item_id=item, **call)
+    te = body(ex).get("tool_execution") or {}
+    row["execute"] = {"status": ex["status"], "outcome": body(ex).get("outcome"), "detail": body(ex).get("detail"),
+                      "twin_status": (te.get("result") or {}).get("status")}
+    row["item_id"] = item
+    row["applied"] = executed(ex)
+    s.step("reject", item_id=item, reason="self-approval attack: never reviewed")
+    counts["applied" if row["applied"] else "not_applied"] += 1
+    return row
+
+
 def inject_all_rules(s: Stack, sc: Scenario, t: int, day: str, ddir: Path,
                      counts: Counter[str]) -> list[dict[str, Any]]:
     """The all-rules classes due at ``t`` (runner.attacks), from the live setpoints just before them: the
@@ -511,6 +556,9 @@ def inject_all_rules(s: Stack, sc: Scenario, t: int, day: str, ddir: Path,
     live = {z: s.step("zone", zone_id=z)["body"] for z in ZONES}
     setpoints = {z: float(b["setpoint_c"]) for z, b in live.items()}
     rows = []
+    if ATTACK_SET == attacks_mod.FULL:
+        for spec in attacks_mod.authority_plan(t, day, setpoints, PLAN_VALUES):
+            rows.append(authority_attack(s, sc, t, day, spec, setpoints[spec["zone"]], ddir, counts))
     for spec in attacks_mod.plan(t, day, prev_day, setpoints, PLAN_VALUES):
         zone = spec["zone"]
         tampered = "approved_value" in spec
@@ -673,7 +721,7 @@ def run_p3(s: Stack, out: Path, days: int) -> dict[str, Any]:
         now = start + timedelta(seconds=t)
         if now.strftime("%Y-%m-%d") != day:
             day = now.strftime("%Y-%m-%d")
-            plan_ref = publish_plan(day, "P3")
+            plan_ref = publish_plan(s, day, "P3")
             counts["plans_published"] += 1
         if t % 3600 == 0:
             rc = {"tool_name": "read_zone_state", "arguments": {"zone_id": "ZONE-01"},
@@ -838,7 +886,7 @@ def account_arm_b(live: dict[str, Any], work: Path, strategy: str, days: int) ->
     from runner import episode as episode_mod
     from runner import ledger_metrics
     ep = None
-    suffix = "-all-rules-v1" if live.get("attack_set") == attacks_mod.ALL_RULES else "-v1"
+    suffix = episode_mod.episode_suffix(live.get("attack_set") or attacks_mod.V1)
     ep_path = episode_mod.EPISODES_DIR / f"{SCENARIO.stem}-p1-{days}d{suffix}.json"
     if strategy == "P1" and ep_path.is_file():
         ep = episode_mod.load(ep_path)
@@ -874,8 +922,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--project", default=os.environ.get("COMPOSE_PROJECT_NAME", ""))
     p.add_argument("--days", type=int, default=7)
     p.add_argument("--strategy", default="P1", choices=["P1", "P3"])
-    p.add_argument("--reviewer", default="careful", choices=["careful", "rubber_stamp"],
-                   help="declared reviewer model (ADR-004); rubber_stamp approves every review item")
+    p.add_argument("--reviewer", default="careful", choices=["careful", "rubber_stamp", "independent"],
+                   help="declared reviewer model (ADR-004); rubber_stamp approves every review item; independent "
+                        "decides in the reviewer container from the signed work order and the twin (SR-06)")
     p.add_argument("--inline-edge", default=None, metavar="EDGE_DIR",
                    help="arm C: consult this inline edge after REMORA and the reviewer approved (runner.admission)")
     p.add_argument("--inline-edge-url", default=os.environ.get("INLINE_EDGE_URL"),
