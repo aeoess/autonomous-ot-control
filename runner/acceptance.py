@@ -47,6 +47,8 @@ class StepError(RuntimeError):
 class Stack:
     compose: list[str]
     trace: list[dict[str, Any]] = field(default_factory=list)
+    #: REMORA calls that got no answer (no HTTP status): a transport failure is never a refusal (SR-10).
+    no_answer: list[dict[str, Any]] = field(default_factory=list)
 
     def _run(self, args: list[str], *, timeout: float = 120) -> subprocess.CompletedProcess[str]:
         return subprocess.run([*self.compose, *args], capture_output=True, text=True,
@@ -60,6 +62,8 @@ class Stack:
             raise StepError(f"{op}: no JSON from harness (rc={p.returncode}): {p.stderr[-400:]}")
         out = json.loads(lines[-1])
         self.trace.append({"op": op, "args": _redact(args), "result": _brief(out)})
+        if op in REMORA_OPS and not answered(out):
+            self.no_answer.append({"op": op, "error": out.get("error")})
         return out
 
     def ctl(self, *args: str) -> dict[str, Any]:
@@ -134,6 +138,23 @@ def revision(s: Stack) -> int:
 
 def setpoint(s: Stack, zone: str) -> float:
     return float(s.step("zone", zone_id=zone)["body"]["setpoint_c"])
+
+
+#: Harness steps that are REMORA calls (runner.harness_step): each needs an answer to count as a decision.
+REMORA_OPS = frozenset({"assess", "approve", "reject", "execute", "execute_accepted", "proposal", "envelope",
+                        "evidence", "record_effect", "lifecycle", "audit_verify", "unresolved", "sdk_approve"})
+
+
+def answered(r: dict[str, Any]) -> bool:
+    """REMORA answered: an HTTP status and a body. A transport failure (status None) is no answer (SR-10)."""
+    return isinstance(r.get("status"), int) and r.get("body") is not None
+
+
+def require_answer(r: dict[str, Any], what: str) -> None:
+    """Credit a refusal only to an answer: no answer from REMORA fails the case, it never passes it."""
+    if not answered(r):
+        raise StepError(f"{what}: no answer from REMORA ({r.get('error') or 'no status'}); "
+                        "a transport failure is never a refusal")
 
 
 def body(r: dict[str, Any]) -> dict[str, Any]:
@@ -277,6 +298,7 @@ def at08_contract_refusals(c: Ctx) -> tuple[bool, str]:
     seen, bad = {}, []
     for name, cl in probes.items():
         r = s.step("assess", **cl)
+        require_answer(r, f"AT-08 {name}")
         b = body(r)
         seen[name] = f"{r['status']}:{b.get('decision') or b.get('detail')}"
         # A refusal is an HTTP refusal or ABSTAIN; anything with a token or a
@@ -300,6 +322,7 @@ def at08b_guard_refusal_is_not_success(c: Ctx) -> tuple[bool, str]:
     target = round(min(sp0 + 2.0, 23.0), 1)
     cl = call("ZONE-02", target, wo=WO2)
     a = s.step("assess", **cl)
+    require_answer(a, "AT-08b assess")
     if not a["ok"]:
         return True, f"refused before dispatch: {a['status']} {body(a).get('detail')}"
     item = body(a).get("review_item_id")
@@ -308,6 +331,7 @@ def at08b_guard_refusal_is_not_success(c: Ctx) -> tuple[bool, str]:
     s.step("approve", item_id=item)
     before = revision(s)
     ex = s.step("execute", item_id=item, **cl)
+    require_answer(ex, "AT-08b execute")
     after = revision(s)
     ok = not executed(ex) and after == before
     return ok, (f"execute={ex['status']} executed={executed(ex)} "
@@ -345,6 +369,8 @@ def at11_store_outage(c: Ctx) -> tuple[bool, str]:
         unready_after = s.wait_ready(False, timeout_s=60)
         a = s.step("assess", **call("ZONE-02", 21.0, wo=WO2))
         ex = s.step("execute", item_id=item, **cl)
+        require_answer(a, "AT-11 assess during the outage")
+        require_answer(ex, "AT-11 execute during the outage")
         during = revision(s)
     finally:
         s.service("start", "postgres")
@@ -475,6 +501,29 @@ NOT_RUN = {
 }
 
 
+def run_cases(ctx: Ctx, cases: list[tuple[str, str, Case]], only: list[str] | None = None) -> list[dict[str, Any]]:
+    """Run the cases in order. A case that crashed, or during which REMORA did not answer a call, is FAIL."""
+    results: list[dict[str, Any]] = []
+    for cid, title, fn in cases:
+        if only is not None and cid not in only and cid != "INV-ALL":
+            continue
+        started, unanswered = time.monotonic(), len(ctx.s.no_answer)
+        try:
+            ok, detail = fn(ctx)
+            outcome = "PASS" if ok else "FAIL"
+        except Exception as e:  # a crashed case is a failure, never a skip
+            outcome, detail = "FAIL", f"case_error: {type(e).__name__}: {e}"
+        missed = ctx.s.no_answer[unanswered:]
+        if missed and outcome == "PASS":
+            outcome = "FAIL"
+            detail = (f"REMORA did not answer {len(missed)} call(s) ({', '.join(m['op'] for m in missed)}): "
+                      f"a transport failure is never a refusal; {detail}")
+        results.append({"case_id": cid, "title": title, "outcome": outcome, "detail": detail,
+                        "elapsed_s": round(time.monotonic() - started, 1)})
+        print(f"[{outcome}] {cid} {title}\n        {detail}", flush=True)
+    return results
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="runner.acceptance")
     p.add_argument("--run-id", required=True)
@@ -491,19 +540,7 @@ def main(argv: list[str] | None = None) -> int:
     ctx = Ctx(s)
     s.wait_ready(True)
     ctx.notes["start_revision"] = revision(s)
-    results: list[dict[str, Any]] = []
-    for cid, title, fn in CASES:
-        if a.only is not None and cid not in a.only and cid != "INV-ALL":
-            continue
-        started = time.monotonic()
-        try:
-            ok, detail = fn(ctx)
-            outcome = "PASS" if ok else "FAIL"
-        except Exception as e:  # a crashed case is a failure, never a skip
-            outcome, detail = "FAIL", f"case_error: {type(e).__name__}: {e}"
-        results.append({"case_id": cid, "title": title, "outcome": outcome, "detail": detail,
-                        "elapsed_s": round(time.monotonic() - started, 1)})
-        print(f"[{outcome}] {cid} {title}\n        {detail}", flush=True)
+    results = run_cases(ctx, CASES, a.only)
     for cid, why in NOT_RUN.items():
         results.append({"case_id": cid, "outcome": "NOT_RUN", "detail": why})
     failed = [r for r in results if r["outcome"] == "FAIL"]

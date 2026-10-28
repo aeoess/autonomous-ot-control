@@ -196,3 +196,52 @@ def test_all_supervisory_plant_tools_and_interlocks_through_registry(otreg, toke
     with pytest.raises(ActuationError, match="IL-10:freezing_wet_surface"):
         t.set_heating_cable_mode({"circuit": "CABLE-GUTTER", "mode": "off"})
 
+
+
+# -- SDD-OT-002 SR-09 (ST-09): a stored outcome answers only the same request --------------------------
+
+def test_st09_a_replay_with_other_arguments_is_refused_not_receipted(tools, twin):
+    from adapter.actuation import OperationIdReused
+    rec = tools.set_zone_setpoint({"zone_id": "ZONE-01", "setpoint_c": 20.5})
+    assert rec["status"] == "APPLIED"
+    fp, stored = plant_fingerprint(twin), twin.operation(PROPOSAL)
+    for other in ({"zone_id": "ZONE-01", "setpoint_c": 21.0}, {"zone_id": "ZONE-02", "setpoint_c": 20.5}):
+        with pytest.raises(OperationIdReused, match="operation_id_reused"):
+            tools.set_zone_setpoint(other)
+    assert plant_fingerprint(twin) == fp and twin.operation(PROPOSAL) == stored
+    # The same request is still an idempotent replay, and its canonical form (20.50 == 20.5) is the same request.
+    assert tools.set_zone_setpoint({"zone_id": "ZONE-01", "setpoint_c": 20.50})["replayed"] is True
+
+
+def test_st09_a_plant_tool_replay_with_other_arguments_is_refused(otreg, tokens):
+    from adapter.actuation import ActuatorClient, OperationIdReused
+    from twin.model import Twin, load_config
+    from twin.scenarios import load_scenario
+    hvac = Twin(load_config(ROOT / "twin" / "fixtures" / "three-zone-hvac-seasonal-v2.json"),
+                load_scenario(ROOT / "scenarios" / "baseline-day-hvac-v1.json"))
+    t = otreg.OtTools(actuator=ActuatorClient("http://testserver", tokens.actuator,
+                                              client=TestClient(build_actuator_app(hvac, tokens))),
+                      read_base_url="http://testserver", read_token=tokens.read, toolspec=ToolSpec.load(),
+                      read_client=TestClient(build_read_app(hvac, tokens)), proposal_id=lambda: PROPOSAL)
+    first = t.set_supply_air_setpoint({"supply_air_c": 18.5})
+    assert first["status"] == "APPLIED"
+    rev = hvac.revision
+    with pytest.raises(OperationIdReused):
+        t.set_supply_air_setpoint({"supply_air_c": 17.0})
+    with pytest.raises(OperationIdReused):
+        t.set_tank_setpoint({"tank_c": 50.0})  # another tool under the same operation id
+    assert hvac.revision == rev and t.set_supply_air_setpoint({"supply_air_c": 18.5})["replayed"] is True
+
+
+def test_the_adapters_request_digests_are_the_twins(twin):
+    from adapter.actuation import build_plant_command, build_setpoint_command, plant_request_digest, \
+        setpoint_request_digest
+    from twin.model import Twin
+    for sp, rev in ((20.5, 0), (19.0, 7), (float("nan"), 3)):
+        c = build_setpoint_command("op-d-1", rev, {"zone_id": "ZONE-01", "setpoint_c": sp})
+        assert setpoint_request_digest(c) == Twin.request_digest(c)
+    for tool, args in (("set_supply_air_setpoint", {"supply_air_c": 18.5}),
+                       ("set_zone_lighting", {"zone_id": "ZONE-01", "mode": "dim", "daylight_harvesting": True}),
+                       ("set_ahu_enabled", {"enabled": False})):
+        c = build_plant_command("op-d-2", 4, tool, args)
+        assert plant_request_digest(c) == Twin.plant_request_digest(c)

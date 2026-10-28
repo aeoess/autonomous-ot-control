@@ -33,7 +33,7 @@ from typing import Any
 import httpx
 
 from adapter.actuation import (ActuationError, ActuatorClient, EffectUnknown, apply_plant_command,
-                               apply_setpoint)
+                               apply_setpoint, build_plant_command, build_setpoint_command, check_replay)
 from adapter.contracts import ALL_WRITE_TOOLS, READ_TOOLS, ToolSpec
 
 READ_TIMEOUT_S = 5.0
@@ -114,6 +114,9 @@ class OtTools:
         try:
             prior = self._prior_effect(operation_id)
             if prior is not None:
+                # SR-09: a stored outcome answers only the same request; other arguments are refused first.
+                canonical = self._toolspec.canonical_setpoint_arguments(arguments)
+                check_replay(prior, build_setpoint_command(operation_id, 0, canonical), plant=False)
                 if prior.get("status") != "APPLIED":
                     raise ActuationError(f"prior_outcome:{prior.get('reason') or prior.get('status')}")
                 return {**prior, "replayed": True}
@@ -128,6 +131,8 @@ class OtTools:
         try:
             prior = self._prior_effect(operation_id)
             if prior is not None:
+                canonical = self._toolspec.canonical_tool_arguments(tool_name, arguments)
+                check_replay(prior, build_plant_command(operation_id, 0, tool_name, canonical), plant=True)
                 if prior.get("status") != "APPLIED":
                     raise ActuationError(f"prior_outcome:{prior.get('reason') or prior.get('status')}")
                 return {**prior, "replayed": True}

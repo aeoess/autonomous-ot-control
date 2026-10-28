@@ -25,6 +25,13 @@ from twin.effect_observer import (EFFECT_MISMATCH, EFFECT_UNOBSERVABLE, EFFECT_V
 from twin.state import canonical_digest
 
 TOOL_ID = "set_zone_setpoint"
+#: Re-observations when an observation turns out to precede the dispatch (SDD-OT-002 SR-11): container
+#: clocks can disagree by milliseconds, and a later reading settles it. After these, the effect is unobservable.
+REOBSERVE_WAIT_S = (0.05, 0.25)
+
+
+class ObservedBeforeDispatch(RuntimeError):
+    """The observation's time precedes REMORA's dispatch: it is not an observation of this effect."""
 DEFAULT_VERIFIER_IDENTITY = "ot-effect-observer/v1"
 
 #: Observer refusals that say "this record is not evidence for this claim".
@@ -119,22 +126,20 @@ class EffectAttestor:
                 proposal_id=proposal_id, execution_id=execution_id,
                 toolspec_hash=toolspec_hash, verifier_identity=self._verifier_identity,
             )
-        result["verification"] = view.to_dict() if hasattr(view, "to_dict") else view
-        if client is not None:
-            try:
-                recorded = self._record_with_observation(
-                    client, proposal_id, view,
-                    observed=observed,
-                    arguments={"zone_id": zone_id, "setpoint_c": expected_setpoint_c},
-                )
-                result["remora_recorded"] = True
-                result["recorded"] = (
-                    {**recorded.to_dict(), "verdict_source": getattr(recorded, "verdict_source", "")}
-                    if hasattr(recorded, "to_dict") else recorded
-                )
-            except Exception as e:  # recording failed; do not claim it succeeded
-                result["remora_record_error"] = f"{type(e).__name__}: {e}"
-        return result
+        def again() -> tuple[dict[str, Any], Any, Any]:
+            env = self._observer.observe(operation_id, zone_id=zone_id, expected_setpoint_c=expected_setpoint_c)
+            if binding_refusal(env) is not None:
+                return env, None, self._refused_view(env, binding_refusal(env), tool_id=TOOL_ID,
+                                                     expected_fields={"setpoint_c": expected_setpoint_c},
+                                                     proposal_id=proposal_id, execution_id=execution_id,
+                                                     toolspec_hash=toolspec_hash)
+            obs = self._observed_fields(env)
+            return env, obs, self._sdk.verify_effect(spec, obs, proposal_id=proposal_id, execution_id=execution_id,
+                                                     toolspec_hash=toolspec_hash,
+                                                     verifier_identity=self._verifier_identity)
+        return self._record(result, client, proposal_id, view, observed, again, spec,
+                            arguments={"zone_id": zone_id, "setpoint_c": expected_setpoint_c},
+                            ids=(proposal_id, execution_id, toolspec_hash))
 
     def attest_tool(self, *, proposal_id: str, execution_id: str, toolspec_hash: str,
                     tool_id: str, arguments: dict[str, Any], operation_id: str,
@@ -172,18 +177,55 @@ class EffectAttestor:
                 proposal_id=proposal_id, execution_id=execution_id,
                 toolspec_hash=toolspec_hash, verifier_identity=self._verifier_identity,
             )
+        def again() -> tuple[dict[str, Any], Any, Any]:
+            env = self._observer.observe_tool(operation_id, tool_name=tool_id, arguments=arguments)
+            if binding_refusal(env) is not None:
+                return env, None, self._refused_view(env, binding_refusal(env), tool_id=tool_id,
+                                                     expected_fields=expected, proposal_id=proposal_id,
+                                                     execution_id=execution_id, toolspec_hash=toolspec_hash)
+            st = env.get("effect_status")
+            obs = None if st in (EFFECT_UNOBSERVABLE, EFFECT_VERIFIER_FAILED) else env.get("observed_fields")
+            return env, obs, self._sdk.verify_effect(spec, obs, proposal_id=proposal_id, execution_id=execution_id,
+                                                     toolspec_hash=toolspec_hash,
+                                                     verifier_identity=self._verifier_identity)
+        return self._record(result, client, proposal_id, view, observed, again, spec, arguments=arguments,
+                            ids=(proposal_id, execution_id, toolspec_hash))
+
+    def _record(self, result: dict[str, Any], client: Any, proposal_id: str, view: Any, observed: Any,
+                again: Any, spec: Any, *, arguments: dict[str, Any], ids: tuple[str, str, str]) -> dict[str, Any]:
+        """Record the verification. An observation that precedes the dispatch is never re-dated (SR-11): it is
+        observed again, and if every reading still precedes the dispatch the effect is recorded unobservable."""
         result["verification"] = view.to_dict() if hasattr(view, "to_dict") else view
-        if client is not None:
+        if client is None:
+            return result
+        check_order = True
+        for attempt in range(len(REOBSERVE_WAIT_S) + 2):
             try:
-                recorded = self._record_with_observation(
-                    client, proposal_id, view, observed=observed, arguments=arguments)
-                result["remora_recorded"] = True
-                result["recorded"] = (
-                    {**recorded.to_dict(), "verdict_source": getattr(recorded, "verdict_source", "")}
-                    if hasattr(recorded, "to_dict") else recorded
-                )
-            except Exception as e:
+                recorded = self._record_with_observation(client, proposal_id, view, observed=observed,
+                                                         arguments=arguments, check_order=check_order)
+            except ObservedBeforeDispatch as e:
+                result.setdefault("observed_before_dispatch", []).append(str(e))
+                if attempt < len(REOBSERVE_WAIT_S):
+                    import time
+                    time.sleep(REOBSERVE_WAIT_S[attempt])
+                    result["observation"], observed, view = again()
+                else:
+                    pid, eid, ts = ids
+                    observed = None  # no reading of this effect after its dispatch: unobservable, not verified
+                    view = self._sdk.verify_effect(spec, None, proposal_id=pid, execution_id=eid, toolspec_hash=ts,
+                                                   verifier_identity=self._verifier_identity)
+                    check_order = False
+                result["verification"] = view.to_dict() if hasattr(view, "to_dict") else view
+                continue
+            except Exception as e:  # recording failed; do not claim it succeeded
                 result["remora_record_error"] = f"{type(e).__name__}: {e}"
+                return result
+            result["remora_recorded"] = True
+            result["recorded"] = (
+                {**recorded.to_dict(), "verdict_source": getattr(recorded, "verdict_source", "")}
+                if hasattr(recorded, "to_dict") else recorded
+            )
+            return result
         return result
 
     def _refused_view(self, envelope: dict[str, Any], refusal: str, *, tool_id: str,
@@ -237,10 +279,10 @@ class EffectAttestor:
     @staticmethod
     def _record_with_observation(client: Any, proposal_id: str, view: Any, *,
                                  observed: dict[str, Any] | None,
-                                 arguments: dict[str, Any]) -> Any:
+                                 arguments: dict[str, Any], check_order: bool = True) -> Any:
         """Record the effect in REMORA, attaching observed & arguments when supported (ToolSpec v5)."""
         if hasattr(client, "_request") and hasattr(client, "_dispatch_binding"):
-            from datetime import UTC, datetime
+            from datetime import datetime
             from remora.sdk.client import bind_verification
             from remora.sdk.effects import EffectVerificationView
 
@@ -249,20 +291,21 @@ class EffectAttestor:
             if not body.get("tool_call_hash") or not body.get("grant_jti"):
                 from remora.sdk.client import dispatch_binding
                 body = bind_verification(body, dispatch_binding(trail))
-            # Ensure verified_at is never before the server's dispatch timestamp
-            # when two containers' VM clocks jitter by a few milliseconds.
+            # SR-11: a verification is never re-dated to follow its dispatch. One that precedes it is not an
+            # observation of this effect; the caller observes again or records the effect unobservable.
             dispatched_at = ""
             for ev in trail.get("events") or []:
                 if ev.get("event") == "execution_result" and ev.get("timestamp"):
                     dispatched_at = str(ev["timestamp"])
-            if dispatched_at and body.get("verified_at"):
+            if check_order and dispatched_at and body.get("verified_at"):
                 try:
                     t_disp = datetime.fromisoformat(dispatched_at.replace("Z", "+00:00"))
                     t_obs = datetime.fromisoformat(str(body["verified_at"]).replace("Z", "+00:00"))
-                    if t_obs < t_disp:
-                        body["verified_at"] = max(t_disp, datetime.now(UTC)).isoformat()
                 except ValueError:
-                    pass
+                    t_disp = t_obs = None
+                if t_disp is not None and t_obs < t_disp:
+                    raise ObservedBeforeDispatch(f"verified_at {body['verified_at']} precedes the dispatch at "
+                                                 f"{dispatched_at}")
             if observed is not None:
                 body["observed"] = observed
                 body["arguments"] = arguments

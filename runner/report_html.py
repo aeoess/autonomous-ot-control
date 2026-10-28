@@ -22,6 +22,13 @@ from pathlib import Path
 from typing import Any
 
 E = html.escape
+#: CSS classes for an outcome come from this map only, never from the data (SDD-OT-002 SR-23).
+PILL = {"PASS": "pass", "FAIL": "fail", "NOT_RUN": "not_run", "SKIP": "skip"}
+
+
+def S(v: object) -> str:
+    """Any value, escaped: what the report shows never becomes markup."""
+    return E(str(v))
 
 
 def nok(x: float, d: int = 0) -> str:
@@ -101,7 +108,7 @@ FINDINGS = [
     ("testbed", "Effect receipts", "Production requires a separate effect_verifier principal and REMORA_EFFECT_VERIFIER_BINDINGS.", "fixed"),
     ("testbed", "Network", "plant-private overlapped a Docker auto-assigned pool; moved to 10.250.250.0/24.", "fixed"),
     ("testbed", "Time", "Limit windows run on REMORA's wall clock; a time-compressed demo hits production budgets, so the demo signs a documented accelerated policy.", "documented"),
-    ("environment", "Clock", "Docker Desktop's VM clock stepped back up to 866 ms;verifier timestamp alignment added so observations never precede the container's dispatch timestamp.", "fixed"),
+    ("environment", "Clock", "Docker Desktop's VM clock stepped back up to 866 ms. The verifier first re-dated such readings to follow the dispatch; since SDD-OT-002 SR-11 it never re-dates: a reading that precedes the dispatch is observed again, or the effect is recorded unobservable.", "fixed"),
     ("REMORA", "Effect verdict", "Upgraded to signed ToolSpec schema v5 with postcondition templates across all 10 supervisory write tools. REMORA now computes EFFECT_VERIFIED itself (verdict_source: computed, effect_outcome: EFFECT_VERIFIED).", "fixed"),
 ]
 
@@ -139,14 +146,14 @@ def render(d: dict[str, Any]) -> str:
         f"<td>{v['mean_price_nok_per_kwh']:.2f}</td><td>{nok(v['heating_season_h'])}</td></tr>"
         for k, v in sea["table"]["month"].items())
     arows = "".join(f'<tr><td>{E(x["case_id"])}</td><td>{E(x.get("title", ""))}</td>'
-                    f'<td><span class="pill {x["outcome"].lower()}">{E(x["outcome"])}</span></td></tr>' for x in acc)
+                    f'<td><span class="pill {PILL.get(str(x.get("outcome")), "unknown")}">{S(x.get("outcome"))}</span></td></tr>' for x in acc)
     atk = "".join(
         f"<tr><td>{E(x['origin'].split(':', 1)[1].replace('_', ' '))}</td><td>{E(str(x.get('to_c', x.get('replayed_item', ''))))}</td>"
         f"<td>{E(str(x.get('decision') or x.get('status') or ''))}</td>"
         f"<td>{E(str((x.get('reviewer') or {}).get('reason') or x.get('refusal') or x.get('detail') or ''))}</td>"
         f"<td>{'no effect' if not x.get('applied') else 'APPLIED'}</td></tr>" for x in attacks)
     frows = "".join(f"<tr><td>{E(a)}</td><td>{E(b)}</td><td>{E(t)}</td><td>{E(st)}</td></tr>" for a, b, t, st in FINDINGS)
-    count_rows = "".join(f"<tr><td>{E(k.replace('_', ' '))}</td><td>{v}</td></tr>" for k, v in sorted(c.items()))
+    count_rows = "".join(f"<tr><td>{E(k.replace('_', ' '))}</td><td>{S(v)}</td></tr>" for k, v in sorted(c.items()))
     sample_rows = [
         ("proposal", led["proposal_id"]), ("call", f"set_zone_setpoint {led['zone_id']} {led['from_c']} → {led['to_c']} °C"),
         ("why (strategy)", led["strategy_reason"]), ("work order", led["intent_ref"]),
@@ -213,8 +220,8 @@ svg .b0{{fill:var(--accent);opacity:.85}} svg .b1{{fill:var(--accent2);opacity:.
 <tr><td>Energy (kWh)</td><td>{r['energy_kwh']:.1f}</td><td>{g['energy_kwh']:.1f}</td></tr>
 <tr><td>Spot cost (NOK)</td><td>{r['energy_cost_simulated']:.2f}</td><td>{g['energy_cost_simulated']:.2f}</td></tr>
 <tr><td>Comfort outside band (degree-hours)</td><td>{r['comfort_violation_degree_hours']:.2f}</td><td>{g['comfort_violation_degree_hours']:.2f}</td></tr>
-<tr><td>Setpoint changes</td><td>{r['setpoint_changes_count']}</td><td>{g['setpoint_changes_count']}</td></tr></table>
-<p class="muted">Determinism: live twin {s['determinism']['live_energy_kwh']} kWh, offline replay {s['determinism']['replay_energy_kwh']} kWh, match = {s['determinism']['match']}. Audit chain valid = {audit.get('valid')}, {audit.get('records_checked')} records.</p></div>
+<tr><td>Setpoint changes</td><td>{S(r['setpoint_changes_count'])}</td><td>{S(g['setpoint_changes_count'])}</td></tr></table>
+<p class="muted">Determinism: live twin {S(s['determinism']['live_energy_kwh'])} kWh, offline replay {S(s['determinism']['replay_energy_kwh'])} kWh, match = {S(s['determinism']['match'])}. Audit chain valid = {S(audit.get('valid'))}, {S(audit.get('records_checked'))} records.</p></div>
 </div>
 <div class="card"><h3>Day 2 attacks</h3><table><tr><th>Attack</th><th>Value</th><th>REMORA</th><th>Why refused</th><th>Plant</th></tr>{atk}</table></div>
 
