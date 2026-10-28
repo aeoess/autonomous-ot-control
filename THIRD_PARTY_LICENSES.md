@@ -72,9 +72,13 @@ Licences read from each package's published metadata. Optional local tools
 used to read the calibration sources (`openpyxl`, MIT; `pypdf`, BSD-3-Clause)
 are not dependencies of the repository.
 
-The federation edge `agent-evidence-vectors-axes` declares its own package,
-`agent-evidence-vectors==0.28.0` (**Apache-2.0**, Sankalp Gilda), installed
-only inside that edge's sandbox.
+The federation edge `agent-evidence-vectors-axes` pins the package
+`agent-evidence-vectors==0.28.0` (**Apache-2.0**, Sankalp Gilda). Nothing is
+installed when it runs: the edge carries an unchanged copy of the package's
+`invocation_axes/reader.py` (stdlib only), whose SHA-256 the adapter checks
+before loading it, with the package's licence file beside it. The
+`requirements.txt` in that directory names the pin for Dependabot; it is not
+installed by the sandbox, which has no network.
 
 ## 4. Container images and CI
 

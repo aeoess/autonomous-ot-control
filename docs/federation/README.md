@@ -102,12 +102,17 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ### Choose the submission path
 
-**One bounded report, without enrolling.** Add
-`federation/reports/<report-id>.md`, using
-[REPORT_TEMPLATE.md](REPORT_TEMPLATE.md). Link the evaluator's own immutable
+**One bounded report, without enrolling.** Publish the report where you
+control it (your repository, a gist or a release), written from
+[REPORT_TEMPLATE.md](REPORT_TEMPLATE.md): link the evaluator's own immutable
 source and logs; include the testbed SHA, agreed inputs, exact commands,
-outcomes, negative controls and claim ceiling. No edge directory, runtime
-adapter, registry entry, credentials or ongoing maintenance is required.
+outcomes, negative controls and claim ceiling. Then open a pull request (or an
+issue, and a maintainer adds it) that appends one row to
+[`federation/reports.json`](../../federation/reports.json) with the report's
+URL, testbed commit, boundary, result and non-claims as you stated them;
+`runner.edge_check --check-results` validates the row. The report itself is
+not copied into this repository. No edge directory, runtime adapter, registry
+entry, credentials or ongoing maintenance is required.
 `runner_validity` and `corpus_adequacy` reports are reviewed by a maintainer;
 CI does not execute them as effect verifiers or manufacture a PASS record.
 A report alone is not an auto-scored row in `RESULTS.md`.
@@ -171,6 +176,21 @@ python -m runner.edge_check --list-fixture-sets federation/edges/<your-edge-id>
   proposals, false refusals of permitted ones, misses and unavailable answers.
   Start from `federation/edges/_inline_template/` (a stdlib server that
   re-checks the call against the day plan).
+
+**A delivered example.** Probity's `agent-evidence-vectors-axes`
+([PR #22](https://github.com/darklordVirtual/autonomous-ot-control/pull/22))
+is an offline `effect_evidence` edge: its manifest is
+`federation/edges/agent-evidence-vectors-axes/edge.json`, its external run is
+`federation/records/agent-evidence-vectors-axes/20261027T171310Z.json` (v1,
+12/12 positives, 6/6 negatives, `L4_INDEPENDENT_HOST_RUN` from the declared
+operator and host; no public run URL), and it is listed under
+`registered_edges` in [`federation/index.json`](../../federation/index.json).
+It agreed to **v1 only** (`"fixture_sets": ["v1"]`), so v2 is not run against
+it unless its maintainer opts in. `runner.edge_pass` also runs it over every
+governed arm's exported trails, beside the run and never changing it. It is
+the one accepted exception to the rule below: the PR ships an unchanged,
+hash-verified copy of the upstream `invocation_axes` reader with its licence
+file, because the reader is stdlib-only and the sandbox has no network.
 
 **Keep external implementations external.** Instead of copying a verifier or
 library here, publish the checker in its own repository/image. Remove the
@@ -303,8 +323,8 @@ are listed, with your own record and the CI record side by side.
 
 - **May add:** files under `federation/edges/<your-edge-id>/` and
   `federation/records/<your-edge-id>/`, your registry entry, the regenerated
-  `RESULTS.md`. A report-only submission may instead add only
-  `federation/reports/<report-id>.md` and its sanitized evidence references.
+  `RESULTS.md`. A report-only submission may instead add only its row in
+  `federation/reports.json` (the report stays at its published URL).
 - **May not change:** the REMORA image, the adapter in `deploy/ot/`, the twin's
   interlock, any policy, the fixtures, the scorer, or another edge's files.
   Those belong in a separate pull request with its own review.

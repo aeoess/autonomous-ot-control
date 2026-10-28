@@ -271,3 +271,39 @@ def test_no_runtime_code_reads_the_registry():
     for rel in ("twin", "adapter", "deploy/ot", "runner"):
         for p in (ROOT / rel).rglob("*.py"):
             assert "edge-registry" not in p.read_text("utf-8"), p
+
+
+def _registry_participants() -> list[dict[str, str]]:
+    """docs/federation/edge-registry.yaml: a flat list of `key: value` entries (no YAML parser in the locks)."""
+    out: list[dict[str, str]] = []
+    for line in (ROOT / "docs" / "federation" / "edge-registry.yaml").read_text("utf-8").splitlines():
+        m = re.match(r"^\s{2}(- )?\s*(\w+):\s*(.+)$", line)
+        if not m:
+            continue
+        if m.group(1):
+            out.append({})
+        out[-1][m.group(2)] = m.group(3).strip()
+    return out
+
+
+def test_registered_edges_match_registry_manifests_and_records():
+    listed = {e["edge_id"]: e for e in INDEX["registered_edges"]["edges"]}
+    registry = {p["edge_id"]: p for p in _registry_participants()}
+    assert set(listed) == set(registry), "federation/index.json and edge-registry.yaml list different edges"
+    for eid, e in listed.items():
+        r = registry[eid]
+        for k in ("project", "maintainer", "boundary", "mode", "consent_ref"):
+            assert e[k] == r[k], f"{eid}.{k}: index {e[k]!r}, registry {r[k]!r}"
+        m = json.loads((ROOT / e["manifest"]).read_text("utf-8"))
+        assert m["edge_id"] == eid and e["boundary"] == m["boundary"] and e["mode"] == m["mode"]
+        assert e["fixture_sets"] == m.get("fixture_sets") and e.get("licence") == m.get("licence")
+        assert e.get("pin") == m["pin"]["value"]
+        assert (ROOT / e["records"]).is_dir() and (ROOT / e["results"]).is_file()
+        best = e.get("best_record")
+        if best:
+            rec = json.loads((ROOT / best["record"]).read_text("utf-8"))
+            res = rec["result"]
+            assert rec["edge"]["edge_id"] == eid and rec["fixtures"]["fixture_set"] == best["fixture_set"]
+            assert rec["status"] == best["status"] and rec["independence_level"] == best["independence_level"]
+            assert best["positives"] == f"{res['positives_established']} / {res['positives']}"
+            assert best["negatives_caught"] == f"{res['negatives_caught']} / {res['negatives']}"

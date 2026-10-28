@@ -166,6 +166,16 @@ Next, each blocked on something stated:
 - **Tool-definition integrity checks.** These need an MCP tool surface, which
   is the OT-006 gateway.
 
+Status 2026-10-28 (the text above is kept as decided): the sealed fixture sets
+`v1` and `v2` are published (`federation/fixtures/`), and one external effect
+evidence verifier has delivered (Probity's `agent-evidence-vectors-axes`, PR
+#22, v1, `L4_INDEPENDENT_HOST_RUN`; `registered_edges` in
+`federation/index.json`). Runner validity has a reviewed external report
+(`federation/reports.json`). Tool-definition checks no longer wait for a
+gateway: they are planned against the signed ToolSpec bundle REMORA pins by
+digest and the MCP contract in `contracts/mcp/`; they still have no harness
+(`docs/federation/README.md`).
+
 ## Owner decisions this ADR needs
 
 | ID | Decision | Recommended default |
