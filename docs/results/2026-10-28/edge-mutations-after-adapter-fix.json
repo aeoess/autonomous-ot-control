@@ -1,0 +1,869 @@
+{
+  "schema": "ot-edge-mutations/v1",
+  "source_work": "artifacts/observer-e2e-20261028T012704Z-work",
+  "seeds": 14,
+  "seeds_left_out": [],
+  "case_set_manifest_sha256": "61096e9beea5d09dcd4d687bf17e23b15daeb8a4b67efebc912692264576a1b2",
+  "operators": 37,
+  "case_mutants": 518,
+  "case_layer": {
+    "template-reference-verifier": {
+      "ran": true,
+      "cases": 518,
+      "kill_rate": 1.0,
+      "killed": 420,
+      "mutants": 420,
+      "exact_accuracy": 1.0,
+      "accepted_missing_evidence": 0,
+      "unanswered": 0,
+      "false_refusals": 0,
+      "positive_controls": 98,
+      "by_class": {
+        "negative_n": 280,
+        "negative_correct": 280,
+        "negative_established": 0,
+        "negative_unanswered": 0,
+        "missing_n": 98,
+        "missing_correct": 98,
+        "missing_established": 0,
+        "missing_unanswered": 0,
+        "malformed_n": 42,
+        "malformed_correct": 42,
+        "malformed_established": 0,
+        "malformed_unanswered": 0,
+        "positive_n": 98,
+        "positive_correct": 98,
+        "positive_established": 98,
+        "positive_unanswered": 0
+      },
+      "by_claim": {
+        "call_binding": {
+          "n": 42,
+          "killed": 42,
+          "correct": 42,
+          "claim_attributed": 42
+        },
+        "decision_correspondence": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 70
+        },
+        "declared_effect_observed": {
+          "n": 126,
+          "killed": 126,
+          "correct": 126,
+          "claim_attributed": 126
+        },
+        "evidence_digest_integrity": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        },
+        "observation_after_dispatch": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 70
+        },
+        "single_dispatch": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        }
+      },
+      "by_operator": {
+        "cb_operation_id_case": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_other_operation": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_record_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "dc_denied_but_applied": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_escalate_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_executed_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "dc_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_not_executed_but_observed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_half": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observation_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "de_observed_off": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_off_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_value_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "de_twin_other_zone": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_twin_rejected": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_ascii_escaped": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_one_char": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_uppercase": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_evidence_changed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_dispatch_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_dispatch_time_null": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_fifteen_minutes_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_observation_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_one_second_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "pc_evidence_key_order": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_extra_reviewer_field": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_identity": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_integer_setpoint": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_non_ascii_evidence": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_an_hour_later": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_at_dispatch": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "sd_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "sd_string_one": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_twice": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_zero": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        }
+      },
+      "wrong": [],
+      "runtime_ms": 362.8,
+      "exit": 0,
+      "whole_set_ran": true,
+      "crashed_operators": []
+    },
+    "agent-evidence-vectors-axes": {
+      "ran": true,
+      "cases": 518,
+      "kill_rate": 1.0,
+      "killed": 420,
+      "mutants": 420,
+      "exact_accuracy": 1.0,
+      "accepted_missing_evidence": 0,
+      "unanswered": 0,
+      "false_refusals": 0,
+      "positive_controls": 98,
+      "by_class": {
+        "negative_n": 280,
+        "negative_correct": 280,
+        "negative_established": 0,
+        "negative_unanswered": 0,
+        "missing_n": 98,
+        "missing_correct": 98,
+        "missing_established": 0,
+        "missing_unanswered": 0,
+        "malformed_n": 42,
+        "malformed_correct": 42,
+        "malformed_established": 0,
+        "malformed_unanswered": 0,
+        "positive_n": 98,
+        "positive_correct": 98,
+        "positive_established": 98,
+        "positive_unanswered": 0
+      },
+      "by_claim": {
+        "call_binding": {
+          "n": 42,
+          "killed": 42,
+          "correct": 42,
+          "claim_attributed": 42
+        },
+        "decision_correspondence": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 56
+        },
+        "declared_effect_observed": {
+          "n": 126,
+          "killed": 126,
+          "correct": 126,
+          "claim_attributed": 70
+        },
+        "evidence_digest_integrity": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        },
+        "observation_after_dispatch": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 70
+        },
+        "single_dispatch": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        }
+      },
+      "by_operator": {
+        "cb_operation_id_case": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_other_operation": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_record_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "dc_denied_but_applied": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_escalate_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_executed_missing": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_not_executed_but_observed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_half": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observation_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "de_observed_off": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_off_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_value_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "de_twin_other_zone": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_twin_rejected": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_ascii_escaped": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_one_char": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_uppercase": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_evidence_changed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_dispatch_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_dispatch_time_null": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_fifteen_minutes_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_observation_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_one_second_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "pc_evidence_key_order": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_extra_reviewer_field": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_identity": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_integer_setpoint": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_non_ascii_evidence": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_an_hour_later": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_at_dispatch": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "sd_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "sd_string_one": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_twice": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_zero": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        }
+      },
+      "wrong": [],
+      "runtime_ms": 346.4,
+      "exit": 0,
+      "whole_set_ran": true,
+      "crashed_operators": [],
+      "vs_reference": {
+        "only_this_edge_correct": [],
+        "only_reference_correct": []
+      }
+    }
+  },
+  "pipeline_layer": {
+    "seeds": 14,
+    "operators": {
+      "p_capture_missing_manifest_ok": {
+        "class": "positive",
+        "expected": [
+          "ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_evidence_edited_after_capture": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_section_edited_no_capture": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_observer_record_tampered": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_observer_disagrees_with_readback": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_double_execution": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_observer_record_removed": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_lifecycle_incomplete": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_readback_missing": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_twin_record_missing": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      }
+    }
+  },
+  "benchmark": {
+    "sizes": [
+      100,
+      1000,
+      5000
+    ],
+    "repeats": 3,
+    "edges": {
+      "template-reference-verifier": [
+        {
+          "cases": 100,
+          "ok": true,
+          "median_ms": 112.2,
+          "ms_per_case": 1.122,
+          "cases_per_s": 891.4,
+          "runs_ms": [
+            114.7,
+            112.2,
+            108.5
+          ]
+        },
+        {
+          "cases": 1000,
+          "ok": true,
+          "median_ms": 422.3,
+          "ms_per_case": 0.422,
+          "cases_per_s": 2368.2,
+          "runs_ms": [
+            422.3,
+            415.4,
+            422.7
+          ]
+        },
+        {
+          "cases": 5000,
+          "ok": true,
+          "median_ms": 1839.7,
+          "ms_per_case": 0.368,
+          "cases_per_s": 2717.8,
+          "runs_ms": [
+            1791.8,
+            2045.9,
+            1839.7
+          ]
+        }
+      ],
+      "agent-evidence-vectors-axes": [
+        {
+          "cases": 100,
+          "ok": true,
+          "median_ms": 132.0,
+          "ms_per_case": 1.32,
+          "cases_per_s": 757.3,
+          "runs_ms": [
+            135.8,
+            132.0,
+            128.2
+          ]
+        },
+        {
+          "cases": 1000,
+          "ok": true,
+          "median_ms": 570.3,
+          "ms_per_case": 0.57,
+          "cases_per_s": 1753.3,
+          "runs_ms": [
+            557.9,
+            570.3,
+            610.1
+          ]
+        },
+        {
+          "cases": 5000,
+          "ok": true,
+          "median_ms": 2417.7,
+          "ms_per_case": 0.484,
+          "cases_per_s": 2068.1,
+          "runs_ms": [
+            2417.7,
+            2408.8,
+            2443.3
+          ]
+        }
+      ]
+    }
+  },
+  "note": "Expected verdicts come from each operator and the case contract, written before any edge ran. Scores hold for these operators on these simulated trails; they are not a guarantee.",
+  "testbed_commit": "29a9d072da85f038edd60d98a22c48f50839de95",
+  "note_edge_version": "agent-evidence-vectors-axes with the repaired adapter (uncommitted when run; committed unchanged with this file). The earlier run, against the unrepaired adapter, is edge-mutations.md."
+}

@@ -80,6 +80,16 @@ def _evidence_text(case: dict[str, Any]) -> str:
 STRICT = False  # --strict-vantage: take the observation source from the recorded vantage
 
 
+def _number(v: Any) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf")
+
+
+def _vantage(case: dict[str, Any]) -> str:
+    env = case.get("remora_envelope") or {}
+    entry = (env.get("effect") or {}).get("ledger_entry") or {} if isinstance(env, dict) else {}
+    return entry.get("effect_vantage", "unrecorded") if isinstance(entry, dict) else "unrecorded"
+
+
 def _build(case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any] | None]:
     c = case["claim"]
     req = _request(c["proposal_id"], c["zone_id"], c["setpoint_c"], c["tool"])
@@ -101,9 +111,10 @@ def _build(case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[s
                   "dispatch": {"outcome": "DISPATCHED" if ex.get("executed") else "REFUSED"},
                   "execution_report": {"status": "success" if op.get("status") == "APPLIED" else "failure"},
                   "postcondition": {"expected_fields": {"setpoint_c": f"{c['setpoint_c']:.3f}"}}}
-        if obs is not None:
-            vantage = case["remora_envelope"]["effect"]["ledger_entry"].get("effect_vantage", "unrecorded")
-            bundle["observation"] = {"source": vantage if STRICT else R.INDEPENDENT_SOURCE,
+        # An observation without a numeric observed value is no observation (the case contract makes
+        # declared_effect_observed NOT_ESTABLISHED); it is left out rather than formatted or guessed.
+        if obs is not None and _number(obs.get("observed_setpoint_c")):
+            bundle["observation"] = {"source": _vantage(case) if STRICT else R.INDEPENDENT_SOURCE,
                                      "fields": {"setpoint_c": f"{obs['observed_setpoint_c']:.3f}"}}
     return req, capture, bundle
 
@@ -147,7 +158,9 @@ def check(case: dict[str, Any]) -> dict[str, tuple[str, str]]:
             out["declared_effect_observed"] = ("NOT_ESTABLISHED", "applied status or actual value missing")
         elif op["status"] != "APPLIED" or op["new_setpoint_c"] != claimed["setpoint_c"]:
             out["declared_effect_observed"] = ("CONTRADICTED", "twin status or actual value contradicts the claimed effect")
-        elif obs and obs.get("observed_setpoint_c") != claimed["setpoint_c"]:
+        elif obs is None or obs.get("observed_setpoint_c") is None:
+            out["declared_effect_observed"] = ("NOT_ESTABLISHED", "no observed value")
+        elif obs.get("observed_setpoint_c") != claimed["setpoint_c"]:
             out["declared_effect_observed"] = ("CONTRADICTED", "raw observation contradicts the claimed effect")
     dispatch_time = ex.get("dispatched_at_sim_s")
     observation_time = (obs or {}).get("observed_at_sim_s")
@@ -187,9 +200,12 @@ def main(argv: list[str] | None = None) -> int:
     verdicts = []
     for path in sorted((root / "cases").glob("*.json")):
         case = json.loads(path.read_text("utf-8"))
-        vantage = case["remora_envelope"]["effect"]["ledger_entry"].get("effect_vantage", "unrecorded")
-        v, reason, claim_id = verdict(check(case), vantage)
-        entry: dict[str, Any] = {"case_id": case["case_id"], "verdict": v, "reason": reason}
+        try:
+            v, reason, claim_id = verdict(check(case), _vantage(case))
+        except (KeyError, TypeError, ValueError, AttributeError) as e:
+            # A case this adapter cannot read is not established; it never stops the run for the others.
+            v, reason, claim_id = "NOT_ESTABLISHED", f"malformed case: {type(e).__name__}: {e}", None
+        entry: dict[str, Any] = {"case_id": case.get("case_id", path.stem), "verdict": v, "reason": reason}
         if claim_id:
             entry["claim_id"] = claim_id
         verdicts.append(entry)
