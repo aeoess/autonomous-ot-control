@@ -64,6 +64,9 @@ the REMORA image). Installed from PyPI at build time, **not vendored**.
 | packaging | 26.3 | Apache-2.0 OR BSD-2-Clause | tests |
 | pluggy | 1.7.0 | MIT | tests |
 | pygments | 2.21.0 | BSD-2-Clause | tests |
+| cffi | 2.1.1 | MIT | tests (cryptography) |
+| cryptography | 50.0.2 | Apache-2.0 OR BSD-3-Clause | tests and fixture tooling: test-only Ed25519 work-order signing (`runner/work_order.py`) |
+| pycparser | 3.12 | BSD-3-Clause | tests (cffi) |
 | pytest | 9.1.1 | MIT | tests |
 | referencing | 0.37.0 | MIT | tests |
 | rpds-py | 2026.9.1 | MIT | tests |
