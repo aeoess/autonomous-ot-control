@@ -134,7 +134,20 @@ def test_the_proposer_holds_no_approver_token_and_the_reviewer_no_operator_token
     assert "REMORA_APPROVER_TOKEN: ${" in reviewer and "REMORA_OPERATOR_TOKEN: ${" not in reviewer
     assert "work_order.seed" in authority and "network_mode: none" in authority and "TOKEN: ${" not in authority
     assert "work_order.seed" not in harness + reviewer + service("remora")
-    assert "REMORA_OT_WORK_ORDER_KEYS" in service("remora")
+    for svc in (service("remora"), reviewer):
+        assert "REMORA_OT_WORK_ORDER_TRUSTED_KEYS: ${" in svc and "work_order_keys.json" not in svc
+    assert "REMORA_OT_WORK_ORDER_TRUSTED_KEYS" not in harness + authority
+
+
+def test_the_trust_anchor_is_pinned_and_a_swapped_key_is_refused():
+    key, other = wo.key_from_seed(secrets.token_hex(32)), wo.key_from_seed(secrets.token_hex(32))
+    assert wo.parse_trusted_env(wo.trusted_env_value(key)) == wo.trusted_document(key)["keys"]
+    pub_other = wo.trusted_env_value(other).split(":", 1)[1]
+    with pytest.raises(ValueError):
+        wo.parse_trusted_env(f"{wo.key_id(key)}:{pub_other}")  # a key id that is not its key's
+    for src in ("ot_bundle.py", "ot_reviewer.py"):
+        text = (OT / src).read_text("utf-8")
+        assert "REMORA_OT_WORK_ORDER_TRUSTED_KEYS" in text and "load_trusted" not in text
 
 
 def test_the_harness_answers_no_credential_instead_of_approving(monkeypatch):

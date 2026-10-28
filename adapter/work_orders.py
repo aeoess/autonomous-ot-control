@@ -19,7 +19,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-from pathlib import Path
 from typing import Any
 
 from cryptography.exceptions import InvalidSignature
@@ -96,8 +95,23 @@ def trusted_document(*keys: Ed25519PrivateKey | Ed25519PublicKey) -> dict[str, A
     return {"schema": "ot-work-order-keys/v1", "keys": {key_id(k): _b64(public_raw(k)) for k in keys}}
 
 
-def load_trusted(path: Path) -> dict[str, str]:
-    d = json.loads(Path(path).read_text("utf-8"))
-    if d.get("schema") != "ot-work-order-keys/v1" or not isinstance(d.get("keys"), dict):
-        raise ValueError(f"{path}: not an ot-work-order-keys/v1 file")
-    return {str(k): str(v) for k, v in d["keys"].items()}
+def trusted_env_value(*keys: Ed25519PrivateKey | Ed25519PublicKey) -> str:
+    """The trust anchor as one environment value, ``<key id>:<base64url public key>[,...]``.
+
+    It is set in the gitignored ``.env`` by the bootstrap, beside REMORA's other trusted keys, and never read
+    from a file: the directory the intent table lives in is writable by the authority and by the proposer, so a
+    keys file there could be swapped for the proposer's own key."""
+    return ",".join(f"{key_id(k)}:{_b64(public_raw(k))}" for k in keys)
+
+
+def parse_trusted_env(value: str) -> dict[str, str]:
+    """``<key id>:<public key>[,...]`` back to {key id: public key}; a key id must be the hash of its key."""
+    out: dict[str, str] = {}
+    for part in (p.strip() for p in value.split(",") if p.strip()):
+        kid, sep, pub = part.partition(":")
+        if not sep:
+            raise ValueError("a trusted work-order key is <key id>:<public key>")
+        if key_id(Ed25519PublicKey.from_public_bytes(_unb64(pub))) != kid:
+            raise ValueError(f"key id {kid} is not the id of its public key")
+        out[kid] = pub
+    return out

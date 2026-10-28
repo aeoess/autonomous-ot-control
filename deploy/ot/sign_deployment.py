@@ -16,9 +16,10 @@ Outputs, under ``--out``:
 * ``limits.signed.json`` — ``deploy/ot/ot_limits.policy.json`` signed by the
   limit authority key.
 * ``ot_intents.json`` — the shipped work orders (``deploy/ot/ot_intents.json``),
-  each signed by the work-order authority key (SDD-OT-002 SR-05); and
-  ``work_order_keys.json``, that key's public half, which REMORA's bundle trusts.
-  Day plans are added later by the authority container, with the same key.
+  each signed by the work-order authority key (SDD-OT-002 SR-05). That key's
+  public half is printed as ``REMORA_OT_WORK_ORDER_TRUSTED_KEYS`` for ``.env``,
+  never written beside the table (its directory is writable by others). Day
+  plans are added later by the authority container, with the same key.
 
 stdout carries ``KEY=value`` lines for the gitignored ``.env``:
 ``REMORA_TOOLSPEC_VERIFY_KEYS``, ``REMORA_TOOLSPEC_PINNED_DIGEST`` and
@@ -304,8 +305,6 @@ def main(argv: list[str] | None = None) -> int:
     a.out.mkdir(parents=True, exist_ok=True)
     (a.out / "ot_intents.json").write_text(json.dumps(signed_intents, indent=2, sort_keys=True) + "\n",
                                            encoding="utf-8")
-    (a.out / "work_order_keys.json").write_text(
-        json.dumps(work_orders.trusted_document(wo_key), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (a.out / "toolspec-bundle.json").write_text(
         json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (a.out / "limits.signed.json").write_text(
@@ -313,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"REMORA_TOOLSPEC_VERIFY_KEYS={toolspec_public}")
     print(f"REMORA_TOOLSPEC_PINNED_DIGEST={pinned}")
     print(f"REMORA_LIMITS_TRUSTED_KEYS={limits_key.verification_key().public_bytes.hex()}")
+    print(f"REMORA_OT_WORK_ORDER_TRUSTED_KEYS={work_orders.trusted_env_value(wo_key)}")
     return 0
 
 
