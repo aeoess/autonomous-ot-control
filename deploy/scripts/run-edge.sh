@@ -47,7 +47,7 @@ REF_ARGS=()
 TRUST_ARGS=()
 CMD_NOTE="./deploy/scripts/run-edge.sh ${EDGE} ${SET}"
 if [[ "$LOCAL" -eq 1 ]]; then
-  TRUST_ARGS=(--trust-edge "$(  "$PY" -c "import json,sys;print(json.load(open(sys.argv[1]))['edge_id'])" "${EDGE_DIR}/edge.json" | tr -d '\r')")
+  TRUST_ARGS=(--trust-edge "$EDGE")  # the directory you named, already validated above
   CMD_NOTE="${CMD_NOTE} --local"
 fi
 "$PY" -m runner.edge_check --run "$EDGE_DIR" --fixtures "$FIX" --out "$OUT" "${TRUST_ARGS[@]}" \

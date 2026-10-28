@@ -12,10 +12,12 @@ A contributed edge is third-party code. It never runs on a host process that hol
   anything that is not a regular file, caps its size, and writes it into the output directory with
   ``O_CREAT | O_EXCL`` (and ``O_NOFOLLOW`` where the platform has it). Every file the host writes for a run
   goes through ``write_new``.
-- **SR-03, no host execution.** An adapter runs on the host only when its edge id is on an explicit trust
-  list: ``--trust-edge <id>`` on the command line, or ``OT_TRUST_EDGES`` (comma-separated ids; the test
-  suite sets ``*``). Otherwise it runs in this sandbox, and when Docker is not available it does not run
-  at all. The testbed's own authority stand-in verifier imports the testbed and is the only default entry.
+- **SR-03, no host execution.** An adapter runs on the host only when trust is given by something the edge
+  cannot write: its directory. ``--trust-edge <name>`` (or ``OT_TRUST_EDGES``, comma-separated; the test
+  suite sets ``*``) names an edge directory; the manifest's ``edge_id`` counts only when it equals that
+  directory's name, so a contributed edge cannot borrow another edge's trust by naming itself after it. The
+  one default is the reviewed directory of the testbed's own authority stand-in verifier (it imports the
+  testbed), by resolved path. Otherwise the adapter runs in this sandbox, and without Docker not at all.
 
 Sandbox: no network, read-only root, no capabilities, no new privileges, non-root, pids, memory and CPU
 bounded, a small tmpfs, the edge and the fixtures read-only.
@@ -36,9 +38,9 @@ IMAGE_RE = re.compile(r"^[a-z0-9][a-z0-9./_-]*(:[A-Za-z0-9_.-]+)?@sha256:[0-9a-f
 #: python:3.12-slim as pulled and used by every sandboxed run so far; a tag alone is never used.
 DEFAULT_IMAGE = "python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9"
 SAFE_ARG_RE = re.compile(r"^[^\x00\r\n]{1,4096}$")
-#: Edge ids that may run on the host by default: testbed code reviewed in this repository that cannot run in
-#: the stdlib-only image (it imports the testbed). Contributed edges are never on this list.
-DEFAULT_TRUSTED = frozenset({"authority-template-verifier"})
+#: Edge directories that may run on the host by default, by resolved path: testbed code reviewed in this
+#: repository that cannot run in the stdlib-only image (it imports the testbed). Never an id from a manifest.
+DEFAULT_TRUSTED_DIRS = frozenset({(ROOT / "federation" / "authority" / "template-verifier").resolve()})
 RESULT_NAME = "result.json"
 MAX_RESULT_BYTES = 16 * 1024 * 1024
 SANDBOX_FLAGS = ("--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",
@@ -72,9 +74,14 @@ def manifest_problems(edge: dict[str, Any]) -> list[str]:
     return problems
 
 
-def trusted(edge_id: str) -> bool:
-    env = {x.strip() for x in os.environ.get("OT_TRUST_EDGES", "").split(",") if x.strip()}
-    return "*" in env or edge_id in env or edge_id in EXTRA_TRUSTED or edge_id in DEFAULT_TRUSTED
+def trusted(edge_dir: Path, edge_id: str) -> bool:
+    """Trust comes from the edge's directory, never from what its manifest says about itself."""
+    if edge_dir.resolve() in DEFAULT_TRUSTED_DIRS:
+        return True
+    named = {x.strip() for x in os.environ.get("OT_TRUST_EDGES", "").split(",") if x.strip()} | EXTRA_TRUSTED
+    if "*" in named:
+        return True
+    return edge_dir.name in named or (edge_id == edge_dir.name and edge_id in named)
 
 
 def docker_argv(edge_dir: Path, fixtures: Path, scratch: Path, edge: dict[str, Any]) -> list[str]:

@@ -636,7 +636,7 @@ def main(argv: list[str] | None = None) -> int:
                    "registered offline effect_evidence edge")
     p.add_argument("--bench", type=int, nargs="*", default=[], help="benchmark case counts, e.g. 100 1000")
     p.add_argument("--repeats", type=int, default=3)
-    p.add_argument("--trust-edge", action="append", default=[], metavar="EDGE_ID",
+    p.add_argument("--trust-edge", action="append", default=[], metavar="EDGE_DIR_NAME",
                    help="run this edge on the host instead of the container sandbox (your own code only)")
     a = p.parse_args(argv)
     from runner import edge_sandbox

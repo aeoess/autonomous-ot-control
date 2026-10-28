@@ -439,7 +439,7 @@ def run_adapter(edge_dir: Path, fixtures: Path, out: Path) -> tuple[int, str]:
     """
     from runner import edge_sandbox
     edge = json.loads((edge_dir / "edge.json").read_text("utf-8"))
-    if not edge_sandbox.trusted(str(edge.get("edge_id", ""))):
+    if not edge_sandbox.trusted(edge_dir, str(edge.get("edge_id", ""))):
         rc, tail = edge_sandbox.run(edge_dir, fixtures, out, edge, ADAPTER_TIMEOUT_S)
         if rc != 0:
             out.mkdir(parents=True, exist_ok=True)
@@ -722,7 +722,7 @@ def score_and_write(edge_dir: Path, fixtures: Path, result_path: Path, out: Path
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="runner.edge_check")
-    p.add_argument("--init", metavar="EDGE_ID", help="scaffold a new edge from _template")
+    p.add_argument("--init", metavar="EDGE_DIR_NAME", help="scaffold a new edge from _template")
     p.add_argument("--project", default="My Federation Edge", help="project name for --init")
     p.add_argument("--maintainer", default="github-handle", help="GitHub handle for --init")
     p.add_argument("--boundary", default="effect_evidence", choices=list(BOUNDARIES))
@@ -735,7 +735,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="fetch the verifier a set declares it was sealed against from git, run it, require the expected verdicts")
     p.add_argument("--run", metavar="EDGE_DIR",
                    help="run the edge's adapter (in the container sandbox unless trusted), then score it")
-    p.add_argument("--trust-edge", action="append", default=[], metavar="EDGE_ID",
+    p.add_argument("--trust-edge", action="append", default=[], metavar="EDGE_DIR_NAME",
                    help="run this edge's adapter on the host instead of the sandbox (repeatable; your own code only)")
     p.add_argument("--edge")
     p.add_argument("--fixtures")

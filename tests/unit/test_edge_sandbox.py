@@ -187,15 +187,31 @@ def test_st03_an_untrusted_edge_never_runs_on_the_host(tmp_path, monkeypatch):
     assert not (home / "pwned-by-edge").exists()
 
 
-def test_st03_only_an_explicitly_trusted_id_runs_on_the_host(tmp_path, monkeypatch):
+def test_st03_trust_comes_from_the_directory_never_from_the_manifest(tmp_path, monkeypatch):
     monkeypatch.delenv("OT_TRUST_EDGES", raising=False)
-    assert not edge_sandbox.trusted("agent-evidence-vectors-axes")
-    assert not edge_sandbox.trusted("template-reference-verifier")
-    assert edge_sandbox.trusted("authority-template-verifier")  # the testbed's own stand-in, imports the testbed
+    edges = ROOT / "federation" / "edges"
+    stand_in = ROOT / "federation" / "authority" / "template-verifier"
+    assert edge_sandbox.trusted(stand_in, "authority-template-verifier")  # the reviewed directory, by path
+    assert not edge_sandbox.trusted(edges / "agent-evidence-vectors-axes", "agent-evidence-vectors-axes")
+    assert not edge_sandbox.trusted(edges / "_template", "template-reference-verifier")
+    # A contributed edge that names itself after the trusted stand-in gets nothing, wherever it lives.
+    spoof = _edge(tmp_path, "authority-template-verifier", image=GOOD)
+    other = _edge(tmp_path, "innocent-name", image=GOOD)
+    for d in (spoof, other):
+        e = json.loads((d / "edge.json").read_text("utf-8"))
+        e["edge_id"] = "authority-template-verifier"
+        (d / "edge.json").write_text(json.dumps(e), "utf-8")
+        assert not edge_sandbox.trusted(d, "authority-template-verifier"), d
+    monkeypatch.setattr(edge_sandbox.shutil, "which", lambda name: None)
+    rc, _ = edge_check.run_adapter(other, ROOT / "federation" / "fixtures" / "v1", tmp_path / "o")
+    assert rc == 125  # not run on the host
+    # Explicit trust names a directory; an id counts only when it is that directory's name.
     monkeypatch.setattr(edge_sandbox, "EXTRA_TRUSTED", {"my-edge"})
-    assert edge_sandbox.trusted("my-edge") and not edge_sandbox.trusted("other-edge")
+    assert edge_sandbox.trusted(tmp_path / "my-edge", "my-edge")
+    assert edge_sandbox.trusted(tmp_path / "my-edge", "anything")  # the directory itself was named
+    assert not edge_sandbox.trusted(tmp_path / "their-edge", "my-edge")  # an id borrowed from elsewhere
     monkeypatch.setenv("OT_TRUST_EDGES", "a, b")
-    assert edge_sandbox.trusted("b") and not edge_sandbox.trusted("c")
+    assert edge_sandbox.trusted(tmp_path / "b", "b") and not edge_sandbox.trusted(tmp_path / "c", "c")
 
 
 def test_the_entry_points_that_run_edges_take_trust_explicitly():
@@ -203,4 +219,4 @@ def test_the_entry_points_that_run_edges_take_trust_explicitly():
         assert '"--trust-edge"' in (ROOT / "runner" / f"{mod}.py").read_text("utf-8"), mod
     sh = (ROOT / "deploy" / "scripts" / "run-edge.sh").read_text("utf-8")
     assert "docker run" not in sh.replace("# ", "") or "runner.edge_sandbox" in sh
-    assert "chmod 777" not in sh and '--trust-edge "$(' in sh
+    assert "chmod 777" not in sh and '--trust-edge "$EDGE"' in sh
