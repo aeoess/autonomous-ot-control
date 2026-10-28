@@ -23,6 +23,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from runner import attacks as attacks_mod
 from runner import episode as episode_mod
 from runner.scoring import score
 from twin.model import Twin, load_config
@@ -43,7 +44,10 @@ def run(ep: dict[str, Any]) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
     rev0 = twin.revision
     n = 0
+    all_rules = ep.get("attack_set") == attacks_mod.ALL_RULES
     for t in range(0, int(ep["simulated_s"]), step):
+        if all_rules and t == attacks_mod.FREEZE_FROM_S:  # the same sensor fault the episode was built with
+            twin.inject_fault("sensor_freeze", attacks_mod.STALE_ZONE, actor="arm-a")
         for p in by_t.get(t, []):
             args = p["call"]["arguments"]
             zone, value = args.get("zone_id"), args.get("setpoint_c")
@@ -65,6 +69,8 @@ def run(ep: dict[str, Any]) -> dict[str, Any]:
             if not applied:
                 row["execute"] = {"status": 409, "twin_status": "REJECTED", "detail": rec.reason}
             ledger.append(row)
+        if all_rules and t == attacks_mod.FREEZE_CLEARED_AFTER_S:
+            twin.clear_faults("arm-a")
         twin.advance(step)
     s = score(twin)
     return {"ledger": ledger, "revision_before": rev0, "revision_after": twin.revision,

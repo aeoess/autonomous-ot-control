@@ -20,10 +20,12 @@ cd "$(dirname "$0")/../.."
 PY="${PYTHON:-python3}"
 DAYS="${DAYS:-7}"
 RUN_ID="${RUN_ID:-abc-$(date -u +%Y%m%dT%H%M%SZ)}"
-EPISODE="scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-${DAYS}d-v1.json"
+ATTACK_SET="${ATTACK_SET:-v1}"   # v1, or all-rules: one injected class per oracle rule (runner.attacks)
+SUFFIX="-v1"; [[ "$ATTACK_SET" == "all-rules" ]] && SUFFIX="-all-rules-v1"
+EPISODE="scenarios/episodes/trondheim-week-2026w03-hvac-v1-p1-${DAYS}d${SUFFIX}.json"
 OUT="artifacts/${RUN_ID}"
 EDGE_PORT="${EDGE_PORT:-8765}"
-[[ -f "$EPISODE" ]] || { echo "run-abc: no episode for DAYS=${DAYS}: ${EPISODE} (python -m runner.episode build --days ${DAYS} --out ${EPISODE})" >&2; exit 2; }
+[[ -f "$EPISODE" ]] || { echo "run-abc: no episode for DAYS=${DAYS}: ${EPISODE} (python -m runner.episode build --days ${DAYS} --attack-set ${ATTACK_SET} --out ${EPISODE})" >&2; exit 2; }
 "$PY" -m runner.episode check "$EPISODE"
 mkdir -p "$OUT"
 
@@ -52,7 +54,7 @@ run_governed() {  # label, extra demo args...
   rm -rf "artifacts/${RUN_ID}-${label}-work" "artifacts/${RUN_ID}-${label}"
   # A governed arm that is not the careful acceptance may let a forbidden proposal through;
   # that is the measurement, so the demo exits 0 for such arms. Any other failure stops here.
-  RUN_ID="${RUN_ID}-${label}" STRATEGY=P1 DAYS="$DAYS" DEMO_ARGS="$* ${SHADOW_ARGS}" ./deploy/scripts/run-demo-governed.sh
+  RUN_ID="${RUN_ID}-${label}" STRATEGY=P1 DAYS="$DAYS" DEMO_ARGS="$* --attack-set ${ATTACK_SET} ${SHADOW_ARGS}" ./deploy/scripts/run-demo-governed.sh
   mv "artifacts/${RUN_ID}-${label}-work" "${OUT}/${label}"
 }
 run_governed B-careful --reviewer careful

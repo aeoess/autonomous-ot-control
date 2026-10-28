@@ -48,6 +48,7 @@ from pathlib import Path
 from typing import Any
 
 from runner import admission
+from runner import attacks as attacks_mod
 from runner.acceptance import Stack, body, executed, revision
 from runner.baseline import run_baseline
 from runner.evidence import write_bundle
@@ -70,6 +71,8 @@ SUITE_ID = "ot-governed-demo/v1"
 #: Arm settings (ADR-004), set by main(): the declared reviewer model and the optional inline edge
 #: consulted after REMORA and the reviewer approved (runner.admission; it can only add refusals).
 REVIEWER_MODEL = "careful"
+#: Which injected attack classes the run carries (runner.attacks): v1, or all-rules for every oracle rule.
+ATTACK_SET = attacks_mod.V1
 INLINE_EDGE: admission.InlineEdge | None = None
 #: Shadow edges (ADR-011, authority-fixture contract): asked about every proposed write, before REMORA,
 #: on the same captured input an inline edge gets. Their answers are recorded and never change anything.
@@ -207,8 +210,12 @@ PLAN_VALUES = {19.0, 20.0, 21.0}
 
 
 def publish_plan(day: str, strategy: str = "P1") -> str:
-    table = json.loads(INTENTS.read_text("utf-8"))
     ref, entry = plan_work_order(day, strategy)
+    return publish_intent(ref, entry)
+
+
+def publish_intent(ref: str, entry: dict[str, Any]) -> str:
+    table = json.loads(INTENTS.read_text("utf-8"))
     table[ref] = entry
     INTENTS.write_text(json.dumps(table, indent=2) + "\n", encoding="utf-8")
     return ref
@@ -229,6 +236,8 @@ def edge_context(day: str, zone: str, current: float, intent_ref: str | None, t_
     seconds). Nothing of REMORA's decision and no credential."""
     plan = ({**{z: sorted(PLAN_VALUES) for z in SETBACK_ZONES}, "ZONE-03": [OCCUPIED_C]}
             if intent_ref == f"PLAN-{day}" else {})
+    if ATTACK_SET == attacks_mod.ALL_RULES and intent_ref == attacks_mod.lab_ref(day):
+        plan = attacks_mod.lab_work_order(day)["zones"]
     cx = {"intent_ref": intent_ref, "work_order": {"zones": plan}, "current_setpoint_c": current,
           "max_delta_c": MAX_STEP_C, "sim_time_s": t_s}
     if decision_time_utc:
@@ -321,12 +330,17 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
     plan_ref = None
     day = ""
     learner = ReheatLearner()
+    all_rules = ATTACK_SET == attacks_mod.ALL_RULES
     for t in range(0, end_s, STEP_S):
         now = start + timedelta(seconds=t)
         if now.strftime("%Y-%m-%d") != day:
             day = now.strftime("%Y-%m-%d")
             plan_ref = publish_plan(day)
             counts["plans_published"] += 1
+            if all_rules and t // 86400 == attacks_mod.BUDGET_AT_S // 86400:
+                publish_intent(attacks_mod.lab_ref(day), attacks_mod.lab_intent(day))
+        if all_rules and t == attacks_mod.FREEZE_FROM_S:  # the sensor fault the episode was built with
+            s.ctl("fault", "sensor_freeze", "--zone", attacks_mod.STALE_ZONE, "--actor", "demo")
         # Hourly read through REMORA: expected ACCEPT.
         if t % 3600 == 0:
             rc = {"tool_name": "read_zone_state", "arguments": {"zone_id": "ZONE-01"},
@@ -357,6 +371,13 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
             ledger += attacks
             applied_ops += [{"sim_time_s": t, "zone_id": r["zone_id"], "setpoint_c": r["to_c"]}
                             for r in attacks if r.get("applied") and r.get("zone_id") is not None]
+        if all_rules and t in attacks_mod.TIMES:
+            rows = inject_all_rules(s, sc, t, day, decisions_dir, counts)
+            ledger += rows
+            applied_ops += [{"sim_time_s": t, "zone_id": r["zone_id"], "setpoint_c": r["to_c"]}
+                            for r in rows if r.get("applied")]
+            if t == attacks_mod.FREEZE_CLEARED_AFTER_S:
+                s.ctl("clear-faults", "--actor", "demo")
         s.ctl("advance", str(STEP_S))
     energy = s.step("energy")["body"]
     status = s.step("status")["body"]
@@ -364,7 +385,7 @@ def run(s: Stack, out: Path, days: int) -> dict[str, Any]:
     return {"ledger": ledger, "counts": dict(counts), "applied_ops": applied_ops,
             "live_energy": energy, "live_status": status, "audit": audit,
             "simulated_s": end_s, "wall_s": round(time.monotonic() - started, 1),
-            "revision_before": rev0, "revision_after": revision(s)}
+            "revision_before": rev0, "revision_after": revision(s), "attack_set": ATTACK_SET}
 
 
 def executed_read(r: dict[str, Any]) -> bool:
@@ -375,13 +396,17 @@ def executed_read(r: dict[str, Any]) -> bool:
 def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current: float,
                    value: float, why: str, intent_ref: str | None, ddir: Path,
                    counts: Counter[str], origin: str, room_c: float = SETBACK_C,
-                   learner: ReheatLearner | None = None) -> dict[str, Any]:
+                   learner: ReheatLearner | None = None, execute_value: float | None = None) -> dict[str, Any]:
+    """One governed write. With ``execute_value``, the call approved carries ``value`` and the call sent to
+    execute carries ``execute_value`` (the tampered attack class: not the approved call)."""
     call: dict[str, Any] = {"tool_name": "set_zone_setpoint",
                             "arguments": {"zone_id": zone, "setpoint_c": value}}
     if intent_ref:
         call["intent_ref"] = intent_ref
+    exec_call = call if execute_value is None else {**call, "arguments": {"zone_id": zone, "setpoint_c": execute_value}}
     row: dict[str, Any] = {"sim_time_s": t, "sim_utc": _utc(sc, t), "origin": origin, "zone_id": zone,
-                           "from_c": current, "to_c": value, "strategy_reason": why,
+                           "from_c": current, "to_c": value if execute_value is None else execute_value,
+                           **({} if execute_value is None else {"approved_c": value}), "strategy_reason": why,
                            "intent_ref": intent_ref, "price_nok_per_kwh": round(sc.price_per_kwh(t), 5),
                            "outdoor_c": round(sc.outdoor_c(t), 2), "room_c": round(room_c, 2)}
     context = edge_context(day, zone, current, intent_ref, t, _utc(sc, t))
@@ -408,7 +433,7 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
         if ok:
             s.step("approve", item_id=item)
             counts["approved"] += 1
-            ex = s.step("execute", item_id=item, **call)
+            ex = s.step("execute", item_id=item, **exec_call)
             applied = executed(ex)
             te = body(ex).get("tool_execution") or {}
             row["execute"] = {"status": ex["status"], "outcome": body(ex).get("outcome"),
@@ -417,7 +442,7 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
                               "toolspec_enforced": (body(ex).get("toolspec") or {}).get("enforced")}
             row["item_id"] = item
             if applied:
-                eff = s.step("record_effect", proposal_id=pid, zone_id=zone, setpoint_c=value,
+                eff = s.step("record_effect", proposal_id=pid, zone_id=zone, setpoint_c=row["to_c"],
                              toolspec_hash=(body(ex).get("toolspec") or {}).get("hash", ""))
                 row["effect"] = {"status": eff.get("effect_status"), "recorded": eff.get("ok")}
                 observation = eff.get("observation")
@@ -474,6 +499,32 @@ def inject_attacks(s: Stack, sc: Scenario, t: int, day: str, plan_ref: str | Non
     counts["attacks_blocked"] += blocked
     rows.append({"origin": "attack:summary", "revision_before": before, "revision_after": after,
                  "attacks": len(rows), "blocked": blocked})
+    return rows
+
+
+def inject_all_rules(s: Stack, sc: Scenario, t: int, day: str, ddir: Path,
+                     counts: Counter[str]) -> list[dict[str, Any]]:
+    """The all-rules classes due at ``t`` (runner.attacks), from the live setpoints just before them: the
+    same function the episode was built with, so every row matches its proposal."""
+    start = datetime.fromisoformat(sc.start_utc.replace("Z", "+00:00"))
+    prev_day = (start + timedelta(seconds=t - 86400)).strftime("%Y-%m-%d")
+    live = {z: s.step("zone", zone_id=z)["body"] for z in ZONES}
+    setpoints = {z: float(b["setpoint_c"]) for z, b in live.items()}
+    rows = []
+    for spec in attacks_mod.plan(t, day, prev_day, setpoints, PLAN_VALUES):
+        zone = spec["zone"]
+        tampered = "approved_value" in spec
+        row = governed_write(s, sc, t, day, zone, setpoints[zone],
+                             spec["approved_value"] if tampered else spec["value"], spec["why"],
+                             spec["intent_ref"], ddir, counts, "attack:" + spec["origin"].split(":", 1)[1],
+                             room_c=float(live[zone]["measured_temp_c"]),
+                             execute_value=spec["value"] if tampered else None)
+        for k in ("delegation_fault", "basis_series_sha256"):
+            if k in spec:
+                row[k] = spec[k]
+        rows.append(row)
+    counts["attacks"] += len(rows)
+    counts["attacks_blocked"] += sum(1 for r in rows if not r.get("applied"))
     return rows
 
 
@@ -787,7 +838,8 @@ def account_arm_b(live: dict[str, Any], work: Path, strategy: str, days: int) ->
     from runner import episode as episode_mod
     from runner import ledger_metrics
     ep = None
-    ep_path = episode_mod.EPISODES_DIR / f"{SCENARIO.stem}-p1-{days}d-v1.json"
+    suffix = "-all-rules-v1" if live.get("attack_set") == attacks_mod.ALL_RULES else "-v1"
+    ep_path = episode_mod.EPISODES_DIR / f"{SCENARIO.stem}-p1-{days}d{suffix}.json"
     if strategy == "P1" and ep_path.is_file():
         ep = episode_mod.load(ep_path)
     ledger_metrics.attach(live["ledger"], ep)
@@ -828,12 +880,15 @@ def main(argv: list[str] | None = None) -> int:
                    help="arm C: consult this inline edge after REMORA and the reviewer approved (runner.admission)")
     p.add_argument("--inline-edge-url", default=os.environ.get("INLINE_EDGE_URL"),
                    help="override the edge's entrypoint.http (e.g. when it runs on this host)")
+    p.add_argument("--attack-set", default=attacks_mod.V1, choices=attacks_mod.ATTACK_SETS,
+                   help="injected attack classes (runner.attacks): v1, or all-rules for every oracle rule")
     p.add_argument("--shadow-edge", action="append", default=[], metavar="EDGE_DIR[=URL]",
                    help="shadow evaluation (repeatable): ask this edge about every proposed write, before REMORA, "
                         "and record its answer without effect; =URL overrides its entrypoint.http")
     a = p.parse_args(argv)
-    global REVIEWER_MODEL, INLINE_EDGE, SHADOW_EDGES
+    global REVIEWER_MODEL, INLINE_EDGE, SHADOW_EDGES, ATTACK_SET
     REVIEWER_MODEL = a.reviewer
+    ATTACK_SET = a.attack_set
     INLINE_EDGE = admission.InlineEdge.from_edge_dir(Path(a.inline_edge), url=a.inline_edge_url) if a.inline_edge else None
     SHADOW_EDGES = [admission.InlineEdge.from_edge_dir(Path(d), url=u or None)
                     for d, _, u in (spec.partition("=") for spec in a.shadow_edge)]
