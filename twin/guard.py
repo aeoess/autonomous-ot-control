@@ -72,6 +72,11 @@ def check(twin: "Twin", cmd: dict[str, Any]) -> str | None:
         return "no_change"
     if delta > g.max_delta_c + 1e-9:
         return "delta_exceeded"
+    # IL-01 on the resulting state (SDD-OT-002 SR-13): the deadband holds whichever side is written. Before,
+    # it was checked only when cooling was written, so heating could be raised into the cooling setpoint.
+    sps = getattr(twin, "setpoints", None)
+    if twin.plant is not None and sps is not None and zone_id in sps.zones             and sp > sps.zones[zone_id].cooling_c - 2.0 + 1e-9:
+        return "IL-01:deadband"
     now = twin.clock.now_s
     if zone.change_history_s and now - zone.change_history_s[-1] < g.min_interval_seconds:
         return "min_interval"
@@ -229,6 +234,10 @@ def check_plant(twin: "Twin", cmd: dict[str, Any]) -> str | None:
             return "no_change"
         if abs(val - sp.tank_c) > 3.0 + 1e-9:
             return "IL-04:delta_exceeded"
+        # IL-09 on the resulting state (SR-13): a limited heat pump with the tank more than 2 K short of its
+        # setpoint is refused whichever is written; before, only a new limit was checked, never a raised tank.
+        if sp.hp_max_fraction < 1.0 - 1e-9 and val > sp.tank_c and twin.plant_state.tank_c < val - 2.0 - 1e-9:
+            return "IL-09:tank_short"
         return _rate_check(twin, "TANK-01.Setpoint", 900)
 
     if tool == "set_heat_pump_limit":

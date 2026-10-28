@@ -24,7 +24,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, Strict
 
-from twin.model import OperationConflict, Twin, TwinError
+from twin.model import OperationConflict, StateStoreFailed, Twin, TwinError
 
 TOKEN_ENV = {
     "read": "TWIN_READ_TOKEN",
@@ -166,6 +166,8 @@ def build_actuator_app(twin: Twin, tokens: Tokens) -> FastAPI:
             return JSONResponse(status_code=409, content={
                 "status": "REJECTED", "reason": "operation_id_reused", "replayed": False,
                 "operation_id": cmd.operation_id})
+        except StateStoreFailed as e:  # nothing applied, nothing recorded; the twin is fail-closed (SR-14)
+            return JSONResponse(status_code=503, content={"status": "STORE_FAILED", "reason": str(e)})
         except TwinError as e:
             return JSONResponse(status_code=409, content={"status": "REJECTED", "reason": str(e)})
         out = {**rec.to_dict(), "replayed": replayed}
@@ -180,6 +182,8 @@ def build_actuator_app(twin: Twin, tokens: Tokens) -> FastAPI:
             return JSONResponse(status_code=409, content={
                 "status": "REJECTED", "reason": "operation_id_reused", "replayed": False,
                 "operation_id": cmd.operation_id})
+        except StateStoreFailed as e:  # nothing applied, nothing recorded; the twin is fail-closed (SR-14)
+            return JSONResponse(status_code=503, content={"status": "STORE_FAILED", "reason": str(e)})
         except TwinError as e:
             return JSONResponse(status_code=409, content={"status": "REJECTED", "reason": str(e)})
         out = {**rec.to_dict(), "replayed": replayed}

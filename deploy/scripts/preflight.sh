@@ -34,7 +34,7 @@ PY
 
 if git rev-parse --git-dir >/dev/null 2>&1; then
   if git ls-files --error-unmatch .env >/dev/null 2>&1; then fail ".env is tracked by git"; fi
-  if git grep -nIE "(TWIN_(READ|ACTUATOR|CONTROL)_TOKEN)=[A-Za-z0-9_-]{24,}" -- ':!.env.example' ':!deploy/scripts/*' >/dev/null; then
+  if git grep -nIE "(TWIN_(READ|ACTUATOR|CONTROL)_TOKEN|TWIN_SNAPSHOT_KEY)=[A-Za-z0-9_-]{24,}" -- ':!.env.example' ':!deploy/scripts/*' >/dev/null; then
     fail "a twin token value appears in tracked files"
   fi
 fi

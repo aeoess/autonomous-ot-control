@@ -13,6 +13,8 @@ controller and supports no real-building savings claim.
 from __future__ import annotations
 
 import json
+import hmac
+import hashlib
 import os
 import tempfile
 import threading
@@ -40,6 +42,10 @@ LEGACY_SNAPSHOT_SCHEMA = "ot-twin-snapshot/v1"
 
 class TwinError(RuntimeError):
     pass
+
+
+class StateStoreFailed(Exception):
+    """The twin could not persist a decision: nothing was applied, and it accepts no write until restarted."""
 
 
 class OperationConflict(TwinError):
@@ -79,7 +85,13 @@ def load_config(source: str | Path | dict[str, Any]) -> dict[str, Any]:
 
 class Twin:
     def __init__(self, config: dict[str, Any], scenario: Scenario, *,
-                 snapshot_path: str | Path | None = None, record_trace: bool = False) -> None:
+                 snapshot_path: str | Path | None = None, record_trace: bool = False,
+                 snapshot_key: str | None = None) -> None:
+        # SR-14: snapshots are authenticated with a dedicated key (never a bearer token). Set, it is required on
+        # restore; unset, a snapshot is still re-validated before it is resumed, and the event says unauthenticated.
+        key = snapshot_key if snapshot_key is not None else os.environ.get("TWIN_SNAPSHOT_KEY", "")
+        self._snapshot_key = key.encode("utf-8") if key else b""
+        self._store_failed: str | None = None
         self.config = config
         self.scenario = scenario
         self.guard = GuardConfig.from_config(config)
@@ -417,6 +429,7 @@ class Twin:
                 if prior.request_digest != digest:
                     raise OperationConflict(op_id)
                 return prior, True
+            self._refuse_if_store_failed()
             reason = guard_mod.check(self, cmd)
             zone_id = cmd.get("zone_id") if isinstance(cmd.get("zone_id"), str) else ""
             zone = self.zones.get(zone_id)
@@ -425,6 +438,7 @@ class Twin:
             req_sp = float(sp) if isinstance(sp, (int, float)) and not isinstance(sp, bool) \
                 and sp == sp and abs(sp) != float("inf") else None
             before = self.revision
+            undo = (zone, zone.setpoint_c, list(zone.change_history_s), self.revision) if zone else None
             if reason is None and zone is not None:
                 prev = zone.setpoint_c
                 zone.setpoint_c = float(sp)
@@ -438,7 +452,12 @@ class Twin:
                                       zone.setpoint_c if zone else None, None, before, before,
                                       stamp["sim_time_s"], stamp["sim_utc"])
             self.operations[op_id] = rec
-            self._persist()
+
+            def rollback() -> None:
+                if undo is not None:
+                    z, sp0, hist0, rev0 = undo
+                    z.setpoint_c, z.change_history_s, self.revision = sp0, hist0, rev0
+            self._persist_or_rollback(op_id, rollback)
             return rec, False
 
     @staticmethod
@@ -522,11 +541,13 @@ class Twin:
                 if prior.request_digest != digest:
                     raise OperationConflict(op_id)
                 return prior, True
+            self._refuse_if_store_failed()
             reason = guard_mod.check_plant(self, cmd)
             tool = str(cmd.get("tool_name") or "")
             args = cmd.get("arguments") if isinstance(cmd.get("arguments"), dict) else {}
             stamp = self.clock.stamp()
             before = self.revision
+            undo_plant = (self.setpoints, {k: list(v) for k, v in self.point_history_s.items()}, self.revision)
             if reason is None:
                 zid, target, prev, new, hist_key = self._apply_plant_mutation(tool, args)
                 self.point_history_s.setdefault(hist_key, []).append(self.clock.now_s)
@@ -546,7 +567,10 @@ class Twin:
                     tool_name=tool, target=zid, requested_value=args,
                     previous_value=None, new_value=None)
             self.operations[op_id] = rec
-            self._persist()
+
+            def rollback() -> None:
+                self.setpoints, self.point_history_s, self.revision = undo_plant
+            self._persist_or_rollback(op_id, rollback)
             return rec, False
 
     def set_stop_switch(self, engaged: bool, actor: str) -> dict[str, Any]:
@@ -611,6 +635,54 @@ class Twin:
             return snap
 
     def _restore(self, snap: dict[str, Any]) -> None:
+        """Resume from a snapshot: authenticated when a key is set, always re-validated, never silently (SR-14)."""
+        integrity = snap.get("integrity")
+        authenticated = False
+        if self._snapshot_key:
+            mac = integrity.get("mac") if isinstance(integrity, dict) else None
+            if not isinstance(mac, str) or not hmac.compare_digest(mac, self._mac(snap)):
+                raise TwinError("snapshot integrity check failed (HMAC missing or wrong); refusing to resume")
+            authenticated = True
+        self._restore_unchecked({k: v for k, v in snap.items() if k != "integrity"})
+        problems = self._restored_state_problems()
+        if problems:
+            raise TwinError("snapshot does not hold a valid plant state; refusing to resume: " + "; ".join(problems))
+        self.events.append({"event": "snapshot_restored", "authenticated": authenticated,
+                            "snapshot_sha256": hashlib.sha256(json.dumps(
+                                {k: v for k, v in snap.items() if k != "integrity"}, sort_keys=True)
+                                .encode("utf-8")).hexdigest(), **self.clock.stamp()})
+
+    def _restored_state_problems(self) -> list[str]:
+        """What a resumed state must satisfy before any write is accepted from it."""
+        out: list[str] = []
+        for zid, z in self.zones.items():
+            lo, hi = self.zone_limits.get(zid, (None, None))
+            if lo is None or not isinstance(z.setpoint_c, (int, float)) or not (lo <= z.setpoint_c <= hi):
+                out.append(f"{zid} setpoint {z.setpoint_c} outside {lo}..{hi}")
+            if any(t > self.clock.now_s for t in z.change_history_s):
+                out.append(f"{zid} change history lies in the future")
+        applied = sum(1 for r in self.operations.values() if r.status == "APPLIED")
+        if applied != self.revision:
+            out.append(f"revision {self.revision} does not equal the {applied} applied operations on record")
+        if any(t > self.clock.now_s for v in self.point_history_s.values() for t in v):
+            out.append("point history lies in the future")
+        if self.plant is not None:
+            sp = self.setpoints
+            for zid, zs in sp.zones.items():
+                if not (20.0 <= zs.cooling_c <= 28.0):
+                    out.append(f"{zid} cooling {zs.cooling_c} outside 20..28")
+                if zid in self.zones and zs.cooling_c < self.zones[zid].setpoint_c + 2.0 - 1e-9:
+                    out.append(f"{zid} breaks the IL-01 deadband")
+                if not (600 <= zs.co2_ppm <= 1000) or not (0 <= zs.lux <= 750):
+                    out.append(f"{zid} CO2 or lux setpoint out of bounds")
+            if not (15.0 <= sp.supply_air_c <= 21.0) or not (35.0 <= sp.tank_c <= 60.0) \
+                    or not (0.0 <= sp.hp_max_fraction <= 1.0):
+                out.append("supply air, tank or heat pump setpoint out of bounds")
+            if any(m not in guard_mod.CABLE_MODES for m in sp.cable_modes.values()):
+                out.append("unknown cable mode")
+        return out
+
+    def _restore_unchecked(self, snap: dict[str, Any]) -> None:
         schema = snap.get("schema")
         if schema not in (SNAPSHOT_SCHEMA, LEGACY_SNAPSHOT_SCHEMA) \
                 or snap.get("config_digest") != self.config_digest \
@@ -668,10 +740,34 @@ class Twin:
                 hp_on=bool(ps.get("hp_on", False)), hp_state_since_s=float(ps.get("hp_state_since_s", 1e9)),
                 hp_starts=int(ps.get("hp_starts", 0)))
 
+    def _refuse_if_store_failed(self) -> None:
+        if self._store_failed:
+            raise StateStoreFailed(f"state_store_failed: {self._store_failed}; no write until the twin is restarted")
+
+    def _persist_or_rollback(self, op_id: str, rollback: Any) -> None:
+        """SR-14: an effect exists only together with its durable record. If the record cannot be persisted, the
+        in-memory effect and the record are undone, the twin refuses every further write until restarted, and the
+        caller gets StateStoreFailed: the operation id stays unused, so a restart cannot replay a lost effect."""
+        try:
+            self._persist()
+        except Exception as e:
+            self.operations.pop(op_id, None)
+            rollback()
+            self._store_failed = f"{type(e).__name__}: {e}"
+            raise StateStoreFailed(f"state_store_failed: the operation was not recorded and has no effect "
+                                   f"({type(e).__name__})") from None
+
+    def _mac(self, snap: dict[str, Any]) -> str:
+        body = {k: v for k, v in snap.items() if k != "integrity"}
+        return hmac.new(self._snapshot_key, json.dumps(body, sort_keys=True).encode("utf-8"), hashlib.sha256).hexdigest()
+
     def _persist(self) -> None:
         if not self._snapshot_path:
             return
-        data = json.dumps(self.snapshot(), sort_keys=True).encode("utf-8")
+        snap = self.snapshot()
+        if self._snapshot_key:
+            snap["integrity"] = {"alg": "HMAC-SHA256", "mac": self._mac(snap)}
+        data = json.dumps(snap, sort_keys=True).encode("utf-8")
         d = self._snapshot_path.parent
         d.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=d, prefix=".snap-")

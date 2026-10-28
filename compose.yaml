@@ -69,6 +69,9 @@ services:
       TWIN_READ_TOKEN: ${TWIN_READ_TOKEN:?run deploy/scripts/run-demo.sh to generate .env}
       TWIN_ACTUATOR_TOKEN: ${TWIN_ACTUATOR_TOKEN:?missing}
       TWIN_CONTROL_TOKEN: ${TWIN_CONTROL_TOKEN:?missing}
+      # Authenticates the state snapshot (SDD-OT-002 SR-14). Generated with the tokens; unset, a snapshot is
+      # still re-validated on restore, but cannot be told from a doctored one.
+      TWIN_SNAPSHOT_KEY: ${TWIN_SNAPSHOT_KEY:-}
     volumes:
       - twin-state:/var/lib/twin
     networks:

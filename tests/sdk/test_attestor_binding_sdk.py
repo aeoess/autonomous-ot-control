@@ -108,8 +108,8 @@ def test_zone_01_operation_cannot_attest_zone_02s_existing_value(tw, attestor):
 def test_first_operation_cannot_attest_a_later_value(tw, attestor):
     heat(tw, "op-h1", "ZONE-01", 21.5)
     tw.advance(3600)
-    heat(tw, "op-h2", "ZONE-01", 22.0)
-    r = attest_heat(attestor, "op-h1", "ZONE-01", 22.0)
+    heat(tw, "op-h2", "ZONE-01", 21.0)  # a later, different value inside the IL-01 deadband
+    r = attest_heat(attestor, "op-h1", "ZONE-01", 21.0)
     assert r["observation"]["effect_status"] == "EFFECT_MISMATCH"
     assert r["verification"]["status"] == "EFFECT_MISMATCH"
     assert r["verification"]["reason_code"] == "recorded_setpoint_differs"
@@ -118,7 +118,7 @@ def test_first_operation_cannot_attest_a_later_value(tw, attestor):
 def test_a_genuinely_wrong_current_value_is_a_mismatch(tw, attestor):
     heat(tw, "op-h1", "ZONE-01", 21.5)
     tw.advance(3600)
-    heat(tw, "op-h2", "ZONE-01", 22.0)
+    heat(tw, "op-h2", "ZONE-01", 21.0)
     r = attest_heat(attestor, "op-h1", "ZONE-01", 21.5)  # op-h1 did apply 21.5; the plant moved on
     assert r["observation"]["effect_status"] == "EFFECT_MISMATCH"
     assert r["observation"]["detail"] == "superseded_by_later_operation"
