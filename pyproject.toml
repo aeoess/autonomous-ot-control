@@ -7,6 +7,7 @@ name = "autonomous-ot-control"
 version = "0.1.0"
 description = "Simulation-only digital-twin OT testbed for REMORA-governed setpoint actions (SDD-OT-001)"
 readme = "README.md"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115",

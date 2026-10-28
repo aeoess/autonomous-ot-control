@@ -188,8 +188,28 @@ record on the sealed sets. That is how edges are compared. What exists, what
 was run, and what none of it establishes:
 [`docs/federation/ABC-ROADMAP.md`](docs/federation/ABC-ROADMAP.md).
 
+## Licence
+
+The code and documents written for this repository are **Apache-2.0**
+([LICENSE](LICENSE), [NOTICE](NOTICE)). That grant stops at what this
+repository's authors wrote:
+
+- **REMORA and its SDK are not covered.** REMORA is BUSL-1.1 with its own
+  Research Grant, is not included here, and is fetched at build time at the
+  pinned commit. Running the governed path uses REMORA under REMORA's licence.
+- **Contributions from other projects keep their own licence and copyright**,
+  for example the Probity edge (Apache-2.0, its own licence file).
+- **Data and documents from third parties keep their terms:** Open-Meteo/ERA5
+  weather (CC BY 4.0 with attribution), day-ahead prices republished by
+  hvakosterstrommen.no, Statsbygg's PA 0802 code lists, Enova's
+  energy-certificate data, and one building's meter aggregates published with
+  its owner's consent.
+
+Every item, its licence, attribution and what it does not cover:
+**[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)**.
+
 <details>
-<summary>Quick start, layout, upstream pin, security and licence</summary>
+<summary>Quick start, layout, upstream pin and security</summary>
 
 ### Quick start
 
@@ -220,13 +240,12 @@ docs/        SDD-OT-001, status, strategies, running, datapoints, tfm, federatio
 upstream/    pinned REMORA commit (123a5fd0)
 ```
 
-### Upstream, security, licence
+### Upstream and security
 
 - REMORA is consumed at commit `123a5fd0` ([`upstream/remora.lock.json`](upstream/remora.lock.json));
   nothing upstream is patched locally. REMORA is BUSL-1.1 with its own Research
   Grant and is not relicensed by anything here.
 - Simulation only. Report a bypass of the actuator boundary privately as
   described in [`SECURITY.md`](SECURITY.md).
-- Licence for this repository: not yet decided (SDD decision `D-01`).
 
 </details>

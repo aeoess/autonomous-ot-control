@@ -40,5 +40,12 @@ Pin the testbed SHA, fixture version and package digest. An agreed v1
 evaluation remains a v1 evaluation when v2 appears. Expanding the scope
 requires a separate opt-in change; never relabel earlier results.
 
-This repository's licence decision is still open. These instructions do not
-grant a new licence or change the rights in REMORA or another project.
+## Licence of contributions
+
+This repository is licensed under **Apache-2.0** ([LICENSE](LICENSE)). A pull
+request is a contribution under Apache-2.0 (section 5 of the licence), and
+you keep the copyright in what you contribute. An edge that ships files under
+another OSI-approved licence states it in its own directory (`run.md` and the
+licence file) and keeps those files there; the
+[third-party overview](THIRD_PARTY_LICENSES.md) lists them. Nothing here
+grants or changes any right in REMORA, its SDK, or another project's code.

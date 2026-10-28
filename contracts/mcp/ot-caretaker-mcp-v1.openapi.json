@@ -6,7 +6,8 @@
     "summary": "Remote MCP server for a customer to read, ask and propose; REMORA decides and executes.",
     "description": "Transport: MCP Streamable HTTP (JSON-RPC 2.0 over POST /mcp). Authorization: OAuth 2.1 (MCP authorization), mandatory for every call. The tools are listed under x-mcp-tools with their input/output schemas, required scope, the single REMORA call each makes, and their plant effect, which is 'none' for every tool: no MCP tool dispatches. State-changing calls are limited to REMORA assess (propose), approve and reject; execution happens in the caretaker through REMORA's protected dispatcher. Design specification; see docs/architecture/autonomous-runtime-cloudflare.md section 13.",
     "license": {
-      "name": "Not yet decided (SDD D-01)"
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
     }
   },
   "servers": [
