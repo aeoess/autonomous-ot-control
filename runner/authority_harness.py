@@ -188,7 +188,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--verifier", required=True, help="verifier directory with edge.json and its entrypoint")
     p.add_argument("--out", required=True)
     p.add_argument("--timeout", type=int, default=120, help="seconds the verifier may take over the whole set")
+    p.add_argument("--trust-edge", action="append", default=[], metavar="EDGE_ID",
+                   help="run this edge on the host instead of the container sandbox (your own code only)")
     a = p.parse_args(argv)
+    from runner import edge_sandbox
+    edge_sandbox.EXTRA_TRUSTED.update(a.trust_edge)
     r = run(Path(a.fixtures), Path(a.verifier), Path(a.out), timeout_s=a.timeout)
     print(render_md(r))
     return 0 if r["pass"] else 1

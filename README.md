@@ -11,7 +11,7 @@ repository.
 
 > **Scope:** `SIMULATED_CONTROLLED_PILOT`. No physical OT/BMS write path exists
 > here, and simulation results never unlock a live connector (INV-12).
-> Specification: [`docs/SDD-OT-001.md`](docs/SDD-OT-001.md).
+> Specification: [`docs/SDD-OT-001.md`](docs/SDD-OT-001.md). Security hardening: [`docs/SDD-OT-002.md`](docs/SDD-OT-002.md) (proposed; [status](docs/security/sdd-ot-002-status.md)).
 
 | I want to… | Go to |
 |---|---|
@@ -239,7 +239,7 @@ federation/  index.json (entry point), edges/_template and edges/_inline_templat
 contracts/   ToolSpec, tool surface, caretaker profile catalog, federation edge/case/result/run-record/fixtures/index,
              episode (ot-episode/v1), MCP OpenAPI
 scenarios/   verified 2025 price and ERA5 weather series for NO1..NO5, baseline day, refusal vectors, episodes/
-docs/        SDD-OT-001, status, strategies, running, datapoints, tfm, federation/, results/, adr/
+docs/        SDD-OT-001, SDD-OT-002, security/, status, strategies, running, datapoints, tfm, federation/, results/, adr/
 upstream/    pinned REMORA commit (123a5fd0)
 ```
 

@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import copy
+import os
 import json
 from pathlib import Path
 
 import pytest
+
+# Tests run the repository's own and synthetic edges on the host (runner.edge_sandbox);
+# tests/unit/test_edge_sandbox.py clears this to check that nothing else does.
+os.environ.setdefault("OT_TRUST_EDGES", "*")
 
 from twin.api import Tokens
 from twin.model import Twin, load_config
