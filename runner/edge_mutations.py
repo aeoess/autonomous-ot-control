@@ -273,7 +273,7 @@ def write_set(mutants: list[dict[str, Any]], set_id: str, dst: Path, seed_note: 
     (dst / "cases").mkdir(parents=True)
     for m in mutants:
         (dst / "cases" / f"{m['case']['case_id']}.json").write_text(
-            json.dumps(m["case"], indent=2, sort_keys=True) + "\n", "utf-8")
+            json.dumps(m["case"], indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
     manifest = {"schema": "ot-federation-fixtures/v1", "fixture_set": set_id, "kind": "mutation_set",
                 "scope": f"Mutants of fully recorded applied trails ({seed_note}). Expected verdicts follow "
                          "from each operator and the case contract, never from a verifier.",
@@ -285,7 +285,7 @@ def write_set(mutants: list[dict[str, Any]], set_id: str, dst: Path, seed_note: 
     (dst / "manifest.json").write_bytes(raw)
     expect = {m["case"]["case_id"]: {k: m[k] for k in ("operator", "claim_id", "class", "expected", "seed")}
               for m in mutants}
-    (dst / "expected.json").write_text(json.dumps(expect, indent=2, sort_keys=True) + "\n", "utf-8")
+    (dst / "expected.json").write_text(json.dumps(expect, indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
     return sha256_bytes(raw)
 
 
@@ -484,9 +484,9 @@ def pipeline_layer(work: Path, out: Path, edges: list[Path]) -> dict[str, Any]:
             rec = json.loads((work / "decisions" / f"{pid}.json").read_text("utf-8"))
             row = copy.deepcopy(rows[pid])
             f(rec, row)
-            (w / "decisions" / f"{pid}.json").write_text(json.dumps(rec), "utf-8")
+            (w / "decisions" / f"{pid}.json").write_text(json.dumps(rec), "utf-8", newline="\n")
             led.append(row)
-        (w / "ledger.jsonl").write_text("".join(json.dumps(r) + "\n" for r in led), "utf-8")
+        (w / "ledger.jsonl").write_text("".join(json.dumps(r) + "\n" for r in led), "utf-8", newline="\n")
         s = edge_pass.run_pass(w, out / "pipeline" / op_id / "edges", edges, op_id)
         per_edge = {}
         for e in s["edges"]:
@@ -563,8 +563,8 @@ def run(work: Path, out: Path, edges: list[Path], bench_sizes: list[int]) -> dic
                "benchmark": benchmark(edges, seeds, bench_sizes, out) if bench_sizes else None,
                "note": "Expected verdicts come from each operator and the case contract, written before any edge "
                        "ran. Scores hold for these operators on these simulated trails; they are not a guarantee."}
-    (out / "mutations.json").write_text(json.dumps(summary, indent=2) + "\n", "utf-8")
-    (out / "mutations.md").write_text(render_md(summary), "utf-8")
+    (out / "mutations.json").write_text(json.dumps(summary, indent=2) + "\n", "utf-8", newline="\n")
+    (out / "mutations.md").write_text(render_md(summary), "utf-8", newline="\n")
     return summary
 
 

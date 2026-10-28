@@ -120,8 +120,8 @@ def main(argv: list[str] | None = None) -> int:
     if a.out:
         out = Path(a.out)
         out.mkdir(parents=True, exist_ok=True)
-        (out / "usage-summary.json").write_text(json.dumps(s, indent=2) + "\n", "utf-8")
-        (out / "usage-summary.md").write_text(md, "utf-8")
+        (out / "usage-summary.json").write_text(json.dumps(s, indent=2) + "\n", "utf-8", newline="\n")
+        (out / "usage-summary.md").write_text(md, "utf-8", newline="\n")
     print(md)
     return 0 if s["usage_files"] else 1
 

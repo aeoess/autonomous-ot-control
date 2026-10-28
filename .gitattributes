@@ -1,0 +1,4 @@
+# Sealed fixture sets: every file digest and package digest is over the committed bytes,
+# so git must never convert their line endings (on checkout or commit, on any platform).
+federation/fixtures/** -text
+federation/authority/fixtures/** -text

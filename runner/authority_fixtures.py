@@ -1,6 +1,6 @@
 """Authority-fixture sets: the five cases of issue #27, built and sealed.
 
-    python -m runner.authority_fixtures build --out federation/authority/fixtures/t1
+    python -m runner.authority_fixtures build --out federation/authority/fixtures/t2
     python -m runner.authority_fixtures assemble --submission <dir>/submission.json --out <set dir>
     python -m runner.authority_fixtures check <set dir>
 
@@ -43,6 +43,13 @@ from runner import jcs
 from runner import work_order as wo
 
 SET_SCHEMA = "ot-authority-fixtures/v1"
+CURRENT_SET = "t2"
+#: Sets this builder's current set replaces, kept unchanged in the repository. t1 was sealed on Windows with
+#: CRLF line endings (the writer did not force LF), so its bytes, digests and package digest are those of CRLF
+#: files and a rebuild on Linux cannot reproduce them; t2 is the same five cases written with LF.
+SUPERSEDES = {"t2": {"fixture_set": "t1", "package_digest": "sha256:f326b85e2822d885258fa57e567a894d5f8e48d022b23e236039fdcf00c0e479",
+                     "reason": "t1 was written with CRLF line endings on Windows and cannot be rebuilt byte for "
+                               "byte on Linux; t2 holds the same five cases, same JSON, written with LF"}}
 CASE_SCHEMA = "ot-authority-case/v1"
 DELEGATION_SCHEMA = "ot-test-delegation/v1"
 BUILDING = "demo-building-001"
@@ -115,14 +122,14 @@ def package_digest(files: list[dict[str, str]]) -> str:
     return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def build(out: Path, set_id: str = "t1") -> dict[str, Any]:
+def build(out: Path, set_id: str = CURRENT_SET) -> dict[str, Any]:
     if out.exists():
         shutil.rmtree(out)
     (out / "cases").mkdir(parents=True)
     entries = []
     for n in range(len(CASES)):
         case, entry = build_case(n)
-        (out / "cases" / f"{case['case_id']}.json").write_text(json.dumps(case, indent=2, sort_keys=True) + "\n", "utf-8")
+        (out / "cases" / f"{case['case_id']}.json").write_text(json.dumps(case, indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
         entries.append(entry)
     files = [{"path": f"cases/{p.name}", "sha256": _sha(p)} for p in sorted((out / "cases").glob("*.json"))]
     manifest = {
@@ -139,7 +146,9 @@ def build(out: Path, set_id: str = "t1") -> dict[str, Any]:
         "cases": entries, "files": files, "package_digest": package_digest(files),
         "package_digest_rule": "sha256 over one line per files entry, '<path> <sha256>\\n', sorted by path",
     }
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", "utf-8")
+    if set_id in SUPERSEDES:
+        manifest["supersedes"] = SUPERSEDES[set_id]
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
     return manifest
 
 
@@ -248,7 +257,7 @@ def assemble(submission: Path, out: Path) -> dict[str, Any]:
         fault = c.get("delegation_fault")
         case = {"schema": CASE_SCHEMA, "case_id": c["case_id"], "construction": c["construction"],
                 "call": call, "work_order": order, "delegation": dlg}
-        (out / "cases" / f"{c['case_id']}.json").write_text(json.dumps(case, indent=2, sort_keys=True) + "\n", "utf-8")
+        (out / "cases" / f"{c['case_id']}.json").write_text(json.dumps(case, indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
         aps = "refuse" if fault else "pass"
         entries.append({"case_id": c["case_id"], "construction": c["construction"], "delegation_fault": fault,
                         "expected": {"aps": aps, "work_order": c["expected_work_order"],
@@ -266,7 +275,7 @@ def assemble(submission: Path, out: Path) -> dict[str, Any]:
     for k in ("delegation_root_keys", "delegation_signer_keys", "delegation_keys_ref"):
         if k in sub:
             manifest[k] = sub[k]
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", "utf-8")
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
     problems = check(out)
     if problems:
         raise SystemExit("the assembled set does not check: " + "; ".join(problems))
@@ -278,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build")
     b.add_argument("--out", required=True)
-    b.add_argument("--set-id", default="t1")
+    b.add_argument("--set-id", default=CURRENT_SET)
     c = sub.add_parser("check")
     c.add_argument("set_dir")
     s = sub.add_parser("assemble")

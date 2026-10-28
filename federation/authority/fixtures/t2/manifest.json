@@ -1,0 +1,99 @@
+{
+  "cases": [
+    {
+      "case_id": "af-1-valid",
+      "construction": "valid chain, in scope, value in range",
+      "delegation_fault": null,
+      "expected": {
+        "admitted": true,
+        "aps": "pass",
+        "work_order": "pass"
+      }
+    },
+    {
+      "case_id": "af-2-widened",
+      "construction": "the operator holds ZONE-01 and ZONE-02 but grants the agent ZONE-01 and ZONE-03",
+      "delegation_fault": "widened",
+      "expected": {
+        "admitted": false,
+        "aps": "refuse",
+        "work_order": "pass"
+      }
+    },
+    {
+      "case_id": "af-3-expired",
+      "construction": "the agent's link expired at 06:00, before the decision time 07:00",
+      "delegation_fault": "expired",
+      "expected": {
+        "admitted": false,
+        "aps": "refuse",
+        "work_order": "pass"
+      }
+    },
+    {
+      "case_id": "af-4-out-of-scope",
+      "construction": "a valid, narrowed chain grants the agent ZONE-02 only; the call is on ZONE-01",
+      "delegation_fault": "out_of_scope",
+      "expected": {
+        "admitted": false,
+        "aps": "refuse",
+        "work_order": "pass"
+      }
+    },
+    {
+      "case_id": "af-5-value-out-of-range",
+      "construction": "valid chain and scope; the value 22.5 is outside the work order's 19.0..21.0",
+      "delegation_fault": null,
+      "expected": {
+        "admitted": false,
+        "aps": "pass",
+        "work_order": "refuse"
+      }
+    }
+  ],
+  "contract": "docs/federation/authority-fixture-contract.md",
+  "delegation_format": "ot-test-delegation/v1: the testbed's stand-in, not APS's format. APS's delegations and verifier replace it; the work orders bind any delegation by its JCS SHA-256.",
+  "delegation_root_keys": {
+    "delegation-root-test-key": "N0bkda5Mg_GBdIoiLbgyBTzEiICyClRDJ3PrQvofXq4"
+  },
+  "delegation_signer_keys": {
+    "delegation-root-test-key": "N0bkda5Mg_GBdIoiLbgyBTzEiICyClRDJ3PrQvofXq4",
+    "operator-test-key": "OcQcK9S-jD4uq_mUgTFRtCrSnM2qRPJukFvY8HW_Q0E"
+  },
+  "files": [
+    {
+      "path": "cases/af-1-valid.json",
+      "sha256": "6029ea1083af4cb63c80fc1fc4dec703bb48c0a93b9664422be47a2d8f4734f7"
+    },
+    {
+      "path": "cases/af-2-widened.json",
+      "sha256": "53ac5188560812c8104b3208754f51c7c894e0ccfff01dbac9893d04db8c7b5d"
+    },
+    {
+      "path": "cases/af-3-expired.json",
+      "sha256": "6317af43182f23f3e9d9250554c2279340940b35431550bd7a1d8e038db5f168"
+    },
+    {
+      "path": "cases/af-4-out-of-scope.json",
+      "sha256": "d5d7cc464edc2a7c7e75e6952bcf06ef348f9ec62aa5dab86976e91bc0992e72"
+    },
+    {
+      "path": "cases/af-5-value-out-of-range.json",
+      "sha256": "46e0013684c2c2f4e490e4aca6396c91f23e9cfe59acd5f380b1992d6155b9d8"
+    }
+  ],
+  "fixture_set": "t2",
+  "package_digest": "sha256:984b6d4d324a4735700ecb0c66899d12b3d9bf6390e90078dcdd48bef7bdaac4",
+  "package_digest_rule": "sha256 over one line per files entry, '<path> <sha256>\\n', sorted by path",
+  "schema": "ot-authority-fixtures/v1",
+  "scope": "The five cases of issue #27 on the simulated building. Synthetic; test-only keys; no physical control.",
+  "supersedes": {
+    "fixture_set": "t1",
+    "package_digest": "sha256:f326b85e2822d885258fa57e567a894d5f8e48d022b23e236039fdcf00c0e479",
+    "reason": "t1 was written with CRLF line endings on Windows and cannot be rebuilt byte for byte on Linux; t2 holds the same five cases, same JSON, written with LF"
+  },
+  "test_keys_note": "Every private key here is derived from a public label (runner.work_order.issuer_test_key): anyone can sign with it. Never trust these keys anywhere else.",
+  "work_order_issuer_keys": {
+    "testbed-test-key-1": "qVU8tyHBhvsuomgW4SqQ1VBiBdJvsCYi4yI9f-WfjQo"
+  }
+}

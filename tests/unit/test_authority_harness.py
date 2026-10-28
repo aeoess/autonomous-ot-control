@@ -19,7 +19,8 @@ from runner import authority_harness as ah
 from runner import work_order as wo
 
 ROOT = Path(__file__).resolve().parents[2]
-SET = ROOT / "federation" / "authority" / "fixtures" / "t1"
+SET = ROOT / "federation" / "authority" / "fixtures" / "t2"
+T1 = ROOT / "federation" / "authority" / "fixtures" / "t1"  # superseded, kept unchanged
 VERIFIER = ROOT / "federation" / "authority" / "template-verifier"
 
 
@@ -35,9 +36,34 @@ def _verifier(tmp_path: Path, name: str, body: str) -> Path:
 
 def test_committed_set_is_sealed_and_rebuilds_byte_for_byte(tmp_path):
     assert af.check(SET) == []
-    m = af.build(tmp_path / "t1")
+    m = af.build(tmp_path / "t2")
     for f in m["files"] + [{"path": "manifest.json"}]:
-        assert (tmp_path / "t1" / f["path"]).read_bytes() == (SET / f["path"]).read_bytes(), f["path"]
+        assert (tmp_path / "t2" / f["path"]).read_bytes() == (SET / f["path"]).read_bytes(), f["path"]
+
+
+def test_the_builder_writes_lf_on_every_platform(tmp_path):
+    """The cause of t1's CRLF bytes: a text-mode write on Windows. No sealed byte may depend on the OS."""
+    af.build(tmp_path / "s")
+    for p in sorted((tmp_path / "s").rglob("*.json")):
+        assert b"\r" not in p.read_bytes(), p.name
+    for p in sorted(SET.rglob("*.json")):
+        assert b"\r" not in p.read_bytes(), p.name
+
+
+def test_t1_is_kept_unchanged_and_t2_names_what_it_replaces():
+    """t1 stays as it was sealed (CRLF, its own digests still hold); t2 is the same cases with LF."""
+    assert af.check(T1) == []
+    m1 = json.loads((T1 / "manifest.json").read_text("utf-8"))
+    m2 = json.loads((SET / "manifest.json").read_text("utf-8"))
+    assert m2["supersedes"]["fixture_set"] == "t1" and m2["supersedes"]["package_digest"] == m1["package_digest"]
+    assert m1["package_digest"] != m2["package_digest"]
+    assert [c["expected"] for c in m1["cases"]] == [c["expected"] for c in m2["cases"]]
+    for c in m1["cases"]:
+        name = f"{c['case_id']}.json"
+        a, b = (T1 / "cases" / name).read_bytes(), (SET / "cases" / name).read_bytes()
+        assert a != b and a.replace(b"\r\n", b"\n") == b, name  # only the line endings differ
+    gitattributes = (ROOT / ".gitattributes").read_text("utf-8")
+    assert "federation/authority/fixtures/** -text" in gitattributes and "federation/fixtures/** -text" in gitattributes
 
 
 def test_cases_are_built_as_they_say():
@@ -92,7 +118,7 @@ def test_errors_malformed_and_missing_answers_are_not_refusals(tmp_path):
 
 
 def test_a_changed_fixture_fails_the_set(tmp_path):
-    s = tmp_path / "t1"
+    s = tmp_path / "t2"
     shutil.copytree(SET, s)
     p = s / "cases" / "af-1-valid.json"
     case = json.loads(p.read_text("utf-8"))
@@ -105,7 +131,7 @@ def test_a_changed_fixture_fails_the_set(tmp_path):
 # -- a delegation owner's submission (APS), and verifier answers the harness does not accept ---------
 
 def _submission(tmp_path: Path) -> Path:
-    """A submission as APS would send it, here with the stand-in's delegations from t1."""
+    """A submission as APS would send it, here with the stand-in's delegations from t2."""
     m = json.loads((SET / "manifest.json").read_text("utf-8"))
     d = tmp_path / "submission"
     (d / "delegations").mkdir(parents=True)
@@ -162,7 +188,7 @@ def test_a_submission_is_refused_when_it_is_not_what_it_says(tmp_path):
 
 
 def test_contradictory_expectations_and_schema_violations_fail_the_set(tmp_path):
-    s = tmp_path / "t1"
+    s = tmp_path / "t2"
     shutil.copytree(SET, s)
     m = json.loads((s / "manifest.json").read_text("utf-8"))
     m["cases"][1]["delegation_fault"] = None  # widened case no longer labelled, still expected to be refused

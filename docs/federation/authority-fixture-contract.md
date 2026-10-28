@@ -146,11 +146,20 @@ pins the work-order column.)
 5. The five cases test the division of responsibilities. Whether APS adds
    value is a question for the A/B/C runs (ADR-011).
 
+## Sets and their history
+
+| Set | State | Package digest |
+|---|---|---|
+| `t1` | **superseded, kept unchanged.** It was sealed on Windows by a writer that did not force LF, so its files are CRLF. Its own digests still hold (`check` passes), but a rebuild on Linux cannot reproduce its bytes. | `sha256:f326b85e2822d885258fa57e567a894d5f8e48d022b23e236039fdcf00c0e479` |
+| `t2` | **current.** The same five cases and the same JSON, written with LF; its manifest names `t1` under `supersedes`. Rebuilt byte for byte in CI. | `sha256:984b6d4d324a4735700ecb0c66899d12b3d9bf6390e90078dcdd48bef7bdaac4` |
+
+Every writer of sealed or hashed files forces LF (`newline="\n"`), a test fails if the builder writes a carriage return on any platform, and `.gitattributes` marks the sealed fixture directories `-text` so git never converts their line endings. A sealed set is never re-sealed in place: a new set replaces it and says so.
+
 ## Running the harness
 
 ```bash
-python -m runner.authority_fixtures check federation/authority/fixtures/t1   # sealed, unchanged
-python -m runner.authority_harness --fixtures federation/authority/fixtures/t1     --verifier federation/authority/template-verifier --out /tmp/authority
+python -m runner.authority_fixtures check federation/authority/fixtures/t2   # sealed, unchanged
+python -m runner.authority_harness --fixtures federation/authority/fixtures/t2     --verifier federation/authority/template-verifier --out /tmp/authority
 ```
 
 The harness runs these steps:
@@ -168,7 +177,7 @@ It writes `authority-result.json` and `.md`. It passes only if every column
 matches the manifest. Errors, timeouts, malformed answers and unanswered
 cases are counted as their own classes, never as refusals.
 
-**Replacing the stand-in.** The set `t1` uses `ot-test-delegation/v1`, the
+**Replacing the stand-in.** The set `t2` uses `ot-test-delegation/v1`, the
 testbed's own two-link chain format, so the harness runs end to end today.
 APS's own delegations and verifier replace it. The stand-in then stays only
 as the harness's own regression test.
@@ -232,7 +241,7 @@ delegation check.
 | RFC 8785 JCS (`runner/jcs.py`) | done, tested against RFC 8785 vectors |
 | Normalized call, Ed25519 test-key signing, the work-order check (`runner/work_order.py`) | done, tested |
 | Offline `authority_fixture` harness (both verdicts per case, errors as their own class) (`runner/authority_harness.py`) | done, tested; passes on `t1` with the stand-in verifier |
-| The five cases as a sealed set (`federation/authority/fixtures/t1`, built by `runner/authority_fixtures.py`) and a stand-in delegation verifier (`federation/authority/template-verifier`) | done; **the delegation format and verifier are the testbed's stand-ins, not APS's** |
+| The five cases as a sealed set (`federation/authority/fixtures/t2`, built by `runner/authority_fixtures.py`) and a stand-in delegation verifier (`federation/authority/template-verifier`) | done; **the delegation format and verifier are the testbed's stand-ins, not APS's** |
 | Oracle: value-range support, pre-registered `delegation_invalid` rule and precedence (`runner/oracle.py`) | done, tested |
 | Shadow evaluation on every proposal (`runner.demo --shadow-edge`, `SHADOW_EDGES` in `run-abc.sh`; four-cell matrix, false refusals, unavailable and latency in the A/B/C report) | done, tested on simulated stacks; not yet run on Docker with an APS verifier |
 | Pins in the episode and run manifest: REMORA commit and lock, **REMORA's mode flags** (WS1 mode and admission, flow control, clock skew, signature and binding policy, limits, registry and bundle modules, intent source; unset ones named with their default, e.g. WS1 `off`, admission `legacy`) and a digest of the `remora` service's environment block, ToolSpec, limits policy and oracle digests, initial twin state, seeds (none; the stream is deterministic). `runner.episode check` fails on drift; each governed arm records its own pins, the flags its stack actually resolved (`docker compose config`, allow-listed, never a secret), and whether both match the episode | done, tested |

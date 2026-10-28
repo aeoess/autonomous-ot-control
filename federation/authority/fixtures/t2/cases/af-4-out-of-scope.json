@@ -1,0 +1,79 @@
+{
+  "call": {
+    "asset": "ZONE-01",
+    "building_id": "demo-building-001",
+    "decision_time": "2026-01-15T07:00:00Z",
+    "operation": "set_zone_setpoint",
+    "parameter": "setpoint_c",
+    "schema": "ot-normalized-call/v1",
+    "unit": "degC",
+    "value": 20.5
+  },
+  "case_id": "af-4-out-of-scope",
+  "construction": "a valid, narrowed chain grants the agent ZONE-02 only; the call is on ZONE-01",
+  "delegation": {
+    "chain": [
+      {
+        "delegate": "operator-test-key",
+        "delegator": "delegation-root-test-key",
+        "scope": {
+          "assets": [
+            "ZONE-01",
+            "ZONE-02"
+          ],
+          "building_id": "demo-building-001",
+          "operations": [
+            "set_zone_setpoint"
+          ],
+          "parameters": [
+            "setpoint_c"
+          ]
+        },
+        "signature": "OkkD0R-PXvismN5STVysc2i1EJ0hnsbxV141YDzSWeu_PF9shHf9mzSkPgkv1Z0jSI5FC3KdsHLzlIhZ_Q8hBw",
+        "valid_from": "2026-01-15T00:00:00Z",
+        "valid_until": "2026-01-15T23:59:59Z"
+      },
+      {
+        "delegate": "agent",
+        "delegator": "operator-test-key",
+        "scope": {
+          "assets": [
+            "ZONE-02"
+          ],
+          "building_id": "demo-building-001",
+          "operations": [
+            "set_zone_setpoint"
+          ],
+          "parameters": [
+            "setpoint_c"
+          ]
+        },
+        "signature": "9x8CThMZs9fBsSEeYsoBJMtkKJLfhz_uTNtcWQ1vfGFFxxorj2ORiF5rMOF4CnTuMuhI8smfagP_z1qaa0VPAg",
+        "valid_from": "2026-01-15T00:00:00Z",
+        "valid_until": "2026-01-15T18:00:00Z"
+      }
+    ],
+    "delegation_id": "DLG-af-4-out-of-scope",
+    "schema": "ot-test-delegation/v1"
+  },
+  "schema": "ot-authority-case/v1",
+  "work_order": {
+    "asset": "ZONE-01",
+    "building_id": "demo-building-001",
+    "delegation_id": "DLG-af-4-out-of-scope",
+    "delegation_sha256": "da62e3a40c6df5bff88e43e2225444d3b95b102d335db41719959a3285dd8a66",
+    "issuer": "testbed-test-key-1",
+    "operation": "set_zone_setpoint",
+    "parameter": "setpoint_c",
+    "schema": "ot-work-order/v1",
+    "signature": "GF_94n7qVW2AVMgDsUYQj-buTmFB2RlmZSShDUXrJ6rtP2i8D0LznDOd1GNlJSCTLwZ_RpW__8Gz64uNvHSpDA",
+    "valid_from": "2026-01-15T00:00:00Z",
+    "valid_until": "2026-01-15T23:59:59Z",
+    "value_range": {
+      "max": 21.0,
+      "min": 19.0,
+      "unit": "degC"
+    },
+    "work_order_id": "WO-af-4-out-of-scope"
+  }
+}
