@@ -23,6 +23,14 @@ agent (the proposers in this repository are deterministic strategies).
 | ASI09 | Human-Agent Trust Exploitation | No approval and no edge can turn a refusal by REMORA or the reviewer into an effect. The careful reviewer approves only the plan's own values, whatever the agent explains. The cost of a rubber-stamping human is measured (A/B/C arm `B-rubber_stamp`). Every report states what it does not establish, and strict vantage is always shown. | `test_asi09_*` (3); `docs/results/2026-10-28/abc-e2e.md` | How much real operators trust fluent explanations is a human-factors question that no test here can settle. |
 | ASI10 | Rogue Agents | The oracle judges every proposal from the work orders and the limits alone, whatever an agent or a layer claims. The proposer dispatches only on REMORA's ACCEPT, through REMORA's token, and never approves itself. A rogue proposal stream meets the same contract and interlock. Arm A measures what an ungoverned agent does. | `test_asi10_*` (3); `test_governed_runner.py`; A/B/C arm A | Detecting a rogue agent's intent before it proposes. The testbed contains it instead. |
 
+## Adversarial benchmark
+
+The ASI01, ASI02, ASI07 and ASI10 techniques are also run as an adversarial benchmark against the automation:
+9 attack families and an adaptive adversary, 25,200 attempts against five defence stacks, with the oracle as
+ground truth: [adversarial-benchmark.md](adversarial-benchmark.md). It found one thing these tests do not:
+in-policy abuse (plan values at the wrong time) starves the legitimate schedule of the plant's change budget,
+and only a reviewer that checks the strategy's own step prevents it.
+
 ## Changes made with these tests
 
 - **ASI06.** `runner.demo.ReheatLearner` previously folded any observed reheat rate into its memory. It
