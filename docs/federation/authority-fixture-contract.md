@@ -191,6 +191,6 @@ regression test.
 | Offline `authority_fixture` harness (both verdicts per case, errors as their own class) (`runner/authority_harness.py`) | done, tested; passes on `t1` with the stand-in verifier |
 | The five cases as a sealed set (`federation/authority/fixtures/t1`, built by `runner/authority_fixtures.py`) and a stand-in delegation verifier (`federation/authority/template-verifier`) | done; **the delegation format and verifier are the testbed's stand-ins, not APS's** |
 | Oracle: value-range support, pre-registered `delegation_invalid` rule and precedence (`runner/oracle.py`) | done, tested |
-| Shadow evaluation on every proposal | open |
+| Shadow evaluation on every proposal (`runner.demo --shadow-edge`, `SHADOW_EDGES` in `run-abc.sh`; four-cell matrix, false refusals, unavailable and latency in the A/B/C report) | done, tested on simulated stacks; not yet run on Docker with an APS verifier |
 | Pins in the episode and run manifest | open |
 | Inline integration | after APS has reviewed the offline results |

@@ -82,6 +82,11 @@ and contributor, counting a repeated input once for findings and distinct cases.
 `python -m runner.edge_mutations --work artifacts/<run>-work --out <dir> --bench 100 1000`
 mutates that run's fully recorded trails (case and pipeline layer, expected verdicts
 written before any edge runs), scores every offline edge and times it.
+Shadow evaluation: `SHADOW_EDGES="federation/edges/<id>=http://127.0.0.1:<port>/decide" ./deploy/scripts/run-abc.sh`
+(or `runner.demo --shadow-edge <dir>[=<url>]`) asks each edge about every proposed write before REMORA, on the
+same context an inline edge gets, and records its answer without effect. The A/B/C report then shows, per arm,
+forbidden proposals both stopped, only the shadow edge would have stopped, only the governed path stopped, or
+neither; false refusals on each side; unavailable answers; latency.
 A governed demo needs `DAYS=2` or more: its attacks are injected on day 2, and a run
 without them fails its acceptance check (and the script then skips the edge pass).
 What the report is and what it does not establish: [federation/ABC-ROADMAP.md](federation/ABC-ROADMAP.md).
