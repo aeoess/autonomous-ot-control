@@ -147,6 +147,13 @@ def op_unresolved(a: dict[str, Any]) -> dict[str, Any]:
     return _remora("GET", "/v1/execution/limits/unresolved", a.get("role", "approver"))
 
 
+def op_resolve(a: dict[str, Any]) -> dict[str, Any]:
+    """Settle an unknown limit operation; REMORA checks the evidence against the plant first (AT-12)."""
+    return _remora("POST", "/v1/execution/limits/resolve", a.get("role", "approver"),
+                   {"operation_id": a["operation_id"], "executed": a["executed"],
+                    "evidence_ref": a["evidence_ref"], "reason": a.get("reason", "acceptance")})
+
+
 def op_ready(a: dict[str, Any]) -> dict[str, Any]:
     started = time.monotonic()
     try:

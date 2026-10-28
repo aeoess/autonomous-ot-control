@@ -67,6 +67,9 @@ def check(twin: "Twin", cmd: dict[str, Any]) -> str | None:
         return "revision_mismatch"
     if twin.clock.now_s - zone.sample_at_s > g.max_observation_age_seconds:
         return "stale_observation"
+    basis = twin.reading_basis_problem(zone_id) if hasattr(twin, "reading_basis_problem") else None
+    if basis is not None:  # AT-09: the zone's reading is in another unit or from another point
+        return basis
     delta = abs(sp - zone.setpoint_c)
     if delta < 1e-9:
         return "no_change"
@@ -75,7 +78,8 @@ def check(twin: "Twin", cmd: dict[str, Any]) -> str | None:
     # IL-01 on the resulting state (SDD-OT-002 SR-13): the deadband holds whichever side is written. Before,
     # it was checked only when cooling was written, so heating could be raised into the cooling setpoint.
     sps = getattr(twin, "setpoints", None)
-    if twin.plant is not None and sps is not None and zone_id in sps.zones             and sp > sps.zones[zone_id].cooling_c - 2.0 + 1e-9:
+    if twin.plant is not None and sps is not None and zone_id in sps.zones \
+            and sp > sps.zones[zone_id].cooling_c - 2.0 + 1e-9:
         return "IL-01:deadband"
     now = twin.clock.now_s
     if zone.change_history_s and now - zone.change_history_s[-1] < g.min_interval_seconds:

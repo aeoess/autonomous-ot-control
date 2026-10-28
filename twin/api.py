@@ -16,6 +16,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -250,6 +251,14 @@ class AdvanceRequest(BaseModel):
     seconds: int = Field(gt=0)
 
 
+class FaultRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    kind: str = Field(pattern=r"^(sensor_freeze|reading_unit|reading_tfm|ack_delay)$")
+    zone_id: str | None = Field(default=None, min_length=1, max_length=64)
+    value: str | float | None = None
+    actor: str = Field(min_length=1, max_length=64)
+
+
 class StopSwitchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     engaged: bool
@@ -323,6 +332,9 @@ def build_actuator_app(twin: Twin, tokens: Tokens) -> FastAPI:
         except TwinError as e:
             return JSONResponse(status_code=409, content={"status": "REJECTED", "reason": str(e)})
         out = {**rec.to_dict(), "replayed": replayed}
+        delay = twin.take_ack_delay()
+        if delay:  # AT-12 fault: the write has run; its acknowledgement comes late
+            time.sleep(delay)
         return JSONResponse(status_code=200 if rec.status == "APPLIED" else 409, content=out)
 
     @app.post("/internal/v1/actuate/plant", dependencies=[auth])
@@ -339,6 +351,9 @@ def build_actuator_app(twin: Twin, tokens: Tokens) -> FastAPI:
         except TwinError as e:
             return JSONResponse(status_code=409, content={"status": "REJECTED", "reason": str(e)})
         out = {**rec.to_dict(), "replayed": replayed}
+        delay = twin.take_ack_delay()
+        if delay:  # AT-12 fault: the write has run; its acknowledgement comes late
+            time.sleep(delay)
         return JSONResponse(status_code=200 if rec.status == "APPLIED" else 409, content=out)
 
     return app
@@ -359,6 +374,21 @@ def build_control_app(twin: Twin, tokens: Tokens) -> FastAPI:
     @app.post("/control/v1/stop-switch", dependencies=[auth])
     def stop_switch(req: StopSwitchRequest) -> dict[str, Any]:
         return twin.set_stop_switch(req.engaged, req.actor)
+
+    @app.post("/control/v1/faults", dependencies=[auth])
+    def inject_fault(req: FaultRequest) -> dict[str, Any]:
+        try:
+            return {**twin.inject_fault(req.kind, req.zone_id, req.value, req.actor), "faults": twin.fault_state()}
+        except (TwinError, TypeError, ValueError) as e:
+            raise HTTPException(status_code=409, detail=str(e)) from None
+
+    @app.post("/control/v1/faults/clear", dependencies=[auth])
+    def clear_faults(req: StopSwitchRequest) -> dict[str, Any]:
+        return {**twin.clear_faults(req.actor), "faults": twin.fault_state()}
+
+    @app.get("/control/v1/faults", dependencies=[auth])
+    def faults() -> dict[str, Any]:
+        return twin.fault_state()
 
     @app.get("/control/v1/snapshot", dependencies=[auth])
     def snapshot() -> dict[str, Any]:

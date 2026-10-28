@@ -142,6 +142,10 @@ class Twin:
         # line per operation, so persisting an operation costs one line, not a rewrite of every record.
         self._journal_path = Path(f"{snapshot_path}.journal") if snapshot_path else None
         self._chain: list[str] = []      # chain MAC after each operation, in log order
+        # Injected faults (AT-09, AT-12), set only through the control listener. Simulation only, never
+        # persisted: a restart clears them.
+        self.faults: dict[str, Any] = {"sensor_freeze": set(), "reading_unit": {}, "reading_tfm": {},
+                                       "ack_delay_s": 0.0}
         self._journal_on_disk = 0        # lines known to be durable in the journal
         self.snapshot_migrated_from: str | None = None
         self.config_digest = canonical_digest(config)
@@ -333,7 +337,7 @@ class Twin:
         now = self.clock.tick()
         if now % self.obs_step_s == 0:
             for zid, z in self.zones.items():
-                if not self.scenario.sensor_frozen(zid, now):
+                if not self.scenario.sensor_frozen(zid, now) and zid not in self.faults["sensor_freeze"]:
                     z.measured_temp_c = z.temp_c + self.scenario.sensor_offset_c(zid, now)
                     z.sample_at_s = now
             if self.record_trace:
@@ -354,6 +358,66 @@ class Twin:
     def ended(self) -> bool:
         return self.clock.now_s >= self.scenario.duration_seconds
 
+    # -- injected faults (control listener only; AT-09, AT-12) --------------------
+    FAULT_KINDS = ("sensor_freeze", "reading_unit", "reading_tfm", "ack_delay")
+    MAX_ACK_DELAY_S = 30.0
+
+    def inject_fault(self, kind: str, zone_id: str | None = None, value: Any = None, actor: str = "") -> dict[str, Any]:
+        """Inject one fault into the simulated plant. ``sensor_freeze`` stops a zone's sensor (its reading goes
+        stale), ``reading_unit`` and ``reading_tfm`` make the read path report another unit or point id for a
+        zone, ``ack_delay`` makes the next actuator write wait ``value`` seconds after it applied before it
+        answers (a timeout after actuation, before acknowledgement)."""
+        with self._lock:
+            if kind not in self.FAULT_KINDS:
+                raise TwinError(f"unknown fault {kind!r}")
+            if kind == "ack_delay":
+                d = float(value)
+                if not 0.0 < d <= self.MAX_ACK_DELAY_S:
+                    raise TwinError(f"ack_delay must be in (0, {self.MAX_ACK_DELAY_S}] seconds")
+                self.faults["ack_delay_s"] = d
+            else:
+                if zone_id not in self.zones:
+                    raise TwinError(f"unknown zone {zone_id!r}")
+                if kind == "sensor_freeze":
+                    self.faults["sensor_freeze"].add(zone_id)
+                else:
+                    if not isinstance(value, str) or not 0 < len(value) <= 64:
+                        raise TwinError(f"{kind} needs a value of 1..64 characters")
+                    self.faults[kind][zone_id] = value
+            ev = {"event": "fault_injected", "kind": kind, "zone_id": zone_id, "value": value, "actor": actor,
+                  **self.clock.stamp()}
+            self.events.append(ev)
+            return ev
+
+    def clear_faults(self, actor: str = "") -> dict[str, Any]:
+        with self._lock:
+            self.faults = {"sensor_freeze": set(), "reading_unit": {}, "reading_tfm": {}, "ack_delay_s": 0.0}
+            ev = {"event": "faults_cleared", "actor": actor, **self.clock.stamp()}
+            self.events.append(ev)
+            return ev
+
+    def fault_state(self) -> dict[str, Any]:
+        with self._lock:
+            f = self.faults
+            return {"sensor_freeze": sorted(f["sensor_freeze"]), "reading_unit": dict(f["reading_unit"]),
+                    "reading_tfm": dict(f["reading_tfm"]), "ack_delay_s": f["ack_delay_s"]}
+
+    def reading_basis_problem(self, zone_id: str) -> str | None:
+        """Why the zone's current reading is no basis for a write, or None. The interlock refuses a write whose
+        zone reports another unit or another point id than the twin's own configuration (AT-09)."""
+        if self.faults["reading_unit"].get(zone_id, guard_mod.UNIT) != guard_mod.UNIT:
+            return "basis_unit_mismatch"
+        z = self.zones.get(zone_id)
+        if z is not None and self.faults["reading_tfm"].get(zone_id, z.tfm) != z.tfm:
+            return "basis_tfm_mismatch"
+        return None
+
+    def take_ack_delay(self) -> float:
+        """The one-shot acknowledgement delay for the write that just ran, cleared as it is taken."""
+        with self._lock:
+            d, self.faults["ack_delay_s"] = self.faults["ack_delay_s"], 0.0
+            return d
+
     def alarm_active(self) -> bool:
         return any(not (guard_mod.ALARM_LOW_C <= z.temp_c <= guard_mod.ALARM_HIGH_C)
                    for z in self.zones.values())
@@ -366,8 +430,9 @@ class Twin:
                 raise KeyError(zone_id)
             age = self.clock.now_s - z.sample_at_s
             quality = QUALITY_GOOD if age <= self.guard.max_observation_age_seconds else QUALITY_STALE
-            return ZoneReading(zone_id=zone_id, tfm=z.tfm, measured_temp_c=r6(z.measured_temp_c),
-                               setpoint_c=r6(z.setpoint_c), unit=guard_mod.UNIT,
+            return ZoneReading(zone_id=zone_id, tfm=self.faults["reading_tfm"].get(zone_id, z.tfm),
+                               measured_temp_c=r6(z.measured_temp_c), setpoint_c=r6(z.setpoint_c),
+                               unit=self.faults["reading_unit"].get(zone_id, guard_mod.UNIT),
                                sample_sim_time_s=z.sample_at_s, age_seconds=age, quality=quality,
                                state_revision=self.revision, **self.clock.stamp())
 

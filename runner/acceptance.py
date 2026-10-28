@@ -144,7 +144,7 @@ def setpoint(s: Stack, zone: str) -> float:
 #: and a body to count as a decision. SDK-mediated steps (record_effect, sdk_approve) return their own shape and
 #: are judged by their case; tests/unit/test_acceptance_transport.py keeps this list equal to harness_step.
 REMORA_OPS = frozenset({"assess", "approve", "reject", "execute", "execute_accepted", "proposal", "envelope",
-                        "evidence", "lifecycle", "audit_verify", "unresolved"})
+                        "evidence", "lifecycle", "audit_verify", "unresolved", "resolve"})
 
 
 def answered(r: dict[str, Any]) -> bool:
@@ -466,6 +466,92 @@ def at_sdk_typed_approve(c: Ctx) -> tuple[bool, str]:
     return bool(r["ok"]), f"sdk approve: {r}"
 
 
+def _execute_detail(r: dict[str, Any]) -> str:
+    te = body(r).get("tool_execution") if isinstance(body(r).get("tool_execution"), dict) else {}
+    res = te.get("result") if isinstance(te.get("result"), dict) else {}
+    return str(res.get("reason") or te.get("error") or body(r).get("detail") or body(r).get("outcome") or "")[:160]
+
+
+def at09_basis_faults(c: Ctx) -> tuple[bool, str]:
+    """An approved write whose basis is faulty is refused before it has an effect: the zone's sensor frozen
+    past the observation age, its reading in another unit, or from another point (TFM). Each fault is set on
+    the twin's control listener after approval, so REMORA approved a change that the plant must not take."""
+    s = c.s
+    seen, ok = {}, True
+    for kind, value in (("sensor_freeze", None), ("reading_unit", "degF"), ("reading_tfm", "+DEMO01=564.001-RT699")):
+        s.ctl("advance", "900")
+        sp0 = setpoint(s, "ZONE-01")
+        cl = call("ZONE-01", round(sp0 - 0.5, 1) if sp0 >= 19.0 else round(sp0 + 0.5, 1))
+        item, pid = approved_item(s, cl)
+        s.ctl("fault", kind, "--zone", "ZONE-01", "--actor", "acceptance", *(("--value", value) if value else ()))
+        try:
+            if kind == "sensor_freeze":
+                s.ctl("advance", "900")  # past the twin's 600 s observation age
+            before = revision(s)
+            ex = s.step("execute", item_id=item, **cl)
+            require_answer(ex, f"AT-09 {kind} execute")
+            after = revision(s)
+        finally:
+            s.ctl("clear-faults", "--actor", "acceptance")
+        op = s.step("operation", operation_id=pid) if pid else {}
+        twin_reason = body(op).get("reason") if op.get("ok") else None
+        seen[kind] = f"{ex['status']} executed={executed(ex)} twin={twin_reason} ({_execute_detail(ex)})"
+        ok = ok and not executed(ex) and after == before
+    s.ctl("advance", "900")  # a fresh sample before the next case
+    return ok, f"{seen}"
+
+
+def at12_timeout_after_actuation(c: Ctx) -> tuple[bool, str]:
+    """The twin applies the write and answers only after the adapter's timeout. The outcome must not be
+    reported as a clean success, the effect must exist exactly once, and nothing may repeat it: a later
+    execute of the same approval adds no second effect. The unknown outcome is then reconciled from the
+    plant: REMORA refuses a reviewer who claims it did not execute (the twin's log disagrees) and settles
+    it when the claim matches."""
+    s = c.s
+    pending_before = {o.get("operation_id") for o in body(s.step("unresolved")).get("operations", [])}
+    s.ctl("advance", "900")
+    sp0 = setpoint(s, "ZONE-01")
+    target = round(sp0 + 0.5, 1) if sp0 < 21.0 else round(sp0 - 0.5, 1)
+    cl = call("ZONE-01", target)
+    item, pid = approved_item(s, cl)
+    s.ctl("fault", "ack_delay", "--value", "8", "--actor", "acceptance")
+    before = revision(s)
+    try:
+        ex = s.step("execute", item_id=item, **cl)
+        require_answer(ex, "AT-12 execute")
+    finally:
+        time.sleep(4)  # the late acknowledgement finishes; the fault was one shot
+        s.ctl("clear-faults", "--actor", "acceptance")
+    after = revision(s)
+    op = s.step("operation", operation_id=pid) if pid else {}
+    pending = [o.get("operation_id") for o in body(s.step("unresolved")).get("operations", [])
+               if o.get("operation_id") not in pending_before]
+    evidence = f"twin-op:{pid}"
+    wrong = right = {}
+    if len(pending) == 1:
+        wrong = s.step("resolve", operation_id=pending[0], executed=False, evidence_ref=evidence,
+                       reason="AT-12: claims no effect")
+        right = s.step("resolve", operation_id=pending[0], executed=True, evidence_ref=evidence,
+                       reason="AT-12: the twin's operation log records the write as applied")
+        require_answer(wrong, "AT-12 resolve executed=false")
+        require_answer(right, "AT-12 resolve executed=true")
+    still = [o.get("operation_id") for o in body(s.step("unresolved")).get("operations", [])
+             if o.get("operation_id") in pending]
+    retry = s.step("execute", item_id=item, **cl)
+    final = revision(s)
+    if after == before + 1:
+        c.expected_effects += 1
+    twin_status = body(op).get("status") if op.get("ok") else None
+    ok = (not executed(ex) and after == before + 1 and final == after and twin_status == "APPLIED"
+          and abs(setpoint(s, "ZONE-01") - target) < 1e-9 and len(pending) == 1
+          and wrong.get("status") == 409 and right.get("status") == 200 and not still and not executed(retry))
+    return ok, (f"execute={ex['status']} executed={executed(ex)} ({_execute_detail(ex)}); twin record={twin_status}; "
+                f"revision {before}->{after}; unknown operations={len(pending)}; resolve executed=false -> "
+                f"{wrong.get('status')} {body(wrong).get('detail')}; executed=true -> {right.get('status')}; "
+                f"still unresolved={len(still)}; re-execute={retry['status']} executed={executed(retry)} "
+                f"({_execute_detail(retry)}); revision ->{final}")
+
+
 def at_audit_chain_valid(c: Ctx) -> tuple[bool, str]:
     v = c.s.step("audit_verify")
     b = body(v)
@@ -492,12 +578,12 @@ CASES: list[tuple[str, str, Case]] = [
     ("AT-13", "two concurrent approved writes to one zone: at most one effect", at13_concurrent_same_zone),
     ("LIM-01", "REMORA's cumulative budget refuses what the interlock would allow", at_limits_budget),
     ("SDK-01", "typed SDK approve parses a successful approval", at_sdk_typed_approve),
+    ("AT-09", "stale, false-unit or wrong-point basis: refused before any effect", at09_basis_faults),
+    ("AT-12", "timeout after actuation: not success, one effect, never repeated", at12_timeout_after_actuation),
     ("AUD-01", "tenant audit chain verifies", at_audit_chain_valid),
     ("INV-ALL", "no effect beyond those the cases expected", at_no_unexplained_effect),
 ]
 NOT_RUN = {
-    "AT-09": "stale observation / unit / TFM mismatch: the running twin has no injection hook yet",
-    "AT-12": "timeout after actuation before acknowledgement: needs an actuator fault hook",
     "AT-14..15": "Miniflare / Wrangler parity: no Worker in this repository yet (OT-006)",
     "AT-16": "governed vs baseline comparison: runner.ab_compare, separate suite",
 }
