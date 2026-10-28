@@ -1016,6 +1016,7 @@
   ],
   "rules": {
     "basis_not_verified_data": "computed from an input that is not the verified series",
+    "delegation_invalid": "the delegation presented for the call is not valid for it (widened, expired or out of scope), as labelled when the episode was built",
     "duplicate_effect": "an executed approval sent again",
     "not_the_approved_call": "executed with other arguments than the ones approved",
     "outside_contract": "outside the signed tool contract: wrong tool, unknown zone, value out of bounds, step too large, extra argument",

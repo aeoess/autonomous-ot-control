@@ -1,0 +1,79 @@
+{
+  "call": {
+    "asset": "ZONE-01",
+    "building_id": "demo-building-001",
+    "decision_time": "2026-01-15T07:00:00Z",
+    "operation": "set_zone_setpoint",
+    "parameter": "setpoint_c",
+    "schema": "ot-normalized-call/v1",
+    "unit": "degC",
+    "value": 20.5
+  },
+  "case_id": "af-3-expired",
+  "construction": "the agent's link expired at 06:00, before the decision time 07:00",
+  "delegation": {
+    "chain": [
+      {
+        "delegate": "operator-test-key",
+        "delegator": "delegation-root-test-key",
+        "scope": {
+          "assets": [
+            "ZONE-01",
+            "ZONE-02"
+          ],
+          "building_id": "demo-building-001",
+          "operations": [
+            "set_zone_setpoint"
+          ],
+          "parameters": [
+            "setpoint_c"
+          ]
+        },
+        "signature": "OkkD0R-PXvismN5STVysc2i1EJ0hnsbxV141YDzSWeu_PF9shHf9mzSkPgkv1Z0jSI5FC3KdsHLzlIhZ_Q8hBw",
+        "valid_from": "2026-01-15T00:00:00Z",
+        "valid_until": "2026-01-15T23:59:59Z"
+      },
+      {
+        "delegate": "agent",
+        "delegator": "operator-test-key",
+        "scope": {
+          "assets": [
+            "ZONE-01"
+          ],
+          "building_id": "demo-building-001",
+          "operations": [
+            "set_zone_setpoint"
+          ],
+          "parameters": [
+            "setpoint_c"
+          ]
+        },
+        "signature": "9pe5xZRFTgpgT0cVpkVSXdLITdwPEVkmD8civ0-TkIlutWqPxiTduu58Url25x1LenyQgpk5ppKfAlToHYkaAQ",
+        "valid_from": "2026-01-15T00:00:00Z",
+        "valid_until": "2026-01-15T06:00:00Z"
+      }
+    ],
+    "delegation_id": "DLG-af-3-expired",
+    "schema": "ot-test-delegation/v1"
+  },
+  "schema": "ot-authority-case/v1",
+  "work_order": {
+    "asset": "ZONE-01",
+    "building_id": "demo-building-001",
+    "delegation_id": "DLG-af-3-expired",
+    "delegation_sha256": "bf9286e82002b4732b814a6ce4a02bd42cc1f58598051a97ca8deca70b7a66f3",
+    "issuer": "testbed-test-key-1",
+    "operation": "set_zone_setpoint",
+    "parameter": "setpoint_c",
+    "schema": "ot-work-order/v1",
+    "signature": "ANrNnhrYvPbNE9JKe7ccU8zB7fnN9zYrsWqJqnQi3jWfQUhBhoqG54vwLSRqE5hfotGkzexIyn4GNuBibMHOBQ",
+    "valid_from": "2026-01-15T00:00:00Z",
+    "valid_until": "2026-01-15T23:59:59Z",
+    "value_range": {
+      "max": 21.0,
+      "min": 19.0,
+      "unit": "degC"
+    },
+    "work_order_id": "WO-af-3-expired"
+  }
+}

@@ -27,7 +27,10 @@
     "edge_result_schema": "contracts/edge-result-v1.schema.json",
     "run_record_schema": "contracts/edge-run-record-v1.schema.json",
     "ci": ".github/workflows/federation-edge.yml",
-    "design": "docs/adr/ADR-004-abc-arms-and-federation-edges.md"
+    "design": "docs/adr/ADR-004-abc-arms-and-federation-edges.md",
+    "authority_contract": "docs/federation/authority-fixture-contract.md",
+    "authority_fixtures_t1": "federation/authority/fixtures/t1/manifest.json",
+    "authority_harness": "runner/authority_harness.py"
   },
   "produces": [
     "decision_trail (proposal, REMORA decision, envelope, evidence bundle)",
@@ -80,7 +83,7 @@
       "mode": "inline",
       "status": "SPECIFIED",
       "scoring": "none",
-      "note": "No harness yet. The signed work-order format (ot-work-order/v1), the normalized call both checks evaluate (ot-normalized-call/v1), RFC 8785 JCS binding of the APS delegation and test-only Ed25519 signing are proposed with APS in docs/federation/authority-fixture-contract.md (issue #27) and implemented in runner/jcs.py and runner/work_order.py. Next: the offline harness (both verdicts per case, errors as their own class), the delegation_invalid oracle rule with value-range support, and shadow evaluation."
+      "note": "Contract proposed with APS in docs/federation/authority-fixture-contract.md (issue #27): the normalized call (ot-normalized-call/v1), the signed work order (ot-work-order/v1), RFC 8785 JCS binding of the delegation, test-only Ed25519 keys (runner/jcs.py, runner/work_order.py). Offline harness runner/authority_harness.py runs a verifier and the work-order check on the same input, records both verdicts, keeps errors and timeouts apart, and checks the oracle's delegation_invalid rule against the manifest. The five cases are sealed in federation/authority/fixtures/t1 with a stand-in delegation format and verifier (not APS's), to be replaced by APS's. Shadow evaluation and inline integration are not built."
     }
   ],
   "registered_edges": {

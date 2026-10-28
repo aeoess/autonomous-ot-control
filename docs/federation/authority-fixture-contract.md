@@ -146,6 +146,41 @@ pins the work-order column.)
 5. The five cases test the division of responsibilities. Whether APS adds
    value is a question for the A/B/C runs (ADR-011).
 
+## Running the harness
+
+```bash
+python -m runner.authority_fixtures check federation/authority/fixtures/t1   # sealed, unchanged
+python -m runner.authority_harness --fixtures federation/authority/fixtures/t1     --verifier federation/authority/template-verifier --out /tmp/authority
+```
+
+The harness runs these steps:
+
+1. It checks the set's seal.
+2. It runs the verifier once over the set, as a subprocess with the scorer's
+   timeout. Its answer per case is `pass` or `refuse`.
+3. It runs the testbed's work-order check on the same call, work order and
+   delegation.
+4. It asks the oracle about the same call. The oracle's input is how the
+   case was built (`delegation_fault`) and the work order's range, never
+   either verdict.
+
+It writes `authority-result.json` and `.md`. It passes only if every column
+matches the manifest. Errors, timeouts, malformed answers and unanswered
+cases are counted as their own classes, never as refusals.
+
+**Replacing the stand-in.** The set `t1` uses `ot-test-delegation/v1`, the
+testbed's own two-link chain format, so the harness runs end to end today.
+APS supplies a set in the same layout:
+
+- `manifest.json` (`ot-authority-fixtures/v1`) with the expected outcomes;
+- one `cases/<id>.json` per case (`ot-authority-case/v1`), each with the
+  normalized call, the testbed-signed work order and APS's delegation;
+- a verifier directory with `edge.json` and an entrypoint `run --fixtures <dir> --out <result.json>`.
+
+The work orders for APS's delegations are signed by the testbed and bind each
+delegation by its JCS SHA-256. The stand-in stays only as the harness's own
+regression test.
+
 ## Status of the testbed's side
 
 | Item | State |
@@ -153,8 +188,9 @@ pins the work-order column.)
 | This contract, the two schemas | proposed (this page) |
 | RFC 8785 JCS (`runner/jcs.py`) | done, tested against RFC 8785 vectors |
 | Normalized call, Ed25519 test-key signing, the work-order check (`runner/work_order.py`) | done, tested |
-| Offline `authority_fixture` harness (both verdicts per case, errors as their own class) | open |
-| Oracle: value-range support, pre-registered `delegation_invalid` rule | open |
+| Offline `authority_fixture` harness (both verdicts per case, errors as their own class) (`runner/authority_harness.py`) | done, tested; passes on `t1` with the stand-in verifier |
+| The five cases as a sealed set (`federation/authority/fixtures/t1`, built by `runner/authority_fixtures.py`) and a stand-in delegation verifier (`federation/authority/template-verifier`) | done; **the delegation format and verifier are the testbed's stand-ins, not APS's** |
+| Oracle: value-range support, pre-registered `delegation_invalid` rule and precedence (`runner/oracle.py`) | done, tested |
 | Shadow evaluation on every proposal | open |
 | Pins in the episode and run manifest | open |
 | Inline integration | after APS has reviewed the offline results |

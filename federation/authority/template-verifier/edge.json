@@ -1,0 +1,11 @@
+{
+  "edge_id": "authority-template-verifier",
+  "project": "autonomous-ot-control (stand-in for APS)",
+  "maintainer": "darklordVirtual",
+  "boundary": "authority_fixture",
+  "mode": "offline",
+  "delegation_format": "ot-test-delegation/v1",
+  "claim_ceiling": "A stand-in delegation verifier for the testbed's own test delegation format, so the authority_fixture harness runs end to end before APS's fixtures and verifier arrive. It is not APS, does not implement APS's format, and its results say nothing about APS.",
+  "evaluator": {"kind": "reference", "imports_testbed_code": true, "language": "python"},
+  "entrypoint": {"command": ["python", "/edge/adapter.py", "run", "--fixtures", "/fixtures", "--out", "/out/result.json"]}
+}
