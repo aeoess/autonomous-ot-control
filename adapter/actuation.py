@@ -106,6 +106,46 @@ def apply_setpoint(actuator: ActuatorClient, toolspec: ToolSpec, *, operation_id
     raise EffectUnknown(f"actuator returned HTTP {resp.status_code}")
 
 
+def _clean_for_digest(v: Any) -> Any:
+    if isinstance(v, float) and v != v:
+        return "NaN"
+    if isinstance(v, float) and v in (float("inf"), float("-inf")):
+        return str(v)
+    if isinstance(v, dict):
+        return {k: _clean_for_digest(val) for k, val in v.items()}
+    return v
+
+
+def setpoint_request_digest(command: dict[str, Any]) -> str:
+    """The twin's request digest of an ``ot-actuation-command/v1`` (twin.model.Twin.request_digest)."""
+    from twin.state import canonical_digest
+    return canonical_digest({k: _clean_for_digest(command.get(k))
+                             for k in ("zone_id", "setpoint_c", "units", "expected_state_revision")})
+
+
+def plant_request_digest(command: dict[str, Any]) -> str:
+    """The twin's request digest of an ``ot-plant-command/v1`` (twin.model.Twin.plant_request_digest)."""
+    from twin.state import canonical_digest
+    return canonical_digest({k: _clean_for_digest(command.get(k))
+                             for k in ("tool_name", "arguments", "expected_state_revision")})
+
+
+class OperationIdReused(ActuationError):
+    """A stored operation answers a different call: never a replay, never a receipt (SDD-OT-002 SR-09)."""
+
+
+def check_replay(prior: dict[str, Any], command: dict[str, Any], *, plant: bool) -> None:
+    """Raise unless ``command``, at the revision the stored operation was bound to, is that operation's request.
+
+    The digest is the twin's own, over the canonical arguments the adapter would send now, with the
+    ``expected_state_revision`` the original request carried (``state_revision_before``).
+    """
+    bound = {**command, "expected_state_revision": prior.get("state_revision_before")}
+    digest = plant_request_digest(bound) if plant else setpoint_request_digest(bound)
+    if prior.get("request_digest") != digest:
+        raise OperationIdReused("operation_id_reused: the stored operation was a different request")
+
+
 def build_plant_command(operation_id: str, expected_state_revision: int,
                         tool_name: str, canonical_args: dict[str, Any]) -> dict[str, Any]:
     """Assemble an ``ot-plant-command/v1`` body bound to REMORA's proposal id."""
