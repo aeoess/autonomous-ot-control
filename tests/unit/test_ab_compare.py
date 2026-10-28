@@ -13,7 +13,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from runner import ab_compare, episode
+from runner import ab_compare, demo, episode
+from runner.federation_fixtures import canonical_sha256
 
 ROOT = Path(__file__).resolve().parents[2]
 EP = ROOT / "scenarios" / "episodes" / "trondheim-week-2026w03-hvac-v1-p1-7d-v1.json"
@@ -29,6 +30,18 @@ def _row(p, *, applied, **k):
     return r
 
 
+def _recorded(pid: str, zone: str, value: float, t: int) -> dict:
+    """REMORA's evidence and the observer's sealed record for one applied setpoint, as the demo exports them."""
+    ev = {"lifecycle": {"events": [{"event": "assessed", "payload": {"proposal_id": pid}},
+                                   {"event": "execution_result", "payload": {"proposal_id": pid}}]},
+          "effect_verification": {"history": [{"event": "effect_verified", "proposal_id": pid,
+                                               "observed": {"setpoint_c": value}, "vantage": "same_deployment"}]}}
+    ev["manifest"] = {"event_count": 2, "section_sha256": {k: canonical_sha256(v) for k, v in ev.items()}}
+    obs = {"schema": "ot-observation/v1", "operation_id": pid, "zone_id": zone, "observed_setpoint_c": value,
+           "sim_time_s": t}
+    return {"evidence": ev, "effect_observation": {**obs, "observation_digest": "sha256:" + canonical_sha256(obs)}}
+
+
 def _governed(ep, work: Path, *, reviewer: str, inline_refuses: bool, export_trails: bool) -> None:
     work.mkdir(parents=True)
     rows, decisions = [], []
@@ -41,11 +54,14 @@ def _governed(ep, work: Path, *, reviewer: str, inline_refuses: bool, export_tra
             r["reviewer"]["model"] = reviewer
             if export_trails:
                 a = p["call"]["arguments"]
-                decisions.append({"proposal_id": r["proposal_id"], "ledger_row": {**r, "sim_time_s": p["at_sim_s"]},
-                                  "envelope": {}, "evidence": {"pid": r["proposal_id"]},
-                                  "twin_operation": {"operation_id": r["proposal_id"], "status": "APPLIED",
-                                                     "zone_id": a["zone_id"], "new_setpoint_c": a["setpoint_c"],
-                                                     "sim_time_s": p["at_sim_s"]}})
+                d = {"proposal_id": r["proposal_id"], "ledger_row": {**r, "sim_time_s": p["at_sim_s"]},
+                     "envelope": {},
+                     "twin_operation": {"operation_id": r["proposal_id"], "status": "APPLIED",
+                                        "zone_id": a["zone_id"], "new_setpoint_c": a["setpoint_c"],
+                                        "sim_time_s": p["at_sim_s"]},
+                     **_recorded(r["proposal_id"], a["zone_id"], a["setpoint_c"], p["at_sim_s"])}
+                decisions.append(d)
+                r["capture"] = demo.capture_digests(d)
         elif o == "injected:out_of_contract":
             r = _row(p, applied=False, decision="refused", status=409, refusal="contract_violation")
             del r["reviewer"]
@@ -101,6 +117,8 @@ def test_abc_report_from_arm_a_and_synthetic_governed_arms(tmp_path):
     assert by["B-careful"]["offline_edges"]["cases"] == 44 and by["B-rubber_stamp"]["offline_edges"] is None
     tmpl = next(e for e in by["B-careful"]["offline_edges"]["edges"] if e["edge_id"] == "template-reference-verifier")
     assert tmpl["available"] and tmpl["counts"] == {"ESTABLISHED": 44}
+    assert tmpl["counts_on_recorded_inputs"] == {"ESTABLISHED": 44}
+    assert tmpl["counts_strict_vantage"] == {"NOT_ESTABLISHED": 44}  # same_deployment observations
     assert any(r["edge_id"] == "template-reference-verifier" for r in s["edge_records"])
     md = (out / "abc-report.md").read_text("utf-8")
     for must in ("## How to read this report", "| **A** |", "| **C-rubber_stamp** |", "`outside_work_order`",

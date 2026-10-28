@@ -214,7 +214,11 @@ def render_md(c: dict[str, Any]) -> str:
           "what the edge caught that both let through; with the careful reviewer that is usually zero and with "
           "rubber_stamp it is the edge's contribution.", "",
           "### Offline edges beside each arm (findings)", "",
-          "| Arm | Edge | Ran | Established | Contradicted | Not established |", "|---|---|---|---:|---:|---:|"]
+          "*Edge* is the edge's own answer; *recorded inputs* counts an ESTABLISHED only when every claim rests on "
+          "a record written when it happened; *strict vantage* also requires an independent observation "
+          "(runner.edge_pass).", "",
+          "| Arm | Edge | Ran | Edge E / C / N | Recorded inputs E / C / N | Strict vantage E / C / N |",
+          "|---|---|---|---|---|---|"]
     any_offline = False
     for a in c["arms"]:
         s = a.get("offline_edges")
@@ -225,8 +229,9 @@ def render_md(c: dict[str, Any]) -> str:
             if not e.get("available"):
                 L.append(f"| {a['label']} | `{e['edge_id']}` | no (exit {e.get('exit')}) | | | |")
             else:
-                cnt = e["counts"]
-                L.append(f"| {a['label']} | `{e['edge_id']}` | yes | {cnt.get('ESTABLISHED', 0)} | {cnt.get('CONTRADICTED', 0)} | {cnt.get('NOT_ESTABLISHED', 0)} |")
+                L.append(f"| {a['label']} | `{e['edge_id']}` | yes | {edge_pass.ecn_cell(e['counts'])} | "
+                         f"{edge_pass.ecn_cell(e.get('counts_on_recorded_inputs') or {})} | "
+                         f"{edge_pass.ecn_cell(e.get('counts_strict_vantage') or {})} |")
     if not any_offline:
         L.append("| | *no arm exported decision trails for an offline pass* | | | | |")
     L += ["", "A finding beside a governed arm is about the run or the edge; a finding beside arm A says the trail "
