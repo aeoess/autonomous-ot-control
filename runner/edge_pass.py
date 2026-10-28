@@ -24,9 +24,11 @@ covers applied zone setpoints only.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import sys
+import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -284,6 +286,74 @@ def offline_effect_edges() -> list[Path]:
     return out
 
 
+REFERENCE_EDGE_ID = "template-reference-verifier"
+USAGE_SCHEMA = "ot-edge-usage/v1"
+
+
+def edge_digest(edge_dir: Path) -> str:
+    """SHA-256 over the edge's files (path and bytes): the version a usage row is tied to."""
+    h = hashlib.sha256()
+    for f in sorted(x for x in edge_dir.rglob("*") if x.is_file() and "__pycache__" not in x.parts):
+        h.update(f.relative_to(edge_dir).as_posix().encode("utf-8") + b"\0" + f.read_bytes() + b"\0")
+    return h.hexdigest()
+
+
+def usage_record(run_id: str, manifest_sha: str, cases: list[dict[str, Any]], inputs: dict[str, dict[str, Any]],
+                 runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """What each edge was asked and did in this pass, tied to edge version, input digest and run id.
+
+    A verifier run is one start of the edge's entrypoint over the whole case set,
+    not one call per trail, and nothing here is an external API call: the edges
+    run locally and offline. Live trails have no independent ground truth (they
+    are expected positive), so findings are counted against the reference
+    verifier only as agreement or as candidates for review; confirmed, unique
+    and false findings need a ground truth (sealed fixture sets, whose run
+    records already count them, or seeded mutations) and stay null here.
+    """
+    case_digest = {c["case_id"]: canonical_sha256(c) for c in cases}
+    ref = next((r for r in runs if r["edge_id"] == REFERENCE_EDGE_ID and r["verdicts"] is not None), None)
+    rows = []
+    for r in runs:
+        v = r["verdicts"]
+        row: dict[str, Any] = {
+            "edge_id": r["edge_id"], "project": r.get("project"), "maintainer": r.get("maintainer"),
+            "pin": r.get("pin"), "edge_digest": r["edge_digest"],
+            "verifier_runs": 1, "run_ok": v is not None, "exit": r.get("exit"), "runtime_ms": r["runtime_ms"],
+            "cases_sent": len(cases), "cases_processed": 0 if v is None else len(set(v) & set(case_digest)),
+        }
+        if v is not None:
+            edge_counts = Counter(x.get("verdict", "?") for x in v.values())
+            recorded = Counter(counted_verdict(x.get("verdict", "?"), inputs[c]["basis"], inputs[c]["input_findings"])
+                               for c, x in v.items() if c in inputs)
+            row.update({
+                "answered_case_digests": sorted(case_digest[c] for c in set(v) & set(case_digest)),
+                "verdicts": dict(edge_counts), "verdicts_on_recorded_inputs": dict(recorded),
+                "not_established": edge_counts.get("NOT_ESTABLISHED", 0),
+                "findings": [{"case_id": c, "case_digest": case_digest[c], "verdict": x.get("verdict"),
+                              "claim_id": x.get("claim_id")}
+                             for c, x in sorted(v.items()) if c in case_digest and x.get("verdict") != "ESTABLISHED"],
+            })
+            if ref is not None and r is not ref:
+                both = set(v) & set(ref["verdicts"])
+                same = sum(1 for c in both if v[c].get("verdict") == ref["verdicts"][c].get("verdict")
+                           and v[c].get("claim_id") == ref["verdicts"][c].get("claim_id"))
+                row["vs_reference"] = {
+                    "compared": len(both), "agree": same,
+                    "edge_only_findings": sorted(case_digest[c] for c in both
+                                                 if v[c].get("verdict") != "ESTABLISHED"
+                                                 and ref["verdicts"][c].get("verdict") == "ESTABLISHED"),
+                    "reference_only_findings": sorted(case_digest[c] for c in both
+                                                      if v[c].get("verdict") == "ESTABLISHED"
+                                                      and ref["verdicts"][c].get("verdict") != "ESTABLISHED"),
+                }
+        row.update({"findings_confirmed": None, "unique_findings": None, "false_findings": None})
+        rows.append(row)
+    return {"schema": USAGE_SCHEMA, "run_id": run_id, "input_digest": manifest_sha, "cases": len(cases),
+            "ground_truth": "none: live trails, expected positive; confirmed, unique and false findings need a "
+                            "ground truth and are null (sealed fixture sets are counted in their run records)",
+            "reference_edge": REFERENCE_EDGE_ID, "edges": rows}
+
+
 def run_pass(work: Path, out: Path, edges: list[Path], run_id: str) -> dict[str, Any]:
     cases, inputs, skipped = build_cases_with_inputs(work)
     case_dir = out / "cases"
@@ -292,15 +362,22 @@ def run_pass(work: Path, out: Path, edges: list[Path], run_id: str) -> dict[str,
     manifest_sha = write_case_set(cases, run_id, case_dir)
     expected = {c["case_id"] for c in cases}
     results = []
+    runs: list[dict[str, Any]] = []
     for edge_dir in edges:
         edge = json.loads((edge_dir / "edge.json").read_text("utf-8"))
+        run = {"edge_id": edge["edge_id"], "project": edge.get("project"), "maintainer": edge.get("maintainer"),
+               "pin": (edge.get("pin") or {}).get("value"), "edge_digest": edge_digest(edge_dir), "verdicts": None}
+        runs.append(run)
         edge_out = out / "by-edge" / edge["edge_id"]
         if edge_out.exists():
             shutil.rmtree(edge_out)
         edge_out.mkdir(parents=True)
         entry: dict[str, Any] = {"edge_id": edge["edge_id"], "project": edge.get("project"),
                                  "evaluator": edge.get("evaluator"), "available": False}
+        t0 = time.perf_counter()
         rc, tail = run_adapter(edge_dir, case_dir, edge_out)
+        run["runtime_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+        run["exit"] = rc
         if rc != 0:
             entry.update({"exit": rc, "stderr": tail[-600:]})
             results.append(entry)
@@ -308,6 +385,7 @@ def run_pass(work: Path, out: Path, edges: list[Path], run_id: str) -> dict[str,
         try:
             result = json.loads((edge_out / "result.json").read_text("utf-8"))
             verdicts = {v["case_id"]: v for v in result["verdicts"]}
+            run["verdicts"] = verdicts
         except (OSError, ValueError, KeyError, TypeError) as e:
             entry.update({"exit": 0, "stderr": f"malformed result: {e}"})
             results.append(entry)
@@ -347,6 +425,9 @@ def run_pass(work: Path, out: Path, edges: list[Path], run_id: str) -> dict[str,
                        "contradicts its record as CONTRADICTED; counts_strict_vantage also requires an "
                        "independent observation vantage. A non-ESTABLISHED verdict on a live trail is a "
                        "finding about the run, its records or the edge."}
+    usage = usage_record(run_id, manifest_sha, cases, inputs, runs)
+    (out / "usage.json").write_text(json.dumps(usage, indent=2) + "\n", "utf-8")
+    summary["usage"] = "usage.json"
     (out / "edges.json").write_text(json.dumps(summary, indent=2) + "\n", "utf-8")
     (out / "edges.md").write_text(render_md(summary), "utf-8")
     return summary
