@@ -93,3 +93,19 @@ def test_a_real_refusal_still_counts():
                                    ({"status": 409}, False), ({"status": "409", "body": {}}, False)])
 def test_answered(r, ok):
     assert acc.answered(r) is ok
+
+
+def test_the_guarded_steps_are_exactly_those_that_return_remoras_raw_answer():
+    """The guard must not judge an SDK-mediated step by the raw-answer shape (it made AT-02b and SDK-01 FAIL
+    on a healthy stack): REMORA_OPS equals the harness steps whose every return is a _remora(...) call."""
+    import ast
+    from pathlib import Path
+    tree = ast.parse((Path(acc.__file__).parent / "harness_step.py").read_text("utf-8"))
+    raw = set()
+    for f in tree.body:
+        if isinstance(f, ast.FunctionDef) and f.name.startswith("op_"):
+            rets = [n for n in ast.walk(f) if isinstance(n, ast.Return)]
+            if rets and all(isinstance(r.value, ast.Call) and getattr(r.value.func, "id", "") == "_remora" for r in rets):
+                raw.add(f.name[3:])
+    assert acc.REMORA_OPS == raw
+    assert {"record_effect", "sdk_approve"}.isdisjoint(acc.REMORA_OPS)

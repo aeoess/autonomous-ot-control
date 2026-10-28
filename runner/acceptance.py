@@ -140,9 +140,11 @@ def setpoint(s: Stack, zone: str) -> float:
     return float(s.step("zone", zone_id=zone)["body"]["setpoint_c"])
 
 
-#: Harness steps that are REMORA calls (runner.harness_step): each needs an answer to count as a decision.
+#: Harness steps that return REMORA's raw HTTP answer (runner.harness_step._remora): each needs an HTTP status
+#: and a body to count as a decision. SDK-mediated steps (record_effect, sdk_approve) return their own shape and
+#: are judged by their case; tests/unit/test_acceptance_transport.py keeps this list equal to harness_step.
 REMORA_OPS = frozenset({"assess", "approve", "reject", "execute", "execute_accepted", "proposal", "envelope",
-                        "evidence", "record_effect", "lifecycle", "audit_verify", "unresolved", "sdk_approve"})
+                        "evidence", "lifecycle", "audit_verify", "unresolved"})
 
 
 def answered(r: dict[str, Any]) -> bool:
