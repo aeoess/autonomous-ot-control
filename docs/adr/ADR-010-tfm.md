@@ -50,7 +50,7 @@ The two code lists are separate Statsbygg documents. Both were fetched from dok.
 5. **A zone reading carries its sensor's TFM.**
    - The zone fixtures now use `+DEMO01=564.001-RT60n`.
    - The caretaker rejects a reading whose TFM identifier differs from the expected one, as a mis-mapped point. That zone runs on the fallback and the alarm is escalated, under the separate FDD rule `tfm`.
-   - This covers the "TFM mismatch" part of AT-09 offline. The running twin still has no injection hook for AT-09.
+   - This covers the "TFM mismatch" part of AT-09 offline. On the running twin, AT-09 injects it through the control listener (`reading_tfm`), and the interlock refuses the write (`basis_tfm_mismatch`).
 
 ## Consequences
 

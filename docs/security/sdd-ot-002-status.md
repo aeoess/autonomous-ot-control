@@ -13,7 +13,7 @@ Order of work, as decided for this phase:
 3. The A/B/C additions:
    - attacks on authority, signed work orders and a separate reviewer (a bounded SEC-07);
    - all eight oracle rules attacked;
-   - AT-09 and AT-12 fault injection.
+   - AT-09 and AT-12 fault injection (**done**: both PASS on the governed stack).
 4. Simulator fidelity (PR #30 with holdout validation, the hourly model).
 
 | WP | Gate | State | Evidence |

@@ -92,6 +92,6 @@ Pinned by `tests/boundary/test_custody_and_fencing.py`.
 ## Next
 
 1. Repin to a REMORA commit that contains #1099–#1101 and drop `ALLOW_FAILING=SDK-01`.
-2. Fault hooks in the twin for AT-09 (stale observation, unit, TFM) and AT-12 (timeout after actuation).
+2. ~~Fault hooks in the twin for AT-09 (stale observation, unit, TFM) and AT-12 (timeout after actuation).~~ Done: `POST /control/v1/faults` on the control listener, AT-09 and AT-12 in the governed acceptance suite.
 3. AT-16: the same seeded scenario with and without REMORA (and an adversarial agent), scored with exact denominators.
 4. Federation capsule (OT-007) for #177 edges: read-only fixtures and evidence exports, never the credential-holding runtime.
