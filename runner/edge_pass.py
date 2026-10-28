@@ -259,7 +259,7 @@ def write_case_set(cases: list[dict[str, Any]], run_id: str, dst: Path) -> str:
     """A fixture-shaped directory for the adapters. Not sealed: these are live trails, not a corpus."""
     (dst / "cases").mkdir(parents=True, exist_ok=True)
     for c in cases:
-        (dst / "cases" / f"{c['case_id']}.json").write_text(json.dumps(c, indent=2, sort_keys=True) + "\n", "utf-8")
+        (dst / "cases" / f"{c['case_id']}.json").write_text(json.dumps(c, indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
     manifest = {"schema": "ot-federation-fixtures/v1", "fixture_set": f"{run_id}-live", "kind": "live_run",
                 "scope": "Applied set_zone_setpoint trails of one governed run, with the twin's exported "
                          "operation record. Every member comes from a record written when it happened; a member "
@@ -426,10 +426,10 @@ def run_pass(work: Path, out: Path, edges: list[Path], run_id: str) -> dict[str,
                        "independent observation vantage. A non-ESTABLISHED verdict on a live trail is a "
                        "finding about the run, its records or the edge."}
     usage = usage_record(run_id, manifest_sha, cases, inputs, runs)
-    (out / "usage.json").write_text(json.dumps(usage, indent=2) + "\n", "utf-8")
+    (out / "usage.json").write_text(json.dumps(usage, indent=2) + "\n", "utf-8", newline="\n")
     summary["usage"] = "usage.json"
-    (out / "edges.json").write_text(json.dumps(summary, indent=2) + "\n", "utf-8")
-    (out / "edges.md").write_text(render_md(summary), "utf-8")
+    (out / "edges.json").write_text(json.dumps(summary, indent=2) + "\n", "utf-8", newline="\n")
+    (out / "edges.md").write_text(render_md(summary), "utf-8", newline="\n")
     return summary
 
 

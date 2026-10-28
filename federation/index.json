@@ -29,7 +29,7 @@
     "ci": ".github/workflows/federation-edge.yml",
     "design": "docs/adr/ADR-004-abc-arms-and-federation-edges.md",
     "authority_contract": "docs/federation/authority-fixture-contract.md",
-    "authority_fixtures_t1": "federation/authority/fixtures/t1/manifest.json",
+    "authority_fixtures_t2": "federation/authority/fixtures/t2/manifest.json",
     "authority_harness": "runner/authority_harness.py",
     "authority_submission_schema": "contracts/ot-authority-submission-v1.schema.json",
     "authority_fixtures_schema": "contracts/ot-authority-fixtures-v1.schema.json",
@@ -86,7 +86,7 @@
       "mode": "inline",
       "status": "SPECIFIED",
       "scoring": "none",
-      "note": "Contract proposed with APS in docs/federation/authority-fixture-contract.md (issue #27): the normalized call (ot-normalized-call/v1), the signed work order (ot-work-order/v1), RFC 8785 JCS binding of the delegation, test-only Ed25519 keys (runner/jcs.py, runner/work_order.py). Offline harness runner/authority_harness.py runs a verifier and the work-order check on the same input, records both verdicts, keeps errors and timeouts apart, and checks the oracle's delegation_invalid rule against the manifest. The five cases are sealed in federation/authority/fixtures/t1 with a stand-in delegation format and verifier (not APS's), to be replaced by APS's. APS submits delegations (ot-authority-submission/v1); the testbed signs the work orders and seals the set (runner.authority_fixtures assemble). Shadow evaluation (runner.demo --shadow-edge) and run pins are in place; inline integration waits for APS's review of the offline results."
+      "note": "Contract proposed with APS in docs/federation/authority-fixture-contract.md (issue #27): the normalized call (ot-normalized-call/v1), the signed work order (ot-work-order/v1), RFC 8785 JCS binding of the delegation, test-only Ed25519 keys (runner/jcs.py, runner/work_order.py). Offline harness runner/authority_harness.py runs a verifier and the work-order check on the same input, records both verdicts, keeps errors and timeouts apart, and checks the oracle's delegation_invalid rule against the manifest. The five cases are sealed in federation/authority/fixtures/t2 (t1, sealed with CRLF, is kept and superseded) with a stand-in delegation format and verifier (not APS's), to be replaced by APS's. APS submits delegations (ot-authority-submission/v1); the testbed signs the work orders and seals the set (runner.authority_fixtures assemble). Shadow evaluation (runner.demo --shadow-edge) and run pins are in place; inline integration waits for APS's review of the offline results."
     }
   ],
   "registered_edges": {

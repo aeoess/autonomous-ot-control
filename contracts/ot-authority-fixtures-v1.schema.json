@@ -140,6 +140,29 @@
     },
     "package_digest_rule": {
       "type": "string"
+    },
+    "supersedes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_set",
+        "package_digest",
+        "reason"
+      ],
+      "description": "An earlier set this one replaces. The earlier set stays in the repository unchanged.",
+      "properties": {
+        "fixture_set": {
+          "type": "string"
+        },
+        "package_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     }
   },
   "$defs": {

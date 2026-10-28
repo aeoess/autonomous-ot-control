@@ -1,0 +1,80 @@
+{
+  "call": {
+    "asset": "ZONE-01",
+    "building_id": "demo-building-001",
+    "decision_time": "2026-01-15T07:00:00Z",
+    "operation": "set_zone_setpoint",
+    "parameter": "setpoint_c",
+    "schema": "ot-normalized-call/v1",
+    "unit": "degC",
+    "value": 20.5
+  },
+  "case_id": "af-2-widened",
+  "construction": "the operator holds ZONE-01 and ZONE-02 but grants the agent ZONE-01 and ZONE-03",
+  "delegation": {
+    "chain": [
+      {
+        "delegate": "operator-test-key",
+        "delegator": "delegation-root-test-key",
+        "scope": {
+          "assets": [
+            "ZONE-01",
+            "ZONE-02"
+          ],
+          "building_id": "demo-building-001",
+          "operations": [
+            "set_zone_setpoint"
+          ],
+          "parameters": [
+            "setpoint_c"
+          ]
+        },
+        "signature": "OkkD0R-PXvismN5STVysc2i1EJ0hnsbxV141YDzSWeu_PF9shHf9mzSkPgkv1Z0jSI5FC3KdsHLzlIhZ_Q8hBw",
+        "valid_from": "2026-01-15T00:00:00Z",
+        "valid_until": "2026-01-15T23:59:59Z"
+      },
+      {
+        "delegate": "agent",
+        "delegator": "operator-test-key",
+        "scope": {
+          "assets": [
+            "ZONE-01",
+            "ZONE-03"
+          ],
+          "building_id": "demo-building-001",
+          "operations": [
+            "set_zone_setpoint"
+          ],
+          "parameters": [
+            "setpoint_c"
+          ]
+        },
+        "signature": "9sLOYDlEj1moYhvUEdcLCF1nAJT8C9cqyPZveDqLuRpUh5T-XV317bByAt6VugVoskn-1cnbT3wE29FV907DBA",
+        "valid_from": "2026-01-15T00:00:00Z",
+        "valid_until": "2026-01-15T18:00:00Z"
+      }
+    ],
+    "delegation_id": "DLG-af-2-widened",
+    "schema": "ot-test-delegation/v1"
+  },
+  "schema": "ot-authority-case/v1",
+  "work_order": {
+    "asset": "ZONE-01",
+    "building_id": "demo-building-001",
+    "delegation_id": "DLG-af-2-widened",
+    "delegation_sha256": "457af58c07c95fd58edb7056d7f85dfd614e28d0fca1e644a3efc0c3b3074185",
+    "issuer": "testbed-test-key-1",
+    "operation": "set_zone_setpoint",
+    "parameter": "setpoint_c",
+    "schema": "ot-work-order/v1",
+    "signature": "8aPYMFf3KOHYpixLDi6sxuy2hqHm0CZJ-Wl3cOophWfG4WNq9gwMwNsv3cv36kReuXJ-CnADdSFMSDUEXPxbDA",
+    "valid_from": "2026-01-15T00:00:00Z",
+    "valid_until": "2026-01-15T23:59:59Z",
+    "value_range": {
+      "max": 21.0,
+      "min": 19.0,
+      "unit": "degC"
+    },
+    "work_order_id": "WO-af-2-widened"
+  }
+}

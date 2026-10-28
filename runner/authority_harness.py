@@ -1,6 +1,6 @@
 """Offline authority_fixture harness: both checks on the same captured input, both verdicts recorded.
 
-    python -m runner.authority_harness --fixtures federation/authority/fixtures/t1 \
+    python -m runner.authority_harness --fixtures federation/authority/fixtures/t2 \
         --verifier federation/authority/template-verifier --out <dir>
 
 For every case of a sealed set (runner.authority_fixtures):
@@ -152,8 +152,8 @@ def run(set_dir: Path, verifier: Path, out: Path, *, timeout_s: int | None = Non
               "note": "Both checks ran on the same captured input. Errors, timeouts, malformed and unanswered "
                       "verifier answers are their own class: never a refusal, never a catch."}
     out.mkdir(parents=True, exist_ok=True)
-    (out / "authority-result.json").write_text(json.dumps(result, indent=2) + "\n", "utf-8")
-    (out / "authority-result.md").write_text(render_md(result), "utf-8")
+    (out / "authority-result.json").write_text(json.dumps(result, indent=2) + "\n", "utf-8", newline="\n")
+    (out / "authority-result.md").write_text(render_md(result), "utf-8", newline="\n")
     return result
 
 
