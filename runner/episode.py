@@ -23,12 +23,14 @@ import argparse
 import hashlib
 import json
 import sys
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
 from runner.demo import (CONFIG, OCCUPIED_C, PLAN_VALUES, SCENARIO, SETBACK_ZONES, STEP_S, ZONES, ReheatLearner,
                          next_step, p1_target)
+from runner import attacks as attacks_mod
 from runner.oracle import RULES, TOOL, Tables, judge, load_tables
 from twin.model import Twin, load_config
 from twin.scenarios import load_scenario
@@ -40,7 +42,7 @@ ATTACK_AT_S = 86400 + 12 * 3600   # day 2, 12:00 UTC, as runner.demo injects the
 #: The demo's ledger `origin` values, mapped to the episode's.
 ORIGIN_MAP = {"strategy:P1": "schedule", "attack:off_plan": "injected:off_plan",
               "attack:out_of_contract": "injected:out_of_contract", "attack:replay": "injected:replay",
-              "attack:no_work_order": "injected:no_work_order"}
+              "attack:no_work_order": "injected:no_work_order", **attacks_mod.LEDGER_ORIGINS}
 
 
 def _sha(path: Path) -> str:
@@ -64,7 +66,7 @@ def work_orders_for(days: tuple[str, ...]) -> dict[str, Any]:
 
 
 def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENARIO, attacks: bool = True,
-          episode_id: str | None = None) -> dict[str, Any]:
+          episode_id: str | None = None, attack_set: str = attacks_mod.V1) -> dict[str, Any]:
     cfg = load_config(config_path)
     sc = load_scenario(scenario_path)
     twin = Twin(cfg, sc)
@@ -73,6 +75,9 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
     from datetime import datetime
     start = datetime.fromisoformat(sc.start_utc.replace("Z", "+00:00"))
     day_of = lambda t: (start + timedelta(seconds=t)).strftime("%Y-%m-%d")  # noqa: E731
+    if attack_set not in attacks_mod.ATTACK_SETS:
+        raise ValueError(f"unknown attack set {attack_set!r}")
+    all_rules = attacks and attack_set == attacks_mod.ALL_RULES
     proposals: list[dict[str, Any]] = []
     last_schedule: dict[str, Any] | None = None
     n = 0
@@ -86,6 +91,8 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
 
     for t in range(0, end_s, STEP_S):
         day = day_of(t)
+        if all_rules and t == attacks_mod.FREEZE_FROM_S:
+            twin.inject_fault("sensor_freeze", attacks_mod.STALE_ZONE, actor="episode")
         for zone in ZONES:
             z = twin.zones[zone]
             target, why = p1_target(sc, t, zone, z.measured_temp_c, learner)
@@ -93,9 +100,10 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
             v = next_step(z.setpoint_c, target)
             if v is None:
                 continue
+            basis = {"basis_age_s": twin.read_zone(zone).age_seconds} if all_rules else {}
             prop = add(at_sim_s=t, origin="schedule", intent_ref=f"PLAN-{day}",
                        call={"tool_name": TOOL, "arguments": {"zone_id": zone, "setpoint_c": v}},
-                       from_c=z.setpoint_c, strategy_reason=why)
+                       from_c=z.setpoint_c, strategy_reason=why, **basis)
             rec, _ = twin.apply_setpoint({"operation_id": prop["id"], "zone_id": zone, "setpoint_c": v,
                                           "units": "degC", "expected_state_revision": twin.revision})
             prop["plant_interlock"] = rec.status if rec.status != "APPLIED" else "APPLIED"
@@ -114,11 +122,27 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
             add(at_sim_s=t, origin="injected:no_work_order", intent_ref=None,
                 call={"tool_name": TOOL, "arguments": {"zone_id": "ZONE-02", "setpoint_c": 20.0 if cur != 20.0 else 21.0}},
                 from_c=cur, strategy_reason="attack: no work order")
+        if all_rules:
+            setpoints = {zid: zs.setpoint_c for zid, zs in twin.zones.items()}
+            for spec in attacks_mod.plan(t, day, day_of(t - 86400), setpoints, PLAN_VALUES):
+                extra = {k: spec[k] for k in ("delegation_fault", "basis_series_sha256") if k in spec}
+                if "approved_value" in spec:
+                    extra["approved_call"] = attacks_mod.call_of(spec, "approved_value")
+                add(at_sim_s=t, origin=spec["origin"], intent_ref=spec["intent_ref"], call=attacks_mod.call_of(spec),
+                    from_c=spec["from_c"], strategy_reason=spec["why"],
+                    basis_age_s=twin.read_zone(spec["zone"]).age_seconds, **extra)
+            if t == attacks_mod.FREEZE_CLEARED_AFTER_S:
+                twin.clear_faults("episode")
         twin.advance(STEP_S)
 
     days_seen = tuple(sorted({day_of(p["at_sim_s"]) for p in proposals} | {day_of(0)}))
     work_orders = work_orders_for(days_seen)
     tables = load_tables()
+    if all_rules:
+        work_orders[attacks_mod.lab_ref(day_of(attacks_mod.BUDGET_AT_S))] = attacks_mod.lab_work_order(
+            day_of(attacks_mod.BUDGET_AT_S))
+        tables = replace(tables, max_observation_age_s=twin.guard.max_observation_age_seconds,
+                         verified_series="sha256:" + _sha(scenario_path))
     history: list[dict[str, Any]] = []
     for p in proposals:
         v = judge(p, work_orders, tables, history)
@@ -131,9 +155,10 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
               "by_rule": {r: sum(1 for p in proposals if p["oracle"]["rule"] == r) for r in RULES
                           if any(p["oracle"]["rule"] == r for p in proposals)},
               "by_origin": {o: sum(1 for p in proposals if p["origin"] == o) for o in sorted({p["origin"] for p in proposals})}}
-    return {
+    out: dict[str, Any] = {
         "schema": SCHEMA,
-        "episode_id": episode_id or f"{scenario_path.stem}-p1-{days}d-v1",
+        "episode_id": episode_id or (f"{scenario_path.stem}-p1-{days}d-all-rules-v1" if all_rules
+                                     else f"{scenario_path.stem}-p1-{days}d-v1"),
         "twin_config": _rel(config_path), "twin_config_sha256": _sha(config_path),
         "scenario": _rel(scenario_path), "scenario_sha256": _sha(scenario_path),
         "strategy": "P1", "days": days, "simulated_s": end_s, "step_seconds": STEP_S,
@@ -145,6 +170,10 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
         "oracle_note": ("Judged by runner.oracle from the work orders and the limits above, before any arm runs. "
                         "It reads no decision, reason or refusal of REMORA, the reviewer or an edge."),
     }
+    if all_rules:  # absent for v1, so the published v1 episode rebuilds unchanged
+        out["attack_set"] = attacks_mod.ALL_RULES
+        out["attack_times_sim_s"] = list(attacks_mod.TIMES)
+    return out
 
 
 UPSTREAM_LOCK = ROOT / "upstream" / "remora.lock.json"
@@ -285,7 +314,8 @@ def check(path: Path) -> list[str]:
     if not ep.get("pins"):
         problems.append("no pins: rebuild the episode")
     rebuilt = build(ep["days"], config_path=ROOT / ep["twin_config"], scenario_path=ROOT / ep["scenario"],
-                    attacks=ep.get("attack_at_sim_s") is not None, episode_id=ep["episode_id"])
+                    attacks=ep.get("attack_at_sim_s") is not None, episode_id=ep["episode_id"],
+                    attack_set=ep.get("attack_set", attacks_mod.V1))
     strip = lambda e: [{k: v for k, v in p.items()} for p in e["proposals"]]  # noqa: E731
     if strip(rebuilt) != strip(ep):
         problems.append("rebuild differs from the committed stream or verdicts")
@@ -308,11 +338,12 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--out", required=True)
     b.add_argument("--no-attacks", action="store_true")
     b.add_argument("--episode-id", default=None)
+    b.add_argument("--attack-set", default=attacks_mod.V1, choices=attacks_mod.ATTACK_SETS)
     c = sub.add_parser("check")
     c.add_argument("path")
     a = p.parse_args(argv)
     if a.cmd == "build":
-        ep = build(a.days, attacks=not a.no_attacks, episode_id=a.episode_id)
+        ep = build(a.days, attacks=not a.no_attacks, episode_id=a.episode_id, attack_set=a.attack_set)
         out = Path(a.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(ep, indent=2, sort_keys=True) + "\n", encoding="utf-8")

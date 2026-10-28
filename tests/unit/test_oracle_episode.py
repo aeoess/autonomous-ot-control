@@ -158,8 +158,11 @@ def test_committed_episode_matches_a_rebuild_and_its_pins():
 # -- delegation_invalid and value ranges (authority-fixture contract, issue #27) --------------------
 
 def test_precedence_is_pre_registered_and_followed():
+    # The basis rules (stale_basis, basis_not_verified_data) were added after outside_work_order; the order of
+    # the rules registered before them is unchanged.
     assert oracle.PRECEDENCE == ("duplicate_effect", "not_the_approved_call", "outside_contract", "unauthorized",
-                                 "delegation_invalid", "outside_work_order", "over_authority_budget")
+                                 "delegation_invalid", "outside_work_order", "stale_basis",
+                                 "basis_not_verified_data", "over_authority_budget")
     # outside the contract and without a work order outrank a delegation fault ...
     assert judge(prop(value=26.0, frm=21.0, delegation_fault="expired"), WO, TABLES).rule == "outside_contract"
     assert judge(prop(ref=None, delegation_fault="expired"), WO, TABLES).rule == "unauthorized"
