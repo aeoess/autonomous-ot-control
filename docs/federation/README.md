@@ -94,6 +94,36 @@ right answer is `NOT_ESTABLISHED`, never an assumed value. The fourth,
 APPLIED: `CONTRADICTED`. The scorer counts a negative as caught only when the
 verdict is the expected one; `ESTABLISHED` on any negative fails the run.
 
+### Current adapter admission rules (#177 follow-up)
+
+These rules apply to the current adapters; they do not change the sealed
+v1/v2 files, their manifests, or historical evaluation results.
+
+- A captured `accept` needs no reviewer. An executed `verify`/`escalate`
+  needs `decision.approved=true` and a reviewer with `approved=true`.
+  A recorded reviewer refusal is `CONTRADICTED`; absent or untyped reviewer
+  approval is `NOT_ESTABLISHED`. A deny cannot be turned into approval by
+  setting the outer approval flag.
+- Every recorded binding at `remora_envelope.request_id`,
+  `remora_envelope.request.request_id`, `remora_evidence.proposal_id`,
+  `remora_evidence.manifest.proposal_id` and
+  `remora_evidence.proposal.proposal_id` must equal `claim.proposal_id`.
+  A mismatch contradicts `call_binding`, even with a newly computed valid
+  digest. Optional absent identifiers remain compatible with older synthetic
+  exports; this is consistency checking, not proof of identity or completeness.
+- Invalid case shapes, unknown top-level fields, booleans in numeric fields,
+  non-finite numbers, numbers outside the adapter's numeric range and duplicate
+  JSON members are `NOT_ESTABLISHED`.
+  A malformed case is isolated and does not prevent verdicts on other cases.
+  Optional missing execution/observation evidence retains its per-claim result.
+- Standalone adapters use local standard-library admission checks, because
+  the sandbox mounts no repository code or schema package. The same maintainer
+  guard is included in both wrappers; it is not independent validation by the
+  upstream reader. The vendored reader itself remains unchanged.
+
+The [mutation crosswalk](mutation-crosswalk.md) records the added controls
+and the limits of comparison with the external reader's mutation battery.
+
 ## In five steps
 
 Keep your own commit author identity. External names and GitHub noreply

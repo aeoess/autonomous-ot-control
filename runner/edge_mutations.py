@@ -181,6 +181,18 @@ def _int_setpoints(c: dict[str, Any], _o: dict[str, Any]) -> dict[str, Any]:
     return c
 
 
+def _envelope_request_changed(c: dict[str, Any], _o: dict[str, Any]) -> dict[str, Any]:
+    # Native DecisionEnvelope path; aliases are exercised by the admission tests.
+    c.setdefault("remora_envelope", {}).setdefault("request", {})["request_id"] = "other-proposal"
+    return c
+
+
+def _evidence_proposal_changed(c: dict[str, Any], _o: dict[str, Any]) -> dict[str, Any]:
+    # Rehash so a digest mismatch cannot mask the missing proposal binding.
+    c["remora_evidence"]["proposal_id"] = "other-proposal"
+    return _redigest(c)
+
+
 CASE_OPS: list[Op] = [
     # positive controls: must stay ESTABLISHED
     ("pc_identity", None, "positive", frozenset({E}), lambda c, o: c),
@@ -197,6 +209,9 @@ CASE_OPS: list[Op] = [
      _seq(_set(("decision", "approved"), False), _set(("decision", "decision"), "verify"))),
     ("dc_escalate_not_approved", "decision_correspondence", "negative", frozenset({C}),
      _seq(_set(("decision", "approved"), False), _set(("decision", "decision"), "escalate"))),
+    ("dc_reviewer_refused", "decision_correspondence", "negative", frozenset({C}),
+     _seq(_set(("decision", "decision"), "verify"), _set(("decision", "approved"), True),
+          _set(("decision", "reviewer"), {"approved": False}))),
     ("dc_denied_but_applied", "decision_correspondence", "negative", frozenset({C}),
      _seq(_set(("decision", "decision"), "deny"), _set(("decision", "approved"), False),
           _set(("execution", "executed"), False))),
@@ -211,6 +226,8 @@ CASE_OPS: list[Op] = [
     ("sd_missing", "single_dispatch", "missing", frozenset({N}), _del(("execution", "executions"))),
     ("sd_string_one", "single_dispatch", "malformed", NOT_E, _set(("execution", "executions"), "1")),
     # call_binding
+    ("cb_envelope_request", "call_binding", "negative", frozenset({C}), _envelope_request_changed),
+    ("cb_evidence_proposal", "call_binding", "negative", frozenset({C}), _evidence_proposal_changed),
     ("cb_other_operation", "call_binding", "negative", frozenset({C}), _swap_op),
     ("cb_operation_id_case", "call_binding", "negative", frozenset({C}), _upper_op_id),
     ("cb_record_missing", "call_binding", "missing", frozenset({N}), _set(("twin_operation",), None)),
@@ -223,6 +240,8 @@ CASE_OPS: list[Op] = [
      _shift(("claim", "setpoint_c"), 0.0001)),
     ("de_twin_rejected", "declared_effect_observed", "negative", frozenset({C}),
      _set(("twin_operation", "status"), "REJECTED")),
+    ("de_twin_value_only", "declared_effect_observed", "negative", frozenset({C}),
+     _shift(("twin_operation", "new_setpoint_c"), 0.5)),
     ("de_twin_other_zone", "declared_effect_observed", "negative", frozenset({C}), _other_zone),
     ("de_observed_off", "declared_effect_observed", "negative", frozenset({C}),
      _shift(("observation", "observed_setpoint_c"), -0.5)),
@@ -245,6 +264,9 @@ CASE_OPS: list[Op] = [
     ("ed_digest_one_char", "evidence_digest_integrity", "negative", frozenset({C}), _digest_flip),
     ("ed_digest_ascii_escaped", "evidence_digest_integrity", "negative", frozenset({C}), _digest_ascii_escaped),
     ("ed_digest_uppercase", "evidence_digest_integrity", "malformed", NOT_E, _digest_upper),
+    ("malformed_extra_field", None, "malformed", NOT_E, _set(("unexpected",), True)),
+    ("malformed_boolean_count", "single_dispatch", "malformed", NOT_E,
+     _set(("execution", "executions"), True)),
 ]
 
 
@@ -273,7 +295,9 @@ def write_set(mutants: list[dict[str, Any]], set_id: str, dst: Path, seed_note: 
     (dst / "cases").mkdir(parents=True)
     for m in mutants:
         (dst / "cases" / f"{m['case']['case_id']}.json").write_text(
-            json.dumps(m["case"], indent=2, sort_keys=True) + "\n", "utf-8", newline="\n")
+            # Preserve the key-order positive control on disk. Sorting the entire
+            # case recursively would undo it before any verifier could read it.
+            json.dumps(m["case"], indent=2) + "\n", "utf-8", newline="\n")
     manifest = {"schema": "ot-federation-fixtures/v1", "fixture_set": set_id, "kind": "mutation_set",
                 "scope": f"Mutants of fully recorded applied trails ({seed_note}). Expected verdicts follow "
                          "from each operator and the case contract, never from a verifier.",
