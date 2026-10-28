@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/ot-work-order-v1.schema.json",
+  "title": "ot-work-order/v1",
+  "description": "A signed synthetic work order (runner.work_order). It names one building, asset, parameter and operation, the permitted value range, a validity window and the APS delegation it is bound to. The signature is Ed25519 over the RFC 8785 JCS form of every other member, by a TEST-ONLY key. Contract: docs/federation/authority-fixture-contract.md. Status: proposed in issue #27.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "work_order_id",
+    "building_id",
+    "asset",
+    "parameter",
+    "operation",
+    "value_range",
+    "valid_from",
+    "valid_until",
+    "delegation_id",
+    "delegation_sha256",
+    "issuer",
+    "signature"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-work-order/v1"
+    },
+    "work_order_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "building_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parameter": {
+      "type": "string",
+      "enum": [
+        "setpoint_c"
+      ]
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "set_zone_setpoint"
+      ]
+    },
+    "value_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max",
+        "unit"
+      ],
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "degC"
+          ]
+        }
+      },
+      "description": "Inclusive on both ends. The value range is the work order's alone; the delegation scope has none."
+    },
+    "valid_from": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "Inclusive."
+    },
+    "valid_until": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "Exclusive."
+    },
+    "delegation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The APS delegation's identifier, as APS states it."
+    },
+    "delegation_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 (lowercase hex) of the RFC 8785 JCS form of the complete signed delegation."
+    },
+    "issuer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Id of the test-only signing key; its raw Ed25519 public key (base64url) ships with the fixture set."
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$",
+      "description": "Ed25519 signature, base64url without padding, over JCS(work order without signature)."
+    }
+  }
+}

@@ -80,7 +80,7 @@
       "mode": "inline",
       "status": "SPECIFIED",
       "scoring": "none",
-      "note": "No harness yet. Blocked on a signed work-order format: the testbed's work orders are intent-table entries (deploy/ot/ot_intents.json), not signed artifacts. Planned after tool_definition, with the testbed's own Ed25519 signer as the interim format and the episode's work_orders as the oracle; a pinned federation authority format (APS) is preferred when one is available."
+      "note": "No harness yet. The signed work-order format (ot-work-order/v1), the normalized call both checks evaluate (ot-normalized-call/v1), RFC 8785 JCS binding of the APS delegation and test-only Ed25519 signing are proposed with APS in docs/federation/authority-fixture-contract.md (issue #27) and implemented in runner/jcs.py and runner/work_order.py. Next: the offline harness (both verdicts per case, errors as their own class), the delegation_invalid oracle rule with value-range support, and shadow evaluation."
     }
   ],
   "registered_edges": {
