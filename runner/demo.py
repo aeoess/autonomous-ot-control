@@ -777,6 +777,9 @@ def account_arm_b(live: dict[str, Any], work: Path, strategy: str, days: int) ->
     m["reviewer_model"] = live.get("reviewer_model", "careful")
     m["inline_edge"] = live.get("inline_edge")
     m["shadow_edges"] = live.get("shadow_edges") or []
+    # What this run actually held fixed, beside what the episode pinned (ADR-011, authority-fixture contract).
+    m["pins"] = episode_mod.current_pins()
+    m["pins_match_episode"] = (ep.get("pins") == m["pins"]) if ep and ep.get("pins") else None
     m["arm"] = "C" if live.get("inline_edge") else "B"
     (work / "arm-b-metrics.json").write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
     return m

@@ -170,16 +170,59 @@ cases are counted as their own classes, never as refusals.
 
 **Replacing the stand-in.** The set `t1` uses `ot-test-delegation/v1`, the
 testbed's own two-link chain format, so the harness runs end to end today.
-APS supplies a set in the same layout:
+APS's own delegations and verifier replace it. The stand-in then stays only
+as the harness's own regression test.
 
-- `manifest.json` (`ot-authority-fixtures/v1`) with the expected outcomes;
-- one `cases/<id>.json` per case (`ot-authority-case/v1`), each with the
-  normalized call, the testbed-signed work order and APS's delegation;
-- a verifier directory with `edge.json` and an entrypoint `run --fixtures <dir> --out <result.json>`.
+## How APS submits fixtures and a verifier
 
-The work orders for APS's delegations are signed by the testbed and bind each
-delegation by its JCS SHA-256. The stand-in stays only as the harness's own
-regression test.
+APS supplies **delegations, not work orders**. The testbed writes, signs and
+seals the work orders, so the split of responsibilities holds in the files
+themselves.
+
+1. **A submission directory**
+   ([`ot-authority-submission/v1`](../../contracts/ot-authority-submission-v1.schema.json)).
+   It holds a `submission.json` and one file per complete signed delegation,
+   in APS's own format. The `submission.json` gives:
+   - `source`: the project, the repository and the **pinned revision** the
+     delegations were built at;
+   - `delegation_format`;
+   - optionally the delegation keys, or `delegation_keys_ref` pointing to them;
+   - for each case: `case_id`, `construction` (how it was built),
+     `delegation_fault` (`widened`, `expired`, `out_of_scope` or `null`),
+     `delegation_file`, `delegation_id`, the `call` (`asset`, `value`,
+     `decision_time`) and `expected_work_order` (`pass`/`refuse`).
+     Optional `work_order` overrides set the asset, the range and the window;
+     the defaults are the call's asset, 19.0–21.0 °C and the decision day.
+2. **The testbed assembles and seals the set:**
+   `python -m runner.authority_fixtures assemble --submission <dir>/submission.json --out federation/authority/fixtures/<set>`.
+   - Each delegation is carried byte-for-byte as parsed JSON, never
+     re-encoded, and bound by its JCS SHA-256.
+   - The expected delegation verdict is `refuse` exactly when
+     `delegation_fault` is set.
+   - The assembly is refused if a work order built from the submission does
+     not give the `expected_work_order` it states, if a file lies outside the
+     submission directory, or if the submission does not follow its schema.
+3. **A verifier directory** with an `edge.json` and an entrypoint that takes
+   `run --fixtures <set dir> --out <result.json>`. It writes
+   [`ot-authority-verifier-result/v1`](../../contracts/ot-authority-verifier-result-v1.schema.json):
+   one `{case_id, verdict: pass|refuse, reason}` per case. The verifier itself
+   can stay in APS's repository; the directory only pins and calls it.
+   The harness records the following as answer problems, and each one fails
+   the run:
+   - an answer for an unknown case;
+   - more than one answer for a case;
+   - an entry without a `case_id`.
+4. **Run:** `python -m runner.authority_harness --fixtures <set> --verifier <dir> --out <out> --timeout 120`.
+   The result goes in the issue for both sides to review before any inline
+   integration.
+
+`python -m runner.authority_fixtures check <set>` validates a set against
+[`ot-authority-fixtures/v1`](../../contracts/ot-authority-fixtures-v1.schema.json)
+and [`ot-authority-case/v1`](../../contracts/ot-authority-case-v1.schema.json).
+It verifies every file digest and the package digest, and refuses
+expectations that contradict each other. Examples are an `admitted` that is
+not both checks passing, or a delegation fault not expected to fail the
+delegation check.
 
 ## Status of the testbed's side
 
@@ -192,5 +235,6 @@ regression test.
 | The five cases as a sealed set (`federation/authority/fixtures/t1`, built by `runner/authority_fixtures.py`) and a stand-in delegation verifier (`federation/authority/template-verifier`) | done; **the delegation format and verifier are the testbed's stand-ins, not APS's** |
 | Oracle: value-range support, pre-registered `delegation_invalid` rule and precedence (`runner/oracle.py`) | done, tested |
 | Shadow evaluation on every proposal (`runner.demo --shadow-edge`, `SHADOW_EDGES` in `run-abc.sh`; four-cell matrix, false refusals, unavailable and latency in the A/B/C report) | done, tested on simulated stacks; not yet run on Docker with an APS verifier |
-| Pins in the episode and run manifest | open |
+| Pins in the episode and run manifest: REMORA commit and lock, ToolSpec, limits policy and oracle digests, initial twin state, seeds (none; the stream is deterministic). `runner.episode check` fails on drift; each governed arm records its own pins and whether they match the episode | done, tested |
+| Schemas for sets, cases, submissions and verifier results; `assemble` for APS's delegations; harness answer problems (unknown, duplicate, malformed) and `--timeout` | done, tested |
 | Inline integration | after APS has reviewed the offline results |

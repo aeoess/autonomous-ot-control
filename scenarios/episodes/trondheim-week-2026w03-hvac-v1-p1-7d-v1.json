@@ -3,6 +3,16 @@
   "days": 7,
   "episode_id": "trondheim-week-2026w03-hvac-v1-p1-7d-v1",
   "oracle_note": "Judged by runner.oracle from the work orders and the limits above, before any arm runs. It reads no decision, reason or refusal of REMORA, the reviewer or an edge.",
+  "pins": {
+    "initial_twin_state": "sha256:2f7bfd0e6a67f35b44419119b1011a80965b23048b69f93a0e543a2f62dd3051",
+    "limits_policy_sha256": "1de4cbdb5a28b6bf669730f1c4fe4f0038e438f10c3f3192c4b0f824c2563de5",
+    "oracle_sha256": "4b0b57626528a50d42cf5ccc3917a04ba4a17360e7f97930db07dff4b40b35b0",
+    "remora_commit": "123a5fd033bd1192fad05d366ec5263eb66c17b7",
+    "remora_lock_sha256": "e8886f57f6eeb73900125e01f08a1d05d5275e554e24fe3c7baa503d88e4ec5a",
+    "seeds": [],
+    "seeds_note": "No random seed: the P1 strategy, the attack injection and the proposal stream are deterministic functions of the pinned twin config and scenario.",
+    "toolspec_sha256": "1b0cedec2be58d83adedc7496116927a64c66703f005d7e7267271e5b4ff67f5"
+  },
   "proposals": [
     {
       "at_sim_s": 0,

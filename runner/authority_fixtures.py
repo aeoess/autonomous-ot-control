@@ -1,6 +1,14 @@
 """Authority-fixture sets: the five cases of issue #27, built and sealed.
 
     python -m runner.authority_fixtures build --out federation/authority/fixtures/t1
+    python -m runner.authority_fixtures assemble --submission <dir>/submission.json --out <set dir>
+    python -m runner.authority_fixtures check <set dir>
+
+``assemble`` is how APS's own delegations become a set: APS supplies each
+case's complete signed delegation and a line saying how it was built
+(``ot-authority-submission/v1``); the testbed writes and signs the work order
+that binds it (delegation_id and its JCS SHA-256), fixes the expected outcomes
+and seals the set. The delegation is never changed or re-encoded.
 
 Each case carries the normalized call, the testbed's signed work order and a
 delegation, and the manifest fixes the expected outcome of both checks before
@@ -135,10 +143,36 @@ def build(out: Path, set_id: str = "t1") -> dict[str, Any]:
     return manifest
 
 
+CONTRACTS = Path(__file__).resolve().parents[1] / "contracts"
+SCHEMA_FILES = ("ot-authority-fixtures-v1", "ot-authority-case-v1", "ot-normalized-call-v1", "ot-work-order-v1",
+                "ot-authority-verifier-result-v1", "ot-authority-submission-v1")
+
+
+def validator(name: str):
+    """A jsonschema validator for one contract, with the others resolvable by their $id."""
+    import jsonschema
+    from referencing import Registry, Resource
+    schemas = {n: json.loads((CONTRACTS / f"{n}.schema.json").read_text("utf-8")) for n in SCHEMA_FILES}
+    registry = Registry().with_resources((s["$id"], Resource.from_contents(s)) for s in schemas.values())
+    return jsonschema.Draft202012Validator(schemas[name], registry=registry)
+
+
+def schema_problems(name: str, value: Any, where: str) -> list[str]:
+    return [f"{where}: {'/'.join(map(str, e.absolute_path)) or '(root)'}: {e.message}"
+            for e in sorted(validator(name).iter_errors(value), key=lambda e: list(e.absolute_path))]
+
+
 def check(set_dir: Path) -> list[str]:
-    """Problems with a sealed set: missing or changed files, a changed package digest, an unknown case."""
-    m = json.loads((set_dir / "manifest.json").read_text("utf-8"))
-    problems = []
+    """Problems with a sealed set: schema violations, missing or changed files, a changed package digest,
+    an unlisted or missing case, a case whose id disagrees with its file, expectations that contradict
+    each other."""
+    try:
+        m = json.loads((set_dir / "manifest.json").read_text("utf-8"))
+    except (OSError, ValueError) as e:
+        return [f"manifest.json unreadable: {type(e).__name__}"]
+    problems = schema_problems("ot-authority-fixtures-v1", m, "manifest.json")
+    if problems:
+        return problems
     if m.get("schema") != SET_SCHEMA:
         problems.append(f"manifest schema is {m.get('schema')!r}")
     for f in m.get("files", []):
@@ -151,8 +185,92 @@ def check(set_dir: Path) -> list[str]:
         problems.append("package digest does not match the files list")
     listed = {f"cases/{c['case_id']}.json" for c in m.get("cases", [])}
     present = {f"cases/{p.name}" for p in (set_dir / "cases").glob("*.json")}
+    sealed = {f["path"] for f in m["files"]}
     problems += [f"unlisted {p}" for p in sorted(present - listed)]
+    problems += [f"no file for {p}" for p in sorted(listed - present)]
+    problems += [f"{p} is not sealed in files" for p in sorted(listed - sealed)]
+    if len(listed) != len(m["cases"]):
+        problems.append("duplicate case ids in the manifest")
+    for entry in m["cases"]:
+        p = set_dir / "cases" / f"{entry['case_id']}.json"
+        if not p.is_file():
+            continue
+        case = json.loads(p.read_text("utf-8"))
+        problems += schema_problems("ot-authority-case-v1", case, p.name)
+        if case.get("case_id") != entry["case_id"]:
+            problems.append(f"{p.name}: case_id {case.get('case_id')!r} differs from its file name")
+        exp = entry["expected"]
+        if exp["admitted"] != (exp["aps"] == "pass" and exp["work_order"] == "pass"):
+            problems.append(f"{entry['case_id']}: expected admitted contradicts the two expected checks")
+        if (entry["delegation_fault"] is not None) != (exp["aps"] == "refuse"):
+            problems.append(f"{entry['case_id']}: a delegation fault, and only a fault, must be expected to fail "
+                            "the delegation check")
     return problems
+
+
+SUBMISSION_SCHEMA = "ot-authority-submission/v1"
+
+
+def assemble(submission: Path, out: Path) -> dict[str, Any]:
+    """A sealed set from a delegation owner's submission; the testbed signs the work orders."""
+    sub = json.loads(submission.read_text("utf-8"))
+    problems = schema_problems("ot-authority-submission-v1", sub, submission.name)
+    if problems:
+        raise SystemExit("; ".join(problems))
+    base = submission.parent
+    if out.exists():
+        shutil.rmtree(out)
+    (out / "cases").mkdir(parents=True)
+    entries = []
+    for c in sub["cases"]:
+        dlg_path = (base / c["delegation_file"]).resolve()
+        if base.resolve() not in dlg_path.parents:
+            raise SystemExit(f"{c['case_id']}: delegation_file must stay inside the submission directory")
+        dlg = json.loads(dlg_path.read_text("utf-8"))
+        call = wo.normalized_call({"tool_name": "set_zone_setpoint",
+                                   "arguments": {"zone_id": c["call"]["asset"], "setpoint_c": c["call"]["value"]}},
+                                  building_id=sub.get("building_id", BUILDING), decision_time_utc=c["call"]["decision_time"])
+        day = call["decision_time"][:10]
+        w = c.get("work_order") or {}
+        order = wo.sign({"schema": wo.SCHEMA, "work_order_id": f"WO-{c['case_id']}", "building_id": call["building_id"],
+                         "asset": w.get("asset", call["asset"]), "parameter": "setpoint_c",
+                         "operation": "set_zone_setpoint",
+                         "value_range": {"min": w.get("min", 19.0), "max": w.get("max", 21.0), "unit": "degC"},
+                         "valid_from": w.get("valid_from", f"{day}T00:00:00Z"),
+                         "valid_until": w.get("valid_until", f"{day}T23:59:59Z"),
+                         "delegation_id": c["delegation_id"], "delegation_sha256": wo.delegation_sha256(dlg)},
+                        wo.issuer_test_key(), wo.TEST_ISSUER)
+        # The work order is the testbed's own construction: check that it is what the submission says it is.
+        built = wo.check(order, call, wo.issuer_test_keys(), delegation=dlg)["verdict"]
+        if built != c["expected_work_order"]:
+            raise SystemExit(f"{c['case_id']}: the work order built from this submission gives {built}, "
+                             f"the submission says {c['expected_work_order']}")
+        fault = c.get("delegation_fault")
+        case = {"schema": CASE_SCHEMA, "case_id": c["case_id"], "construction": c["construction"],
+                "call": call, "work_order": order, "delegation": dlg}
+        (out / "cases" / f"{c['case_id']}.json").write_text(json.dumps(case, indent=2, sort_keys=True) + "\n", "utf-8")
+        aps = "refuse" if fault else "pass"
+        entries.append({"case_id": c["case_id"], "construction": c["construction"], "delegation_fault": fault,
+                        "expected": {"aps": aps, "work_order": c["expected_work_order"],
+                                     "admitted": aps == "pass" and c["expected_work_order"] == "pass"}})
+    files = [{"path": f"cases/{p.name}", "sha256": _sha(p)} for p in sorted((out / "cases").glob("*.json"))]
+    manifest = {"schema": SET_SCHEMA, "fixture_set": sub["set_id"], "contract": "docs/federation/authority-fixture-contract.md",
+                "scope": sub.get("scope", "Supplied delegations against testbed-signed work orders on the simulated "
+                                          "building. Synthetic; test-only keys; no physical control."),
+                "delegation_format": sub["delegation_format"], "source": sub["source"],
+                "work_order_issuer_keys": wo.issuer_test_keys(),
+                "test_keys_note": "The work-order key is test-only and derivable by anyone "
+                                  "(runner.work_order.issuer_test_key). The delegation keys are the submitter's.",
+                "cases": entries, "files": files, "package_digest": package_digest(files),
+                "package_digest_rule": "sha256 over one line per files entry, '<path> <sha256>\\n', sorted by path"}
+    for k in ("delegation_root_keys", "delegation_signer_keys", "delegation_keys_ref"):
+        if k in sub:
+            manifest[k] = sub[k]
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", "utf-8")
+    problems = check(out)
+    if problems:
+        raise SystemExit("the assembled set does not check: " + "; ".join(problems))
+    return manifest
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -163,7 +281,14 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--set-id", default="t1")
     c = sub.add_parser("check")
     c.add_argument("set_dir")
+    s = sub.add_parser("assemble")
+    s.add_argument("--submission", required=True)
+    s.add_argument("--out", required=True)
     a = p.parse_args(argv)
+    if a.cmd == "assemble":
+        m = assemble(Path(a.submission), Path(a.out))
+        print(f"{a.out}: {len(m['cases'])} cases from {m['source']}, {m['package_digest']}")
+        return 0
     if a.cmd == "build":
         m = build(Path(a.out), a.set_id)
         print(f"{a.out}: {len(m['cases'])} cases, {m['package_digest']}")

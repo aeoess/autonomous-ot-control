@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/ot-authority-verifier-result-v1.schema.json",
+  "title": "ot-authority-verifier-result/v1",
+  "description": "What a delegation verifier writes for runner.authority_harness: one answer per case, pass or refuse, with a reason. Anything else is recorded as malformed, never as a refusal.",
+  "type": "object",
+  "required": [
+    "verdicts"
+  ],
+  "properties": {
+    "edge_id": {
+      "type": "string"
+    },
+    "verifier_revision": {
+      "type": "string"
+    },
+    "verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "case_id",
+          "verdict"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "pass",
+              "refuse"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

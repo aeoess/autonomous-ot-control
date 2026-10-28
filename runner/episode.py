@@ -139,11 +139,34 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
         "strategy": "P1", "days": days, "simulated_s": end_s, "step_seconds": STEP_S,
         "reviewer_models": ["careful", "rubber_stamp"],
         "attack_at_sim_s": ATTACK_AT_S if attacks and end_s > ATTACK_AT_S else None,
+        "pins": current_pins(config_path, scenario_path),
         "work_orders": work_orders, "tables": tables.to_dict(), "rules": RULES,
         "totals": totals, "proposals": proposals,
         "oracle_note": ("Judged by runner.oracle from the work orders and the limits above, before any arm runs. "
                         "It reads no decision, reason or refusal of REMORA, the reviewer or an edge."),
     }
+
+
+UPSTREAM_LOCK = ROOT / "upstream" / "remora.lock.json"
+ORACLE_SRC = ROOT / "runner" / "oracle.py"
+SEEDS_NOTE = ("No random seed: the P1 strategy, the attack injection and the proposal stream are deterministic "
+              "functions of the pinned twin config and scenario.")
+
+
+def current_pins(config_path: Path = CONFIG, scenario_path: Path = SCENARIO) -> dict[str, Any]:
+    """What a scored run must hold fixed (authority-fixture contract section 5, ADR-011): the REMORA
+    revision, the signed tool contract and the limits policy the oracle reads, the oracle itself, the twin's
+    initial state, and the seeds."""
+    from twin.model import Twin, load_config
+    from twin.scenarios import load_scenario
+    from twin.state import canonical_digest
+    from runner.oracle import LIMITS_POLICY, TOOLSPEC
+    lock = json.loads(UPSTREAM_LOCK.read_text("utf-8"))
+    return {"remora_commit": lock["commit"], "remora_lock_sha256": _sha(UPSTREAM_LOCK),
+            "toolspec_sha256": _sha(TOOLSPEC), "limits_policy_sha256": _sha(LIMITS_POLICY),
+            "oracle_sha256": _sha(ORACLE_SRC),
+            "initial_twin_state": canonical_digest(Twin(load_config(config_path), load_scenario(scenario_path)).snapshot()),
+            "seeds": [], "seeds_note": SEEDS_NOTE}
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -192,6 +215,12 @@ def check(path: Path) -> list[str]:
     for key, p in (("twin_config", ep["twin_config"]), ("scenario", ep["scenario"])):
         if _sha(ROOT / p) != ep[f"{key}_sha256"]:
             problems.append(f"{key} {p} no longer has the pinned digest")
+    now = current_pins(ROOT / ep["twin_config"], ROOT / ep["scenario"])
+    for k, v in (ep.get("pins") or {}).items():
+        if now.get(k) != v:
+            problems.append(f"pin {k} drifted: episode {v!r}, now {now.get(k)!r}")
+    if not ep.get("pins"):
+        problems.append("no pins: rebuild the episode")
     rebuilt = build(ep["days"], config_path=ROOT / ep["twin_config"], scenario_path=ROOT / ep["scenario"],
                     attacks=ep.get("attack_at_sim_s") is not None, episode_id=ep["episode_id"])
     strip = lambda e: [{k: v for k, v in p.items()} for p in e["proposals"]]  # noqa: E731

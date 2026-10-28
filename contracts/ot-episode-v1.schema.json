@@ -15,6 +15,7 @@
     "simulated_s",
     "step_seconds",
     "reviewer_models",
+    "pins",
     "work_orders",
     "tables",
     "rules",
@@ -70,6 +71,56 @@
         "integer",
         "null"
       ]
+    },
+    "pins": {
+      "type": "object",
+      "description": "What a scored run holds fixed; runner.episode check fails when any of it drifts.",
+      "additionalProperties": false,
+      "required": [
+        "remora_commit",
+        "remora_lock_sha256",
+        "toolspec_sha256",
+        "limits_policy_sha256",
+        "oracle_sha256",
+        "initial_twin_state",
+        "seeds",
+        "seeds_note"
+      ],
+      "properties": {
+        "remora_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "remora_lock_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "toolspec_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "limits_policy_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "oracle_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "initial_twin_state": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "seeds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "seeds_note": {
+          "type": "string"
+        }
+      }
     },
     "work_orders": {
       "type": "object",

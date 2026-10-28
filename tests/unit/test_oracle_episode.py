@@ -188,3 +188,19 @@ def test_delegation_ground_truth_never_comes_from_a_verifier():
     assert judge(with_aps, WO, TABLES) == judge(p, WO, TABLES)
     labelled = prop(delegation_fault="expired")
     assert judge({**labelled, "aps": {"verdict": "pass"}}, WO, TABLES) == judge(labelled, WO, TABLES)
+
+
+def test_episode_pins_what_a_scored_run_holds_fixed_and_check_catches_drift(tmp_path):
+    ep = episode.load(COMMITTED)
+    pins = ep["pins"]
+    assert pins == episode.current_pins(ROOT / ep["twin_config"], ROOT / ep["scenario"])
+    assert len(pins["remora_commit"]) == 40 and pins["initial_twin_state"].startswith("sha256:")
+    assert pins["seeds"] == [] and "deterministic" in pins["seeds_note"]
+    drifted = copy.deepcopy(ep)
+    drifted["pins"]["limits_policy_sha256"] = "0" * 64
+    p = tmp_path / "ep.json"
+    p.write_text(json.dumps(drifted), "utf-8")
+    assert any(x.startswith("pin limits_policy_sha256 drifted") for x in episode.check(p))
+    del drifted["pins"]
+    p.write_text(json.dumps(drifted), "utf-8")
+    assert "no pins: rebuild the episode" in episode.check(p)

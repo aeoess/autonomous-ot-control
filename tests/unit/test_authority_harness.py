@@ -100,3 +100,87 @@ def test_a_changed_fixture_fails_the_set(tmp_path):
     p.write_text(json.dumps(case, indent=2, sort_keys=True) + "\n", "utf-8")
     r = ah.run(s, VERIFIER, tmp_path / "out")
     assert r["set_problems"] == ["changed cases/af-1-valid.json"] and not r["pass"]
+
+
+# -- a delegation owner's submission (APS), and verifier answers the harness does not accept ---------
+
+def _submission(tmp_path: Path) -> Path:
+    """A submission as APS would send it, here with the stand-in's delegations from t1."""
+    m = json.loads((SET / "manifest.json").read_text("utf-8"))
+    d = tmp_path / "submission"
+    (d / "delegations").mkdir(parents=True)
+    cases = []
+    for entry in m["cases"]:
+        case = json.loads((SET / "cases" / f"{entry['case_id']}.json").read_text("utf-8"))
+        (d / "delegations" / f"{entry['case_id']}.json").write_text(json.dumps(case["delegation"]), "utf-8")
+        cases.append({"case_id": entry["case_id"], "construction": entry["construction"],
+                      "delegation_fault": entry["delegation_fault"],
+                      "delegation_file": f"delegations/{entry['case_id']}.json",
+                      "delegation_id": case["delegation"]["delegation_id"],
+                      "call": {"asset": case["call"]["asset"], "value": case["call"]["value"],
+                               "decision_time": case["call"]["decision_time"]},
+                      "expected_work_order": entry["expected"]["work_order"]})
+    sub = {"schema": "ot-authority-submission/v1", "set_id": "sub-1",
+           "source": {"project": "stand-in", "repository": "local", "revision": "0000000"},
+           "delegation_format": "ot-test-delegation/v1 (stand-in)",
+           "delegation_root_keys": m["delegation_root_keys"], "delegation_signer_keys": m["delegation_signer_keys"],
+           "cases": cases}
+    (d / "submission.json").write_text(json.dumps(sub), "utf-8")
+    return d / "submission.json"
+
+
+def test_a_submission_assembles_into_a_sealed_set_the_harness_passes(tmp_path):
+    sub = _submission(tmp_path)
+    m = af.assemble(sub, tmp_path / "set")
+    assert af.check(tmp_path / "set") == [] and m["source"]["project"] == "stand-in"
+    assert [c["expected"] for c in m["cases"]] == [c["expected"] for c in json.loads((SET / "manifest.json").read_text("utf-8"))["cases"]]
+    case = json.loads((tmp_path / "set" / "cases" / "af-2-widened.json").read_text("utf-8"))
+    original = json.loads((sub.parent / "delegations" / "af-2-widened.json").read_text("utf-8"))
+    assert case["delegation"] == original  # never changed or re-encoded
+    assert case["work_order"]["delegation_sha256"] == wo.delegation_sha256(original)
+    r = ah.run(tmp_path / "set", VERIFIER, tmp_path / "out")
+    assert r["pass"] and r["counts"]["admitted"] == 1
+
+
+def test_a_submission_is_refused_when_it_is_not_what_it_says(tmp_path):
+    import pytest
+    sub = _submission(tmp_path)
+    s = json.loads(sub.read_text("utf-8"))
+    s["cases"][4]["expected_work_order"] = "pass"  # the value 22.5 is outside the default range
+    sub.write_text(json.dumps(s), "utf-8")
+    with pytest.raises(SystemExit, match="gives refuse"):
+        af.assemble(sub, tmp_path / "set")
+    s["cases"][4]["expected_work_order"] = "refuse"
+    s["cases"][0]["delegation_file"] = "../../outside.json"
+    sub.write_text(json.dumps(s), "utf-8")
+    with pytest.raises(SystemExit):
+        af.assemble(sub, tmp_path / "set2")
+    del s["source"]
+    sub.write_text(json.dumps(s), "utf-8")
+    with pytest.raises(SystemExit, match="source"):
+        af.assemble(sub, tmp_path / "set3")
+
+
+def test_contradictory_expectations_and_schema_violations_fail_the_set(tmp_path):
+    s = tmp_path / "t1"
+    shutil.copytree(SET, s)
+    m = json.loads((s / "manifest.json").read_text("utf-8"))
+    m["cases"][1]["delegation_fault"] = None  # widened case no longer labelled, still expected to be refused
+    (s / "manifest.json").write_text(json.dumps(m), "utf-8")
+    assert any("delegation fault" in p for p in af.check(s))
+    m["cases"][1]["delegation_fault"] = "widened"
+    m["cases"][1]["expected"]["aps"] = "maybe"
+    (s / "manifest.json").write_text(json.dumps(m), "utf-8")
+    assert any(p.startswith("manifest.json:") for p in af.check(s))
+
+
+def test_unknown_and_duplicate_answers_fail_the_run(tmp_path):
+    v = _verifier(tmp_path, "chatty",
+                  "ans = [{'case_id': c['case_id'], 'verdict': 'pass' if c['case_id'].startswith(('af-1', 'af-5')) else 'refuse'} for c in cases]\n"
+                  "ans += [{'case_id': 'af-9-invented', 'verdict': 'refuse'}, {'case_id': 'af-1-valid', 'verdict': 'refuse'}, 'junk']\n"
+                  "out.write_text(json.dumps({'verdicts': ans}))\n")
+    r = ah.run(SET, v, tmp_path / "out")
+    probs = r["verifier"]["answer_problems"]
+    assert "answer for unknown case 'af-9-invented'" in probs and "more than one answer for 'af-1-valid'" in probs
+    assert "an answer without a case_id" in probs and not r["pass"]
+    assert next(x for x in r["cases"] if x["case_id"] == "af-1-valid")["aps"]["class"] == "malformed"
