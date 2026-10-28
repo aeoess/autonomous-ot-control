@@ -34,6 +34,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -119,7 +120,116 @@ def _build(case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[s
     return req, capture, bundle
 
 
+def _case_error(case: Any) -> str | None:
+    """Validate the consumed case shape with stdlib only (also in copied/sandboxed edges).
+
+    Optional evidence stays optional; a missing value is handled by its claim.
+    This admission guard is maintainer integration, not upstream reader logic.
+    """
+    required = {"schema", "case_id", "kind", "claim", "decision", "execution",
+                "twin_operation", "observation", "remora_evidence", "evidence_sha256"}
+    if not isinstance(case, dict) or not required <= case.keys():
+        return "missing required case fields"
+    if case.keys() - required - {"fault", "remora_envelope"}:
+        return "unknown top-level field"
+    if case["schema"] != "ot-federation-case/v1" or case["kind"] not in ("positive", "negative"):
+        return "unknown schema or case kind"
+    if not isinstance(case["case_id"], str) or ("fault" in case and case["fault"] is not None
+                                               and not isinstance(case["fault"], str)):
+        return "invalid case id or fault"
+    digest = case["evidence_sha256"]
+    if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+        return "invalid evidence digest"
+    try:
+        json.dumps(case, allow_nan=False)
+    except (TypeError, ValueError, RecursionError):
+        return "not finite JSON"
+
+    def number(v: Any) -> bool:
+        if not isinstance(v, (int, float)) or isinstance(v, bool):
+            return False
+        try:
+            return math.isfinite(v)
+        except OverflowError:
+            return False  # JSON integers may exceed the numeric range consumed by the adapter.
+
+    def integer(v: Any) -> bool:
+        return number(v) and v % 1 == 0
+
+    claim, decision, execution = case["claim"], case["decision"], case["execution"]
+    strings = ("proposal_id", "tool", "zone_id", "claimed_effect")
+    if not isinstance(claim, dict) or not all(isinstance(claim.get(k), str) for k in strings) \
+            or not number(claim.get("setpoint_c")):
+        return "invalid claim"
+    if not isinstance(decision, dict) or not isinstance(decision.get("decision"), str) \
+            or type(decision.get("approved")) is not bool:
+        return "invalid decision"
+    if "reasons" in decision and not isinstance(decision["reasons"], list):
+        return "invalid decision reasons"
+    if decision.get("reviewer") is not None and not isinstance(decision["reviewer"], dict):
+        return "invalid reviewer"
+    if not isinstance(execution, dict) or type(execution.get("executed")) is not bool:
+        return "invalid execution"
+    if "executions" in execution and not integer(execution["executions"]):
+        return "invalid execution count"
+    if execution.get("dispatched_at_sim_s") is not None and not integer(execution["dispatched_at_sim_s"]):
+        return "invalid dispatch time"
+    for section in ("twin_operation", "observation"):
+        value = case[section]
+        if value is not None and not isinstance(value, dict):
+            return "invalid " + section
+    obs = case["observation"]
+    if obs is not None:
+        if "observed_setpoint_c" in obs and not number(obs["observed_setpoint_c"]):
+            return "invalid observed value"
+        if "observed_at_sim_s" in obs and not integer(obs["observed_at_sim_s"]):
+            return "invalid observation time"
+    op = case["twin_operation"]
+    if op is not None:
+        for key in ("requested_setpoint_c", "new_setpoint_c"):
+            if op.get(key) is not None and not number(op[key]):
+                return "invalid twin value"
+    return None
+
+
+def _binding_issue(case: dict[str, Any]) -> tuple[str, str] | None:
+    """Check recorded direct and native REMORA identity paths, without inventing absent IDs."""
+    paths = (("remora_envelope", "request_id"), ("remora_envelope", "request", "request_id"),
+             ("remora_evidence", "proposal_id"), ("remora_evidence", "manifest", "proposal_id"),
+             ("remora_evidence", "proposal", "proposal_id"))
+    for path in paths:
+        value: Any = case
+        for key in path:
+            if value is None:  # optional opaque sections may be absent/null
+                break
+            if not isinstance(value, dict):
+                return "NOT_ESTABLISHED", "unreadable proposal binding at " + ".".join(path)
+            if key not in value:
+                break
+            value = value[key]
+        else:
+            if value != case["claim"]["proposal_id"]:
+                return "CONTRADICTED", "proposal binding differs at " + ".".join(path)
+    return None
+
+
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    obj: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("duplicate JSON member")
+        obj[key] = value
+    return obj
+
+
+def _invalid_constant(value: str) -> Any:
+    raise ValueError("non-finite JSON constant")
+
+
 def check(case: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    error = _case_error(case)
+    if error:
+        return {c: ("NOT_ESTABLISHED", "malformed case: " + error) for c in ORDER}
     req, capture, bundle = _build(case)
     binding = R.invocation_binding(req)
     integ = R.judge_package(capture)
@@ -171,6 +281,17 @@ def check(case: dict[str, Any]) -> dict[str, tuple[str, str]]:
     else:
         out["observation_after_dispatch"] = ("ESTABLISHED", "observed at or after the dispatch")
     out["evidence_digest_integrity"] = (integ["result"], integ["reason"])
+    decision = case["decision"]
+    if decision["decision"] in ("verify", "escalate") and decision["approved"] is True:
+        reviewer = decision.get("reviewer")
+        if not isinstance(reviewer, dict) or type(reviewer.get("approved")) is not bool:
+            if out["decision_correspondence"][0] != "CONTRADICTED":
+                out["decision_correspondence"] = ("NOT_ESTABLISHED", "reviewer approval missing or invalid")
+        elif reviewer["approved"] is False:
+            out["decision_correspondence"] = ("CONTRADICTED", "reviewer refused the executed proposal")
+    binding_issue = _binding_issue(case)
+    if binding_issue:
+        out["call_binding"] = binding_issue
     return out
 
 
@@ -199,13 +320,17 @@ def main(argv: list[str] | None = None) -> int:
     manifest = (root / "manifest.json").read_bytes()
     verdicts = []
     for path in sorted((root / "cases").glob("*.json")):
-        case = json.loads(path.read_text("utf-8"))
+        case: Any = None
         try:
+            case = json.loads(path.read_text("utf-8"), object_pairs_hook=_unique_object,
+                              parse_constant=_invalid_constant)
             v, reason, claim_id = verdict(check(case), _vantage(case))
-        except (KeyError, TypeError, ValueError, AttributeError) as e:
+        except (KeyError, TypeError, ValueError, AttributeError, RecursionError, OverflowError) as e:
             # A case this adapter cannot read is not established; it never stops the run for the others.
             v, reason, claim_id = "NOT_ESTABLISHED", f"malformed case: {type(e).__name__}: {e}", None
-        entry: dict[str, Any] = {"case_id": case.get("case_id", path.stem), "verdict": v, "reason": reason}
+        case_id = case.get("case_id") if isinstance(case, dict) else None
+        entry: dict[str, Any] = {"case_id": case_id if isinstance(case_id, str) else path.stem,
+                                 "verdict": v, "reason": reason}
         if claim_id:
             entry["claim_id"] = claim_id
         verdicts.append(entry)

@@ -83,3 +83,14 @@ Dependabot proposes package updates only. A requirements-only bump fails
 the integration test: version, vendored bytes, digest and current edge pin
 must be reviewed and updated together. No dependency is installed at runtime;
 the sandbox runs this stdlib-only reader with network access disabled.
+
+## Maintainer #177 follow-up
+
+The wrapper now rejects malformed case shapes, duplicate JSON members,
+non-finite numbers, reviewer refusal on approved review decisions, and
+conflicting proposal bindings (including native nested REMORA paths).
+These are local maintainer integration checks also present in the reference
+wrapper, not additional independent checks by the upstream reader. The pinned
+`invocation_axes_reader.py` is unchanged. Existing v1 verdicts and reasons are
+preserved. See `docs/federation/mutation-crosswalk.md` for the development-only
+operator comparison; this does not expand the submitted v1 evaluation.
