@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/ot-authority-case-v1.schema.json",
+  "title": "ot-authority-case/v1",
+  "description": "One authority_fixture case: the normalized call both checks evaluate, the testbed-signed work order and the delegation (opaque to the testbed; bound by its JCS SHA-256).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "case_id",
+    "construction",
+    "call",
+    "work_order",
+    "delegation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-authority-case/v1"
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "construction": {
+      "type": "string",
+      "minLength": 1
+    },
+    "call": {
+      "$ref": "ot-normalized-call-v1.schema.json"
+    },
+    "work_order": {
+      "$ref": "ot-work-order-v1.schema.json"
+    },
+    "delegation": {
+      "description": "The complete signed delegation, in its owner's format."
+    }
+  }
+}

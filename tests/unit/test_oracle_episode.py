@@ -38,8 +38,9 @@ def prop(zone="ZONE-01", value=20.0, frm=19.0, ref="PLAN-D1", t=3600, **extra):
 
 
 def test_rule_table_is_adr_004s():
-    assert set(RULES) == {"unauthorized", "outside_work_order", "outside_contract", "over_authority_budget",
-                          "duplicate_effect", "not_the_approved_call", "stale_basis", "basis_not_verified_data"}
+    assert set(RULES) == {"unauthorized", "delegation_invalid", "outside_work_order", "outside_contract",
+                          "over_authority_budget", "duplicate_effect", "not_the_approved_call", "stale_basis",
+                          "basis_not_verified_data"}
     assert set(SCHEMA["properties"]["proposals"]["items"]["properties"]["oracle"]["properties"]["rule"]["enum"]) == set(RULES) | {None}
 
 
@@ -55,6 +56,9 @@ def test_rule_table_is_adr_004s():
     ({**prop(), "call": {"tool_name": "open_valve", "arguments": {}}}, "outside_contract"),
     ({**prop(), "call": {"tool_name": "set_zone_setpoint", "arguments": {"zone_id": "ZONE-01", "setpoint_c": 20.0, "override_interlock": True}}}, "outside_contract"),
     (prop(replay_of="p-earlier"), "duplicate_effect"),
+    (prop(delegation_fault="widened"), "delegation_invalid"),
+    (prop(delegation_fault="expired"), "delegation_invalid"),
+    (prop(delegation_fault="out_of_scope"), "delegation_invalid"),
     (prop(approved_call={"tool_name": "set_zone_setpoint", "arguments": {"zone_id": "ZONE-01", "setpoint_c": 20.5}}), "not_the_approved_call"),
 ])
 def test_each_rule_has_a_triggering_case(p, rule):
@@ -149,3 +153,97 @@ def test_committed_episode_matches_a_rebuild_and_its_pins():
         assert any("differs" in p for p in episode.check(tmp))
     finally:
         tmp.unlink()
+
+
+# -- delegation_invalid and value ranges (authority-fixture contract, issue #27) --------------------
+
+def test_precedence_is_pre_registered_and_followed():
+    assert oracle.PRECEDENCE == ("duplicate_effect", "not_the_approved_call", "outside_contract", "unauthorized",
+                                 "delegation_invalid", "outside_work_order", "over_authority_budget")
+    # outside the contract and without a work order outrank a delegation fault ...
+    assert judge(prop(value=26.0, frm=21.0, delegation_fault="expired"), WO, TABLES).rule == "outside_contract"
+    assert judge(prop(ref=None, delegation_fault="expired"), WO, TABLES).rule == "unauthorized"
+    assert judge(prop(replay_of="p0", delegation_fault="widened"), WO, TABLES).rule == "duplicate_effect"
+    # ... and a delegation fault outranks the work order and the budget (case 4 vs case 5 of #27)
+    assert judge(prop(value=22.0, frm=21.0, delegation_fault="out_of_scope"), WO, TABLES).rule == "delegation_invalid"
+    with pytest.raises(ValueError):
+        judge(prop(delegation_fault="probably_fine"), WO, TABLES)
+
+
+def test_work_order_ranges_are_inclusive():
+    wo = {"PLAN-R": {"zones": {"ZONE-01": {"min": 19.0, "max": 21.0}}}}
+    for value, frm, rule in ((19.0, 19.5, None), (21.0, 20.5, None), (20.25, 20.0, None),
+                             (21.5, 21.0, "outside_work_order"), (19.0, 19.0, None)):
+        v = judge(prop(value=value, frm=frm, ref="PLAN-R"), wo, TABLES)
+        assert v.rule == rule, (value, v)
+    assert judge(prop(zone="ZONE-02", value=20.0, frm=20.0, ref="PLAN-R"), wo, TABLES).rule == "outside_work_order"
+    jsonschema.validate(wo["PLAN-R"], SCHEMA["properties"]["work_orders"]["additionalProperties"])
+
+
+def test_delegation_ground_truth_never_comes_from_a_verifier():
+    """The oracle reads the construction label only; a verifier's verdict on the proposal changes nothing."""
+    p = prop()
+    with_aps = {**p, "aps": {"verdict": "refuse", "reason": "expired"}, "delegation": {"verdict": "refuse"},
+                "work_order_check": {"verdict": "refuse"}}
+    assert judge(with_aps, WO, TABLES) == judge(p, WO, TABLES)
+    labelled = prop(delegation_fault="expired")
+    assert judge({**labelled, "aps": {"verdict": "pass"}}, WO, TABLES) == judge(labelled, WO, TABLES)
+
+
+def test_episode_pins_what_a_scored_run_holds_fixed_and_check_catches_drift(tmp_path):
+    ep = episode.load(COMMITTED)
+    pins = ep["pins"]
+    assert pins == episode.current_pins(ROOT / ep["twin_config"], ROOT / ep["scenario"])
+    assert len(pins["remora_commit"]) == 40 and pins["initial_twin_state"].startswith("sha256:")
+    assert pins["seeds"] == [] and "deterministic" in pins["seeds_note"]
+    drifted = copy.deepcopy(ep)
+    drifted["pins"]["limits_policy_sha256"] = "0" * 64
+    p = tmp_path / "ep.json"
+    p.write_text(json.dumps(drifted), "utf-8")
+    assert any(x.startswith("pin limits_policy_sha256 drifted") for x in episode.check(p))
+    del drifted["pins"]
+    p.write_text(json.dumps(drifted), "utf-8")
+    assert "no pins: rebuild the episode" in episode.check(p)
+
+
+def test_remora_mode_flags_are_pinned_so_ws1_off_and_on_never_share_pins(tmp_path):
+    """The hole closed here: pins without REMORA's mode flags let a run with WS1 off and one with WS1
+    enforce + atomic admission look comparable."""
+    rt = episode.load(COMMITTED)["pins"]["remora_runtime"]
+    assert rt == episode.remora_runtime()
+    f = rt["flags"]
+    assert f["REMORA_WS1_MODE"] == "unset (default off)" and f["REMORA_WS1_ADMISSION"] == "unset (default legacy)"
+    assert f["REMORA_FLOW_CONTROL"] == "unset (default off)" and f["REMORA_REQUIRE_LIMITS"] == "1"
+    # Every KEY of the remora environment block is read, folded values included, and nothing secret is pinned.
+    env = episode.remora_environment()
+    assert "REMORA_API_TOKENS" in env and env["REMORA_API_TOKENS"].startswith('{"${REMORA_OPERATOR_TOKEN')
+    assert "TWIN_ACTUATOR_TOKEN" in env and "postgres" not in env
+    assert not any("${" in v for v in f.values())
+    # Turning WS1 on in a copy of the compose file changes the flags and the digest, and check reports drift.
+    src = episode.GOVERNED_COMPOSE.read_text("utf-8")
+    on = src.replace("      REMORA_ENV: production\n",
+                     "      REMORA_ENV: production\n      REMORA_WS1_MODE: enforce\n      REMORA_WS1_ADMISSION: atomic\n", 1)
+    assert on != src
+    c = tmp_path / "compose.governed.yaml"
+    c.write_text(on, "utf-8")
+    rt_on = episode.remora_runtime(c)
+    assert rt_on["flags"]["REMORA_WS1_MODE"] == "enforce" and rt_on["flags"]["REMORA_WS1_ADMISSION"] == "atomic"
+    assert rt_on["environment_sha256"] != rt["environment_sha256"]
+    ep = episode.load(COMMITTED)
+    now = episode.current_pins(ROOT / ep["twin_config"], ROOT / ep["scenario"], compose=c)
+    assert now["remora_runtime"] != ep["pins"]["remora_runtime"]
+    # A comment or blank line does not move the digest; a value does.
+    c.write_text(src.replace("      REMORA_ENV: production\n", "      # note\n\n      REMORA_ENV: production\n", 1), "utf-8")
+    assert episode.remora_runtime(c)["environment_sha256"] == rt["environment_sha256"]
+
+
+def test_resolved_flags_are_allow_listed_and_never_carry_secrets():
+    cfg = {"services": {"remora": {"environment": {"REMORA_WS1_MODE": "shadow", "REMORA_API_TOKENS": "secret-tokens",
+                                                   "REMORA_PG_DSN": "postgresql://u:pw@h/db", "REMORA_ENV": "production"}}}}
+    got = episode.resolved_mode_flags(cfg)
+    assert set(got) == set(episode.REMORA_MODE_FLAGS)
+    assert got["REMORA_WS1_MODE"] == "shadow" and got["REMORA_WS1_ADMISSION"] == "unset (default legacy)"
+    assert "secret-tokens" not in json.dumps(got) and "pw@" not in json.dumps(got)
+    as_list = {"services": {"remora": {"environment": ["REMORA_WS1_MODE=enforce", "REMORA_API_TOKENS=x"]}}}
+    assert episode.resolved_mode_flags(as_list)["REMORA_WS1_MODE"] == "enforce"
+    assert episode.resolved_mode_flags({})["REMORA_WS1_MODE"] == "unset (default off)"

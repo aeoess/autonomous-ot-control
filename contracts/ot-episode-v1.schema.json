@@ -15,6 +15,7 @@
     "simulated_s",
     "step_seconds",
     "reviewer_models",
+    "pins",
     "work_orders",
     "tables",
     "rules",
@@ -71,6 +72,82 @@
         "null"
       ]
     },
+    "pins": {
+      "type": "object",
+      "description": "What a scored run holds fixed; runner.episode check fails when any of it drifts.",
+      "additionalProperties": false,
+      "required": [
+        "remora_commit",
+        "remora_lock_sha256",
+        "remora_runtime",
+        "toolspec_sha256",
+        "limits_policy_sha256",
+        "oracle_sha256",
+        "initial_twin_state",
+        "seeds",
+        "seeds_note"
+      ],
+      "properties": {
+        "remora_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "remora_lock_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "remora_runtime": {
+          "type": "object",
+          "description": "REMORA's mode flags as the governed stack sets them (WS1, admission, flow control, ...; unset ones named with their default) and a digest of the remora service's environment block.",
+          "additionalProperties": false,
+          "required": [
+            "compose",
+            "flags",
+            "environment_sha256"
+          ],
+          "properties": {
+            "compose": {
+              "type": "string"
+            },
+            "flags": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "environment_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "toolspec_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "limits_policy_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "oracle_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "initial_twin_state": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "seeds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "seeds_note": {
+          "type": "string"
+        }
+      }
+    },
     "work_orders": {
       "type": "object",
       "description": "intent_ref -> what it permits: zones with their permitted values. The oracle reads only this.",
@@ -82,11 +159,32 @@
         "properties": {
           "zones": {
             "type": "object",
+            "description": "zone -> the permitted values: a list, or an inclusive range {min, max}.",
             "additionalProperties": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "properties": {
+                    "min": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    }
+                  }
+                }
+              ]
             }
           },
           "text": {
@@ -162,6 +260,14 @@
           "from_c": {
             "type": "number"
           },
+          "delegation_fault": {
+            "enum": [
+              "widened",
+              "expired",
+              "out_of_scope"
+            ],
+            "description": "Set when the episode is built: the delegation presented for this call is widened, expired at the decision time, or outside the granted scope. The oracle's ground truth for delegation_invalid; never read from a verifier."
+          },
           "replay_of": {
             "type": "string"
           },
@@ -196,6 +302,7 @@
                 "enum": [
                   null,
                   "unauthorized",
+                  "delegation_invalid",
                   "outside_work_order",
                   "outside_contract",
                   "over_authority_budget",

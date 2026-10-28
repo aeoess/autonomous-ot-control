@@ -36,6 +36,11 @@ else
   "$PY" -m runner.arm_a --episode "$EPISODE" --out "${OUT}/arm-a"
 fi
 
+# SHADOW_EDGES: space-separated EDGE_DIR[=URL] specs asked about every proposal of every governed
+# arm, before REMORA and without effect (runner.demo --shadow-edge); reported per arm by ab_compare.
+SHADOW_ARGS=""
+for spec in ${SHADOW_EDGES:-}; do SHADOW_ARGS+=" --shadow-edge ${spec}"; done
+
 run_governed() {  # label, extra demo args...
   local label="$1"; shift
   if [[ -d "${OUT}/${label}" ]]; then
@@ -47,7 +52,7 @@ run_governed() {  # label, extra demo args...
   rm -rf "artifacts/${RUN_ID}-${label}-work" "artifacts/${RUN_ID}-${label}"
   # A governed arm that is not the careful acceptance may let a forbidden proposal through;
   # that is the measurement, so the demo exits 0 for such arms. Any other failure stops here.
-  RUN_ID="${RUN_ID}-${label}" STRATEGY=P1 DAYS="$DAYS" DEMO_ARGS="$*" ./deploy/scripts/run-demo-governed.sh
+  RUN_ID="${RUN_ID}-${label}" STRATEGY=P1 DAYS="$DAYS" DEMO_ARGS="$* ${SHADOW_ARGS}" ./deploy/scripts/run-demo-governed.sh
   mv "artifacts/${RUN_ID}-${label}-work" "${OUT}/${label}"
 }
 run_governed B-careful --reviewer careful

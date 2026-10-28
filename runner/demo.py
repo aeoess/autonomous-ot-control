@@ -71,6 +71,9 @@ SUITE_ID = "ot-governed-demo/v1"
 #: consulted after REMORA and the reviewer approved (runner.admission; it can only add refusals).
 REVIEWER_MODEL = "careful"
 INLINE_EDGE: admission.InlineEdge | None = None
+#: Shadow edges (ADR-011, authority-fixture contract): asked about every proposed write, before REMORA,
+#: on the same captured input an inline edge gets. Their answers are recorded and never change anything.
+SHADOW_EDGES: list[admission.InlineEdge] = []
 
 
 # -- strategy P1 (pure) ---------------------------------------------------------
@@ -210,13 +213,43 @@ def review(sc: Scenario, t_s: int, zone: str, value: float, current: float, inte
     return careful_reviewer(sc, t_s, zone, value, current, intent_ref, day, zone_temp_c, learner)
 
 
-def edge_context(day: str, zone: str, current: float, intent_ref: str | None, t_s: int) -> dict[str, Any]:
-    """What an inline edge is told besides the exact call: the day plan as what it permits, the current
-    setpoint and the declared step limit. Nothing of REMORA's decision and no credential."""
+def edge_context(day: str, zone: str, current: float, intent_ref: str | None, t_s: int,
+                 decision_time_utc: str | None = None) -> dict[str, Any]:
+    """What an inline or shadow edge is told besides the exact call: the day plan as what it permits, the
+    current setpoint, the declared step limit and the fixed decision time (the episode's start plus simulated
+    seconds). Nothing of REMORA's decision and no credential."""
     plan = ({**{z: sorted(PLAN_VALUES) for z in SETBACK_ZONES}, "ZONE-03": [OCCUPIED_C]}
             if intent_ref == f"PLAN-{day}" else {})
-    return {"intent_ref": intent_ref, "work_order": {"zones": plan}, "current_setpoint_c": current,
-            "max_delta_c": MAX_STEP_C, "sim_time_s": t_s}
+    cx = {"intent_ref": intent_ref, "work_order": {"zones": plan}, "current_setpoint_c": current,
+          "max_delta_c": MAX_STEP_C, "sim_time_s": t_s}
+    if decision_time_utc:
+        cx["decision_time"] = decision_time_utc
+    return cx
+
+
+def consult_shadow_edges(call: dict[str, Any], context: dict[str, Any], row: dict[str, Any],
+                         counts: Counter[str]) -> None:
+    """Every shadow edge's answer on this proposal, recorded beside the row; it changes nothing.
+
+    Asked before REMORA assesses the call, so proposals REMORA refuses are judged too and overlap is
+    measurable. A timeout, an error or a malformed answer is recorded as unavailable, never as a refusal.
+    """
+    for edge in SHADOW_EDGES:
+        d = edge.decide(call, context)
+        row.setdefault("shadow", {})[edge.edge_id] = d.to_dict()
+        counts["shadow_unavailable" if not d.available else f"shadow_{d.verdict}"] += 1
+
+
+def resolved_remora_flags(compose: list[str]) -> dict[str, str] | None:
+    """REMORA's mode flags as this stack resolved them (``docker compose config``), allow-listed and never a
+    secret; None when the config cannot be read. Imported lazily: runner.episode imports this module."""
+    import subprocess
+    from runner import episode as episode_mod
+    try:
+        r = subprocess.run([*compose, "config", "--format", "json"], capture_output=True, text=True, timeout=60)
+        return episode_mod.resolved_mode_flags(json.loads(r.stdout)) if r.returncode == 0 else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
 
 
 def capture_digests(rec: dict[str, Any]) -> dict[str, str | None]:
@@ -342,6 +375,8 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
                            "from_c": current, "to_c": value, "strategy_reason": why,
                            "intent_ref": intent_ref, "price_nok_per_kwh": round(sc.price_per_kwh(t), 5),
                            "outdoor_c": round(sc.outdoor_c(t), 2), "room_c": round(room_c, 2)}
+    context = edge_context(day, zone, current, intent_ref, t, _utc(sc, t))
+    consult_shadow_edges(call, context, row, counts)
     a = s.step("assess", **call)
     b = body(a)
     if not a["ok"]:
@@ -359,7 +394,7 @@ def governed_write(s: Stack, sc: Scenario, t: int, day: str, zone: str, current:
         ok, reason = review(sc, t, zone, value, current, intent_ref, day, room_c, learner)
         row["reviewer"] = {"model": REVIEWER_MODEL, "approved": ok, "reason": reason}
         if ok:
-            ok, edge_reason = consult_inline_edge(call, edge_context(day, zone, current, intent_ref, t), row, counts)
+            ok, edge_reason = consult_inline_edge(call, context, row, counts)
             reason = edge_reason or reason
         if ok:
             s.step("approve", item_id=item)
@@ -753,6 +788,14 @@ def account_arm_b(live: dict[str, Any], work: Path, strategy: str, days: int) ->
                      "sha256": hashlib.sha256(ep_path.read_bytes()).hexdigest()} if ep else None)
     m["reviewer_model"] = live.get("reviewer_model", "careful")
     m["inline_edge"] = live.get("inline_edge")
+    m["shadow_edges"] = live.get("shadow_edges") or []
+    # What this run actually held fixed, beside what the episode pinned (ADR-011, authority-fixture contract).
+    m["pins"] = episode_mod.current_pins()
+    # The flags the stack actually resolved (a shell override included), beside what the file says.
+    m["remora_flags_resolved"] = live.get("remora_flags_resolved")
+    resolved_ok = (m["remora_flags_resolved"] is None
+                   or m["remora_flags_resolved"] == m["pins"]["remora_runtime"]["flags"])
+    m["pins_match_episode"] = ((ep.get("pins") == m["pins"] and resolved_ok) if ep and ep.get("pins") else None)
     m["arm"] = "C" if live.get("inline_edge") else "B"
     (work / "arm-b-metrics.json").write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
     return m
@@ -776,10 +819,15 @@ def main(argv: list[str] | None = None) -> int:
                    help="arm C: consult this inline edge after REMORA and the reviewer approved (runner.admission)")
     p.add_argument("--inline-edge-url", default=os.environ.get("INLINE_EDGE_URL"),
                    help="override the edge's entrypoint.http (e.g. when it runs on this host)")
+    p.add_argument("--shadow-edge", action="append", default=[], metavar="EDGE_DIR[=URL]",
+                   help="shadow evaluation (repeatable): ask this edge about every proposed write, before REMORA, "
+                        "and record its answer without effect; =URL overrides its entrypoint.http")
     a = p.parse_args(argv)
-    global REVIEWER_MODEL, INLINE_EDGE
+    global REVIEWER_MODEL, INLINE_EDGE, SHADOW_EDGES
     REVIEWER_MODEL = a.reviewer
     INLINE_EDGE = admission.InlineEdge.from_edge_dir(Path(a.inline_edge), url=a.inline_edge_url) if a.inline_edge else None
+    SHADOW_EDGES = [admission.InlineEdge.from_edge_dir(Path(d), url=u or None)
+                    for d, _, u in (spec.partition("=") for spec in a.shadow_edge)]
     compose = ["docker", "compose", "-f", "compose.yaml", "-f", "compose.governed.yaml"]
     if a.project:
         compose[2:2] = ["-p", a.project]
@@ -789,6 +837,8 @@ def main(argv: list[str] | None = None) -> int:
     live = run_p3(s, work, a.days) if a.strategy == "P3" else run(s, work, a.days)
     live["reviewer_model"] = REVIEWER_MODEL
     live["inline_edge"] = INLINE_EDGE.edge_id if INLINE_EDGE else None
+    live["shadow_edges"] = [e.edge_id for e in SHADOW_EDGES]
+    live["remora_flags_resolved"] = resolved_remora_flags(compose)
     summary = summarize(live)
     summary["arm_B"] = account_arm_b(live, work, a.strategy, a.days)
     (work / "ledger.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in live["ledger"]),

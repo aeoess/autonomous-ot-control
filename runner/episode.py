@@ -139,11 +139,97 @@ def build(days: int, *, config_path: Path = CONFIG, scenario_path: Path = SCENAR
         "strategy": "P1", "days": days, "simulated_s": end_s, "step_seconds": STEP_S,
         "reviewer_models": ["careful", "rubber_stamp"],
         "attack_at_sim_s": ATTACK_AT_S if attacks and end_s > ATTACK_AT_S else None,
+        "pins": current_pins(config_path, scenario_path),
         "work_orders": work_orders, "tables": tables.to_dict(), "rules": RULES,
         "totals": totals, "proposals": proposals,
         "oracle_note": ("Judged by runner.oracle from the work orders and the limits above, before any arm runs. "
                         "It reads no decision, reason or refusal of REMORA, the reviewer or an edge."),
     }
+
+
+UPSTREAM_LOCK = ROOT / "upstream" / "remora.lock.json"
+GOVERNED_COMPOSE = ROOT / "compose.governed.yaml"
+#: REMORA's mode flags that change what it decides or how it admits, with the pinned revision's default when
+#: unset (remora/toolcall/runtime_profile.py, servers/execution_api.py at the lock's commit). WS1 off means
+#: legacy admission; enforce under a strict profile requires atomic admission and flow control.
+REMORA_MODE_FLAGS = {
+    "REMORA_ENV": None, "REMORA_ENABLED_SURFACES": None,
+    "REMORA_WS1_MODE": "off", "REMORA_WS1_ADMISSION": "legacy", "REMORA_WS1_DEPLOYMENT_MODULE": None,
+    "REMORA_FLOW_CONTROL": "off", "REMORA_MAX_CLOCK_SKEW_MS": None, "REMORA_SIGNATURE_FORMAT": None,
+    "REMORA_BINDING_POLICY": None, "REMORA_REQUIRE_LIMITS": None, "REMORA_LIMITS_LEDGER_SCOPE": None,
+    "REMORA_GROUNDED_READ_ACCEPT": None, "REMORA_TOOL_REGISTRY_MODULE": None,
+    "REMORA_SEMANTIC_BUNDLE_MODULE": None, "REMORA_INTENT_SOURCE_FILE": None,
+}
+
+
+def remora_environment(compose: Path = GOVERNED_COMPOSE) -> dict[str, str]:
+    """The ``remora`` service's environment block as written in the compose file (no YAML parser in the
+    locks; the block is ``KEY: value`` lines, a folded ``>-`` value continuing on deeper-indented lines).
+    Values are the file's text: secrets appear only as ``${VAR:?...}`` references."""
+    env: dict[str, str] = {}
+    in_service = in_env = False
+    key = None
+    for line in compose.read_text("utf-8").splitlines():
+        if line.startswith("  ") and not line.startswith("   ") and line.strip().endswith(":"):
+            in_service, in_env = line.strip() == "remora:", False
+            continue
+        if not in_service:
+            continue
+        if line.startswith("    ") and not line.startswith("     ") and line.strip():
+            in_env = line.strip() == "environment:"
+            key = None
+            continue
+        if not in_env or not line.strip() or line.strip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent == 6 and ":" in line:
+            key, _, value = line.strip().partition(":")
+            value = value.strip()
+            # a block scalar indicator (">-", "|", ...) is YAML syntax, not part of the value
+            env[key] = "" if value in (">", ">-", ">+", "|", "|-", "|+") else value.strip('"')
+        elif indent > 6 and key is not None:
+            env[key] = (env[key] + " " + line.strip()).strip()
+    return env
+
+
+def remora_runtime(compose: Path = GOVERNED_COMPOSE) -> dict[str, Any]:
+    """REMORA's mode flags as the governed stack sets them (defaults named when unset) and a digest of the
+    whole environment block, so a run with WS1 off and one with WS1 enforce never share pins."""
+    env = remora_environment(compose)
+    flags = {k: env.get(k, f"unset (default {d})" if d else "unset") for k, d in REMORA_MODE_FLAGS.items()}
+    return {"compose": compose.name, "flags": flags,
+            "environment_sha256": hashlib.sha256(json.dumps(env, sort_keys=True).encode("utf-8")).hexdigest()}
+
+
+def resolved_mode_flags(compose_config: dict[str, Any]) -> dict[str, str]:
+    """The mode flags of the ``remora`` service from ``docker compose config --format json``: only the
+    allow-listed, non-secret flags, unset ones named with their default. Never anything else of the env."""
+    env = ((compose_config.get("services") or {}).get("remora") or {}).get("environment") or {}
+    if isinstance(env, list):
+        env = dict(item.partition("=")[::2] for item in env)
+    return {k: str(env[k]) if k in env and env[k] is not None else (f"unset (default {d})" if d else "unset")
+            for k, d in REMORA_MODE_FLAGS.items()}
+ORACLE_SRC = ROOT / "runner" / "oracle.py"
+SEEDS_NOTE = ("No random seed: the P1 strategy, the attack injection and the proposal stream are deterministic "
+              "functions of the pinned twin config and scenario.")
+
+
+def current_pins(config_path: Path = CONFIG, scenario_path: Path = SCENARIO,
+                 compose: Path = GOVERNED_COMPOSE) -> dict[str, Any]:
+    """What a scored run must hold fixed (authority-fixture contract section 5, ADR-011): the REMORA
+    revision and its mode flags (WS1, flow control, admission), the signed tool contract and the limits
+    policy the oracle reads, the oracle itself, the twin's initial state, and the seeds."""
+    from twin.model import Twin, load_config
+    from twin.scenarios import load_scenario
+    from twin.state import canonical_digest
+    from runner.oracle import LIMITS_POLICY, TOOLSPEC
+    lock = json.loads(UPSTREAM_LOCK.read_text("utf-8"))
+    return {"remora_commit": lock["commit"], "remora_lock_sha256": _sha(UPSTREAM_LOCK),
+            "remora_runtime": remora_runtime(compose),
+            "toolspec_sha256": _sha(TOOLSPEC), "limits_policy_sha256": _sha(LIMITS_POLICY),
+            "oracle_sha256": _sha(ORACLE_SRC),
+            "initial_twin_state": canonical_digest(Twin(load_config(config_path), load_scenario(scenario_path)).snapshot()),
+            "seeds": [], "seeds_note": SEEDS_NOTE}
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -192,6 +278,12 @@ def check(path: Path) -> list[str]:
     for key, p in (("twin_config", ep["twin_config"]), ("scenario", ep["scenario"])):
         if _sha(ROOT / p) != ep[f"{key}_sha256"]:
             problems.append(f"{key} {p} no longer has the pinned digest")
+    now = current_pins(ROOT / ep["twin_config"], ROOT / ep["scenario"])
+    for k, v in (ep.get("pins") or {}).items():
+        if now.get(k) != v:
+            problems.append(f"pin {k} drifted: episode {v!r}, now {now.get(k)!r}")
+    if not ep.get("pins"):
+        problems.append("no pins: rebuild the episode")
     rebuilt = build(ep["days"], config_path=ROOT / ep["twin_config"], scenario_path=ROOT / ep["scenario"],
                     attacks=ep.get("attack_at_sim_s") is not None, episode_id=ep["episode_id"])
     strip = lambda e: [{k: v for k, v in p.items()} for p in e["proposals"]]  # noqa: E731

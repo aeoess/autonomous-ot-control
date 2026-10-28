@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/darklordVirtual/autonomous-ot-control/contracts/ot-authority-fixtures-v1.schema.json",
+  "title": "ot-authority-fixtures/v1",
+  "description": "Manifest of a sealed authority_fixture set (runner.authority_fixtures). The expected outcome of both checks is fixed here before any verifier runs; files are sealed by SHA-256 and a package digest. Contract: docs/federation/authority-fixture-contract.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "fixture_set",
+    "contract",
+    "scope",
+    "delegation_format",
+    "work_order_issuer_keys",
+    "cases",
+    "files",
+    "package_digest",
+    "package_digest_rule"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ot-authority-fixtures/v1"
+    },
+    "fixture_set": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "contract": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "delegation_format": {
+      "type": "string",
+      "description": "The delegation format the cases carry, and who owns it."
+    },
+    "work_order_issuer_keys": {
+      "$ref": "#/$defs/keys"
+    },
+    "delegation_root_keys": {
+      "$ref": "#/$defs/keys"
+    },
+    "delegation_signer_keys": {
+      "$ref": "#/$defs/keys"
+    },
+    "delegation_keys_ref": {
+      "type": "string",
+      "description": "Where the delegation format's own keys are, when it ships them elsewhere."
+    },
+    "test_keys_note": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "description": "Who supplied the delegations, at which pinned revision."
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "construction",
+          "delegation_fault",
+          "expected"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "construction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "delegation_fault": {
+            "enum": [
+              null,
+              "widened",
+              "expired",
+              "out_of_scope"
+            ]
+          },
+          "expected": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "aps",
+              "work_order",
+              "admitted"
+            ],
+            "properties": {
+              "aps": {
+                "enum": [
+                  "pass",
+                  "refuse"
+                ]
+              },
+              "work_order": {
+                "enum": [
+                  "pass",
+                  "refuse"
+                ]
+              },
+              "admitted": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^cases/[A-Za-z0-9._-]+\\.json$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "package_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "package_digest_rule": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "keys": {
+      "type": "object",
+      "description": "key id -> raw Ed25519 public key, base64url (43 characters).",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      }
+    }
+  }
+}
