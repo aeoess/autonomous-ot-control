@@ -536,7 +536,7 @@ This is **a UI/projection vocabulary**, not a competing REMORA authoritative lif
 
 | ID | Decision | Recommended default | Must resolve by |
 |---|---|---|---|
-| `D-01` | Repo license and allowed contributor reuse | Owner decides independently; preserve REMORA BUSL notice/Research Grant when included as dependency | First public commit |
+| `D-01` | Repo license and allowed contributor reuse | **Decided 2026-10-28: Apache-2.0** for this repository's own material (`LICENSE`, `NOTICE`); REMORA/SDK stays BUSL-1.1 and is not included; contributed edges and third-party data keep their terms (`THIRD_PARTY_LICENSES.md`) | Done |
 | `D-02` | REMORA version distribution | Immutable upstream commit + pinned image/package digest | `OT-001` |
 | `D-03` | Adapter registration interface | Supported server deployment module; minimum plugin installed in protected REMORA image | `OT-003` |
 | `D-04` | Agent provider | Deterministic scripted agent first; LLM optional adapter later | Before scored comparison |

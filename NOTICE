@@ -1,0 +1,36 @@
+autonomous-ot-control
+Copyright 2026 darklordVirtual and the contributors named in the Git history.
+
+This product is licensed under the Apache License, Version 2.0 (LICENSE).
+
+The Apache-2.0 grant covers only the material written for this repository
+by its authors and contributors. It does NOT cover, and nothing in this
+repository relicenses:
+
+  * REMORA (https://github.com/darklordVirtual/REMORA-research), including its
+    SDK (remora.sdk). REMORA is licensed under the Business Source License 1.1
+    with its own Research Grant. It is not included in this repository; the
+    Docker build fetches it at the pinned commit in upstream/remora.lock.json.
+    Using REMORA is governed by REMORA's licence, not by this NOTICE.
+
+  * Third-party software, data and documents listed in
+    THIRD_PARTY_LICENSES.md, each under its own terms.
+
+  * Files contributed by other projects that state their own licence, for
+    example federation/edges/agent-evidence-vectors-axes/ (Apache-2.0,
+    Copyright 2026 Sankalp Gilda; see LICENSE.agent-evidence-vectors in that
+    directory).
+
+This repository includes:
+
+  * Weather data by Open-Meteo.com (CC BY 4.0), derived from ERA5 reanalysis.
+    Contains modified Copernicus Climate Change Service information.
+  * Day-ahead prices as republished by hvakosterstrommen.no (ENTSO-E / Nord
+    Pool day-ahead results per Norwegian price area).
+  * An index of Statsbygg's PA 0802 (TFM) code lists. Statsbygg holds the
+    rights in PA 0802; the published PDFs are the authority.
+  * Priors derived from Enova's published energy-certificate data.
+  * Aggregate calibration targets of one anonymised building (SITE_001),
+    published with the owner's consent.
+
+See THIRD_PARTY_LICENSES.md for the terms, attribution and scope of each.

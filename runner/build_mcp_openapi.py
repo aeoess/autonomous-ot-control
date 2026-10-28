@@ -199,7 +199,7 @@ doc = {
             "are limited to REMORA assess (propose), approve and reject; execution happens in the "
             "caretaker through REMORA's protected dispatcher. Design specification; see "
             "docs/architecture/autonomous-runtime-cloudflare.md section 13."),
-        "license": {"name": "Not yet decided (SDD D-01)"},
+        "license": {"name": "Apache-2.0", "identifier": "Apache-2.0"},
     },
     "servers": [{"url": "https://mcp.{domain}", "variables": {"domain": {"default": "example.invalid"}}}],
     "security": [{"oauth2": ["building.read"]}],

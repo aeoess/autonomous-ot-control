@@ -198,9 +198,14 @@
     }
   },
   "licence": {
-    "code": "NOT_DECIDED (SDD D-01)",
-    "fixtures_and_contracts": "NOT_DECIDED (SDD D-01)",
-    "decision": "Until D-01 is decided, an external project may run the fixtures and publish its own attributed result; redistribution of the fixtures themselves waits for the licence."
+    "code": "Apache-2.0",
+    "fixtures_and_contracts": "Apache-2.0",
+    "decision": "Decided 2026-10-28 (SDD D-01). Covers what this repository's authors wrote. REMORA and its SDK (BUSL-1.1), contributed edges with their own licence, third-party packages and data keep their terms; see THIRD_PARTY_LICENSES.md.",
+    "files": [
+      "LICENSE",
+      "NOTICE",
+      "THIRD_PARTY_LICENSES.md"
+    ]
   },
   "discussion": "https://github.com/aeoess/agent-governance-vocabulary/issues/177"
 }

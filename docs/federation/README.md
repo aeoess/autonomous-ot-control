@@ -359,6 +359,7 @@ files and of the scorer that scored it.
 
 Questions go in an issue on this repository. The discussion that motivated
 the testbed is aeoess/agent-governance-vocabulary#177, but joining happens
-here, by pull request. Licence for the fixtures and contracts is not yet
-decided (SDD D-01): you may run them and publish your own attributed result;
-redistributing the fixtures themselves waits for the licence.
+here, by pull request. The fixtures, contracts, scorer and reference
+verifiers are Apache-2.0 like the rest of this repository; your edge keeps its
+own licence and copyright, stated in its directory. REMORA is not covered
+(BUSL-1.1). Details: [THIRD_PARTY_LICENSES.md](../../THIRD_PARTY_LICENSES.md).
