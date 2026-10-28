@@ -16,3 +16,7 @@ case.
 
 Never commit `.env`, tokens or real site data. `deploy/scripts/preflight.sh`
 fails the build if a twin token value appears in tracked files.
+
+How the testbed answers each risk in the OWASP Top 10 for Agentic Applications
+(ASI01–ASI10), what tests it, and what is not covered:
+[docs/security/owasp-agentic-top10.md](docs/security/owasp-agentic-top10.md).

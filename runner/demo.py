@@ -90,6 +90,10 @@ def next_occupancy_start(sc: Scenario, t_s: int, horizon_s: int = 3 * 86400) -> 
 #: Reheat rate the strategy assumes: about 1 K/h with spare heat-pump capacity
 #: at -5 degC (ADR-007), derated 0.02 K/h per K colder. Deliberately cautious.
 REHEAT_K_PER_H_AT_0C = 0.8
+#: The fastest reheat a zone of this plant can show (K/h), with ample margin: the committed episode's
+#: preheats learn 0.24..0.42 K/h. An observation above it is a bad reading or a poisoned input, not a
+#: property of the zone, and is never folded into the learned rate (OWASP ASI06, memory poisoning).
+MAX_PLAUSIBLE_REHEAT_K_PER_H = 4.0
 
 
 class ReheatLearner:
@@ -99,12 +103,14 @@ class ReheatLearner:
     plant). While a zone is preheating it measures the observed rise per hour;
     at each occupancy start it folds the preheat's mean rate into a per-zone
     estimate (exponential average, weight 0.5). Until a zone has preheated once,
-    the cautious default applies.
+    the cautious default applies. A rise faster than MAX_PLAUSIBLE_REHEAT_K_PER_H
+    is rejected and counted, never learned.
     """
 
     def __init__(self) -> None:
         self.rate: dict[str, float] = {}
         self._start: dict[str, tuple[int, float]] = {}
+        self.rejected: list[tuple[str, float]] = []
 
     def observe(self, zone: str, t_s: int, temp_c: float, preheating: bool) -> None:
         if preheating and zone not in self._start:
@@ -115,6 +121,9 @@ class ReheatLearner:
             rise = temp_c - temp0
             if hours >= 0.5 and rise > 0.2:
                 seen = rise / hours
+                if seen > MAX_PLAUSIBLE_REHEAT_K_PER_H:
+                    self.rejected.append((zone, round(seen, 3)))
+                    return
                 self.rate[zone] = round(0.5 * self.rate.get(zone, seen) + 0.5 * seen, 3)
 
     def preheating(self, zone: str) -> bool:
