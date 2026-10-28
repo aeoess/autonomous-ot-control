@@ -74,7 +74,11 @@ for arm B with the rubber-stamp reviewer, and
 `DEMO_ARGS="--reviewer rubber_stamp --inline-edge federation/edges/_inline_template --inline-edge-url http://127.0.0.1:8765/decide"`
 for arm C, with `python federation/edges/_inline_template/server.py --port 8765` running
 on the host. Every governed run writes `arm-b-metrics.json` (its accounting against
-the oracle) and `edges/edges.md` (offline edges beside the run) in its work directory.
+the oracle) and `edges/edges.md` (offline edges beside the run) in its work directory, with
+`edges/usage.json` (each edge's use in that pass: one local verifier run, runtime,
+cases processed, findings, tied to the edge's version digest and the input digest).
+`python -m runner.edge_usage --root artifacts --out <dir>` adds the passes up per edge
+and contributor, counting a repeated input once for findings and distinct cases.
 What the report is and what it does not establish: [federation/ABC-ROADMAP.md](federation/ABC-ROADMAP.md).
 
 ## Trust boundary
