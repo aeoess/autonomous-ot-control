@@ -192,7 +192,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 
 | Id | Rule | Protects | Status | Enforced by |
 |---|---|---|---|---|
-| IL-01 | CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone | no simultaneous heating and cooling | `IMPLEMENTED` | twin interlock + caretaker validator |
+| IL-01 | CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone, on the resulting state of every write to either setpoint | no simultaneous heating and cooling | `IMPLEMENTED` | twin interlock + caretaker validator |
 | IL-02 | HeatingSetpoint >= 20.0 while the zone is occupied or within its recovery lead | comfort during occupancy (D-15) | `IMPLEMENTED` | caretaker validator + site policy |
 | IL-03 | HeatingSetpoint >= 8.0 degC always; today the interlock floor is 19.0 (D-15 pending) | frost protection of the building | `IMPLEMENTED` | twin interlock + signed ToolSpec |
 | IL-04 | TANK-01.Setpoint within 35..max supply (60); at most +3 K per 15 min | heat-pump high-pressure margin and radiator supply | `IMPLEMENTED` | twin interlock + signed ToolSpec + caretaker validator |
@@ -200,7 +200,7 @@ Kinds: `AI` measured analog; `BI` measured binary; `AV` computed analog; `BV` co
 | IL-06 | AHU-01.Enabled = false refused while any zone is occupied | statutory ventilation during occupancy | `IMPLEMENTED` | twin interlock + caretaker validator |
 | IL-07 | CO2Setpoint within 600..1000 ppm | indoor air quality (1000 ppm guideline) | `IMPLEMENTED` | twin interlock + signed ToolSpec + caretaker validator |
 | IL-08 | LuxSetpoint >= 300 while occupied; 0 only when unoccupied | workplace lighting (NS-EN 12464-1: 500 lux offices) | `IMPLEMENTED` | twin interlock + caretaker validator |
-| IL-09 | HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K | a cap that would start the backup heater (COP 1) | `IMPLEMENTED` | twin interlock + caretaker validator |
+| IL-09 | HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K, and a TANK-01.Setpoint raise refused that would make it so while the cap is set | a cap that would start the backup heater (COP 1) | `IMPLEMENTED` | twin interlock + caretaker validator |
 | IL-10 | CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC (the ground sensor reports a freezing wet surface) | ice on ramps and gutters | `IMPLEMENTED` | twin interlock + caretaker validator |
 | IL-11 | rate: at most one change per point per 15 min; setpoints move <= 1.0 K per change | actuator wear and stability | `IMPLEMENTED` | twin interlock + REMORA cumulative limits |
 

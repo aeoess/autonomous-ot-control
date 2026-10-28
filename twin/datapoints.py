@@ -346,7 +346,7 @@ def build() -> Catalogue:
 
     # -- interlocks ----------------------------------------------------------------------
     IL = c.interlocks.append
-    IL(Interlock("IL-01", "CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone",
+    IL(Interlock("IL-01", "CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone, on the resulting state of every write to either setpoint",
                 "no simultaneous heating and cooling", ("*.HeatingSetpoint", "*.CoolingSetpoint"),
                 "IMPLEMENTED", "twin interlock + caretaker validator"))
     IL(Interlock("IL-02", "HeatingSetpoint >= 20.0 while the zone is occupied or within its recovery lead",
@@ -370,7 +370,7 @@ def build() -> Catalogue:
     IL(Interlock("IL-08", "LuxSetpoint >= 300 while occupied; 0 only when unoccupied",
                 "workplace lighting (NS-EN 12464-1: 500 lux offices)", ("*.LuxSetpoint", "*.Occupants"),
                 "IMPLEMENTED", "twin interlock + caretaker validator"))
-    IL(Interlock("IL-09", "HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K",
+    IL(Interlock("IL-09", "HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K, and a TANK-01.Setpoint raise refused that would make it so while the cap is set",
                 "a cap that would start the backup heater (COP 1)", ("HP-01.MaxFraction", "TANK-01.Temp"),
                 "IMPLEMENTED", "twin interlock + caretaker validator"))
     IL(Interlock("IL-10", "CABLE-*.Mode = off refused while OUT-01.SurfaceWet at -10..+1 degC "

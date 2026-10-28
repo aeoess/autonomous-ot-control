@@ -2485,7 +2485,7 @@
   "interlocks": [
     {
       "id": "IL-01",
-      "rule": "CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone",
+      "rule": "CoolingSetpoint >= HeatingSetpoint + 2.0 K in every zone, on the resulting state of every write to either setpoint",
       "protects": "no simultaneous heating and cooling",
       "points": [
         "*.HeatingSetpoint",
@@ -2569,7 +2569,7 @@
     },
     {
       "id": "IL-09",
-      "rule": "HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K",
+      "rule": "HP-01.MaxFraction < 1 refused while TANK-01.Temp < Setpoint - 2 K, and a TANK-01.Setpoint raise refused that would make it so while the cap is set",
       "protects": "a cap that would start the backup heater (COP 1)",
       "points": [
         "HP-01.MaxFraction",

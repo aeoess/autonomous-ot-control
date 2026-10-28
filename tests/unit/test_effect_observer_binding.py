@@ -99,10 +99,10 @@ def test_setpoint_path_rejects_a_plant_operation_as_proof(tw, observer):
     setpoint in the same zone today, so the record is placed directly: the
     observer must bind on tool_name, not rely on the interlock."""
     from dataclasses import replace
-    heat(tw, "op-heat-1", "ZONE-01", 22.0)
+    heat(tw, "op-heat-1", "ZONE-01", 21.5)  # inside the IL-01 deadband below the default cooling setpoint
     rec = tw.operation("op-heat-1")
     tw.operations["op-cool-1"] = replace(rec, operation_id="op-cool-1", tool_name=COOL,
-                                         requested_value=22.0, new_value=22.0)
-    env = observer.observe("op-cool-1", zone_id="ZONE-01", expected_setpoint_c=22.0)
+                                         requested_value=21.5, new_value=21.5)
+    env = observer.observe("op-cool-1", zone_id="ZONE-01", expected_setpoint_c=21.5)
     assert env["effect_status"] == EFFECT_MISMATCH
     assert env["detail"] == "operation_tool_mismatch"

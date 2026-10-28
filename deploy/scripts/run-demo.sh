@@ -10,7 +10,7 @@ cd "$(dirname "$0")/../.."
 if [[ ! -f .env ]]; then
   python3 - > .env <<'PY'
 import secrets
-for k in ("TWIN_READ_TOKEN", "TWIN_ACTUATOR_TOKEN", "TWIN_CONTROL_TOKEN"):
+for k in ("TWIN_READ_TOKEN", "TWIN_ACTUATOR_TOKEN", "TWIN_CONTROL_TOKEN", "TWIN_SNAPSHOT_KEY"):
     print(f"{k}=dev-{secrets.token_urlsafe(32)}")
 PY
   # The governed overlay (compose.governed.yaml) needs more dev values;
