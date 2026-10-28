@@ -1,0 +1,5 @@
+# REMORA's build backend (hatchling, editables), hash-locked, so an image can install the REMORA source
+# without build isolation and fetch nothing unpinned (SDD-OT-002 SR-21). Compiled with:
+#   uv pip compile deploy/requirements-build.in --python-version 3.12 --python-platform x86_64-unknown-linux-gnu --generate-hashes --no-header -o deploy/requirements-build.lock
+hatchling
+editables

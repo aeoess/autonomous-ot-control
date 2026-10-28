@@ -35,7 +35,7 @@ x-remora-build: &remora-build-args
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     environment:
       POSTGRES_DB: ${REMORA_PG_DB:-remora}
       POSTGRES_USER: ${REMORA_PG_USER:-remora}
@@ -51,6 +51,7 @@ services:
     networks: [authority]
 
   remora:
+    <<: *hardening  # SR-22; the block below keeps its own mem_limit (1g)
     image: autonomous-ot-control/remora-ot:local
     build:
       context: .

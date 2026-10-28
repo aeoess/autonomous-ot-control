@@ -8,7 +8,7 @@
 ARG REMORA_REPO=https://github.com/darklordVirtual/REMORA-research
 ARG REMORA_COMMIT=123a5fd033bd1192fad05d366ec5263eb66c17b7
 
-FROM python:3.12-slim AS remora-src
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS remora-src
 ARG REMORA_REPO
 ARG REMORA_COMMIT
 RUN apt-get update && apt-get install -y --no-install-recommends git \
@@ -21,16 +21,24 @@ RUN git init -q remora \
     && git checkout -q FETCH_HEAD \
     && test "$(git rev-parse HEAD)" = "${REMORA_COMMIT}"
 
-FROM python:3.12-slim
+# REMORA's SDK built into a wheel with its build backend from a hash-locked file, so nothing is fetched
+# unpinned and the build tools never reach the final image (SDD-OT-002 SR-21).
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9 AS remora-wheel
+COPY deploy/requirements-build.lock /tmp/requirements-build.lock
+RUN pip install --require-hashes --no-deps -r /tmp/requirements-build.lock
+COPY --from=remora-src /src/remora /opt/remora
+RUN pip wheel --no-deps --no-build-isolation -w /wheels /opt/remora
+
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
 WORKDIR /app
 
 COPY requirements.lock /app/requirements.lock
 RUN pip install --require-hashes --no-deps -r /app/requirements.lock
 
-# The pinned REMORA SDK (client transport only; it mints no authority).
-COPY --from=remora-src /src/remora /opt/remora
-RUN pip install --no-deps /opt/remora
+# The pinned REMORA SDK (client transport only; it mints no authority), from the wheel built above.
+COPY --from=remora-wheel /wheels /tmp/wheels
+RUN pip install --no-deps /tmp/wheels/*.whl && rm -rf /tmp/wheels
 
 COPY twin /app/twin
 COPY runner /app/runner

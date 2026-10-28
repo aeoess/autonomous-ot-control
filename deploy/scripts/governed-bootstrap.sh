@@ -30,7 +30,8 @@ append_if_missing() {
 }
 set_value() {  # replace or append: for values derived from the signed artifacts
   local key="$1" val="$2"
-  grep -v "^${key}=" .env > .env.tmp || true
+  # The temporary copy holds every secret too: created 0600 (umask 077), never world-readable (SR-20, F-20).
+  ( umask 077; grep -v "^${key}=" .env > .env.tmp || true )
   printf '%s=%s\n' "$key" "$val" >> .env.tmp
   mv .env.tmp .env
   chmod 600 .env

@@ -1,0 +1,8 @@
+# What the REMORA image installs beside REMORA itself (SDD-OT-002 SR-21, F-04), compiled with hashes into
+# requirements-remora.lock together with REMORA's own [api,postgres,security] extras, read from its
+# pyproject.toml at the commit in upstream/remora.lock.json (see the lock's header for the command).
+# The OT adapter's client (ot_registry); the version of requirements.lock.
+httpx==0.28.1
+# REMORA's build backend, so the editable install runs without build isolation and fetches nothing unpinned.
+hatchling
+editables
