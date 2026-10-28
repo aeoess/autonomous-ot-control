@@ -32,6 +32,9 @@ def _positive():
     ("execution", "executions", None, "single_dispatch", "NOT_ESTABLISHED"),
     ("execution", "dispatched_at_sim_s", None, "observation_after_dispatch", "NOT_ESTABLISHED"),
     ("observation", "observed_at_sim_s", None, "observation_after_dispatch", "NOT_ESTABLISHED"),
+    # Found by runner.edge_mutations (2026-10-28): this used to raise KeyError and stop the whole run,
+    # and the comparison below it read a missing value as a contradicting one.
+    ("observation", "observed_setpoint_c", None, "declared_effect_observed", "NOT_ESTABLISHED"),
     ("decision", "decision", "deny", "decision_correspondence", "CONTRADICTED"),
 ])
 def test_missing_or_contradictory_evidence_never_establishes_a_claim(section, field, value, expected_claim, expected):
@@ -78,3 +81,40 @@ def test_dependency_bump_cannot_silently_leave_the_executed_checker_unchanged():
     assert manifest["fixture_sets"] == ["v1"]
     assert manifest["licence"] == "Apache-2.0"
     assert "Copyright 2026 Sankalp Gilda" in (EDGE / "LICENSE.agent-evidence-vectors").read_text()
+
+
+def test_a_malformed_case_is_not_established_and_never_stops_the_run(tmp_path):
+    """One unreadable case must not cost every other case its verdict (found by runner.edge_mutations)."""
+    import shutil
+    import subprocess
+    import sys
+    fx = tmp_path / "fx"
+    shutil.copytree(ROOT / "federation/fixtures/v1", fx)
+    cases = sorted((fx / "cases").glob("pos-*.json"))
+    broken = [json.loads(p.read_bytes()) for p in cases[:3]]
+    del broken[0]["observation"]["observed_setpoint_c"]          # the reported KeyError
+    broken[1]["remora_envelope"] = {}                             # no effect entry to read a vantage from
+    broken[2]["claim"]["setpoint_c"] = "20.0"                     # a value the mapping cannot format
+    for p, c in zip(cases[:3], broken):
+        p.write_text(json.dumps(c), "utf-8")
+    out = tmp_path / "r.json"
+    r = subprocess.run([sys.executable, str(EDGE / "adapter.py"), "run", "--fixtures", str(fx), "--out", str(out)],
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stderr
+    verdicts = {v["case_id"]: v for v in json.loads(out.read_text("utf-8"))["verdicts"]}
+    assert len(verdicts) == len(list((fx / "cases").glob("*.json")))
+    missing_value, no_envelope, string_value = (verdicts[c["case_id"]] for c in broken)
+    assert missing_value["verdict"] == "NOT_ESTABLISHED" and missing_value["claim_id"] == "declared_effect_observed"
+    assert string_value["verdict"] == "NOT_ESTABLISHED" and "malformed case" in string_value["reason"]
+    # The envelope is optional in the case contract and only names the vantage: answered, recorded as unrecorded,
+    # and not established under strict vantage.
+    assert no_envelope["verdict"] == "ESTABLISHED" and "unrecorded" in no_envelope["reason"]
+    adapter = _adapter()
+    adapter.STRICT = True
+    assert adapter.check(broken[1])["declared_effect_observed"][0] == "NOT_ESTABLISHED"
+    # Every other case keeps its v1 verdict.
+    record = {row["case_id"]: row for row in json.loads(
+        (ROOT / "federation/records/agent-evidence-vectors-axes/20261027T171310Z.json").read_bytes())["cases"]}
+    for cid, v in verdicts.items():
+        if cid not in {c["case_id"] for c in broken}:
+            assert (v["verdict"], v["reason"]) == (record[cid]["verdict"], record[cid]["reason"]), cid

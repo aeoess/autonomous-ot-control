@@ -193,34 +193,35 @@ verifier, and is written before any edge runs. The mutants come in two layers:
 
 | | Reference verifier | `agent-evidence-vectors-axes` |
 |---|---|---|
-| Mutants killed (not `ESTABLISHED`) | 420/420 | 406/420 |
-| Exact verdict | 100 % | 97.3 % |
+| Mutants killed (not `ESTABLISHED`) | 420/420 | 406/420 before the repair, 420/420 after |
+| Exact verdict | 100 % | 97.3 % before the repair, 100 % after |
 | Missing evidence accepted | 0 | 0 |
 | False refusals of positive controls | 0/98 | 0/98 |
 | Pipeline layer | 140/140 | 140/140 |
 | Throughput at 5,000 cases (indicative, contended host) | about 3,000 cases/s | about 2,200 cases/s |
 
-**Finding.** The edge's adapter crashes (`KeyError: 'observed_setpoint_c'` in
-`adapter.py`) on a case whose observation lacks `observed_setpoint_c`. The
-contract makes such a case `NOT_ESTABLISHED`. A single such case stops the
-whole run, so no trail in it gets an answer.
+**Finding, now repaired.**
 
-- The harness then runs each operator on its own. The 14 mutants of that
-  operator are counted as unanswered, never as killed.
-- Everything else matched the contract, including every
-  `NOT_ESTABLISHED`-for-missing-evidence case.
-- There were no mutants that only this edge judged correctly. This edge's
-  value here is independent agreement, not extra catches.
-- The finding is in the adapter, not in Probity's reader. It has not been
-  changed here: the fix belongs with the edge's maintainer.
+- The edge's adapter used to crash (`KeyError: 'observed_setpoint_c'` in `adapter.py`) on a case whose
+  observation lacks `observed_setpoint_c`. A single such case stopped the whole run.
+- The repair also exposed a second error that the crash had hidden: a missing observed value was compared as if
+  it contradicted the claim. The contract makes such a case `NOT_ESTABLISHED`.
+- Both are in the adapter, not in Probity's reader, whose digest is unchanged.
+- The finding was reported to the edge's maintainer in
+  [PR #22](https://github.com/darklordVirtual/autonomous-ot-control/pull/22#issuecomment-6458546497). The
+  testbed maintainer repaired the adapter on 2026-10-28 and recorded the change in the edge's `run.md`.
+- Every v1 verdict and reason is unchanged.
+- After the repair, the same mutation set gives 420/420 mutants killed, 100 % exact verdicts, 0 missing
+  evidence accepted and 0/98 false refusals, in one run of the whole set.
+- There were no mutants that only this edge judged correctly. This edge's value here is independent agreement,
+  not extra catches.
 
-Details: [`edge-mutations.md`](../../results/2026-10-28/edge-mutations.md).
+Details: before the repair [`edge-mutations.md`](../../results/2026-10-28/edge-mutations.md), after it [`edge-mutations-after-adapter-fix.md`](../../results/2026-10-28/edge-mutations-after-adapter-fix.md).
 
 ## What is open
 
 - **A full Docker A/B/C run** with the new export (`DAYS=7`, a new
   `RUN_ID`).
-- **The adapter crash above**, to be reported to the maintainer.
 - **More seeds and operators.** The mutation set is generated, not sealed in
   the repository: re-running it on a new governed run gives new seeds under
   the same operators. Adding an operator needs its expected verdict to follow

@@ -53,6 +53,25 @@ Regression tests retain every original v1 verdict and reason and cover those
 additional mutations. These checks are maintainer tests, not an expansion of
 the external contributor's agreed evaluation.
 
+On 2026-10-28 the testbed's mutation suite (`runner.edge_mutations`) found two
+problems in the adapter. A case whose observation lacks `observed_setpoint_c` made
+`adapter.py` raise `KeyError` and stop the whole run. The comparison below it also
+read a missing value as a contradicting one. Both were reported to the maintainer in
+[PR #22](https://github.com/darklordVirtual/autonomous-ot-control/pull/22#issuecomment-6458546497).
+The testbed maintainer then repaired the adapter, not the vendored reader, whose
+digest is unchanged:
+
+- an observation without a numeric value is left out of the bundle and answered
+  `NOT_ESTABLISHED`;
+- the vantage is read defensively;
+- a case the adapter cannot read is answered `NOT_ESTABLISHED` with its reason,
+  instead of ending the run.
+
+Every v1 verdict and reason is unchanged (12/12, 6/6), as the regression tests
+require. On the mutation set the edge now kills 420/420 mutants with 100 % exact
+verdicts; before the repair it was 406/420 and 97.3 %. The historical v1 record
+is unchanged.
+
 Dependabot proposes package updates only. A requirements-only bump fails
 the integration test: version, vendored bytes, digest and current edge pin
 must be reviewed and updated together. No dependency is installed at runtime;
