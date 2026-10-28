@@ -1,0 +1,1012 @@
+{
+  "schema": "ot-edge-mutations/v1",
+  "source_work": "artifacts/observer-e2e-20261028T012704Z-work",
+  "seeds": 14,
+  "seeds_left_out": [],
+  "case_set_manifest_sha256": "61096e9beea5d09dcd4d687bf17e23b15daeb8a4b67efebc912692264576a1b2",
+  "operators": 37,
+  "case_mutants": 518,
+  "case_layer": {
+    "template-reference-verifier": {
+      "ran": true,
+      "cases": 518,
+      "kill_rate": 1.0,
+      "killed": 420,
+      "mutants": 420,
+      "exact_accuracy": 1.0,
+      "accepted_missing_evidence": 0,
+      "unanswered": 0,
+      "false_refusals": 0,
+      "positive_controls": 98,
+      "by_class": {
+        "negative_n": 280,
+        "negative_correct": 280,
+        "negative_established": 0,
+        "negative_unanswered": 0,
+        "missing_n": 98,
+        "missing_correct": 98,
+        "missing_established": 0,
+        "missing_unanswered": 0,
+        "malformed_n": 42,
+        "malformed_correct": 42,
+        "malformed_established": 0,
+        "malformed_unanswered": 0,
+        "positive_n": 98,
+        "positive_correct": 98,
+        "positive_established": 98,
+        "positive_unanswered": 0
+      },
+      "by_claim": {
+        "call_binding": {
+          "n": 42,
+          "killed": 42,
+          "correct": 42,
+          "claim_attributed": 42
+        },
+        "decision_correspondence": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 70
+        },
+        "declared_effect_observed": {
+          "n": 126,
+          "killed": 126,
+          "correct": 126,
+          "claim_attributed": 126
+        },
+        "evidence_digest_integrity": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        },
+        "observation_after_dispatch": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 70
+        },
+        "single_dispatch": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        }
+      },
+      "by_operator": {
+        "cb_operation_id_case": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_other_operation": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_record_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "dc_denied_but_applied": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_escalate_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_executed_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "dc_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_not_executed_but_observed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_half": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observation_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "de_observed_off": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_off_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_value_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "de_twin_other_zone": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_twin_rejected": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_ascii_escaped": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_one_char": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_uppercase": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_evidence_changed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_dispatch_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_dispatch_time_null": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_fifteen_minutes_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_observation_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_one_second_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "pc_evidence_key_order": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_extra_reviewer_field": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_identity": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_integer_setpoint": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_non_ascii_evidence": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_an_hour_later": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_at_dispatch": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "sd_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "sd_string_one": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_twice": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_zero": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        }
+      },
+      "wrong": [],
+      "runtime_ms": 247.3,
+      "exit": 0,
+      "whole_set_ran": true,
+      "crashed_operators": []
+    },
+    "agent-evidence-vectors-axes": {
+      "ran": true,
+      "cases": 518,
+      "kill_rate": 0.9667,
+      "killed": 406,
+      "mutants": 420,
+      "exact_accuracy": 0.973,
+      "accepted_missing_evidence": 0,
+      "unanswered": 14,
+      "false_refusals": 0,
+      "positive_controls": 98,
+      "by_class": {
+        "negative_n": 280,
+        "negative_correct": 280,
+        "negative_established": 0,
+        "negative_unanswered": 0,
+        "missing_n": 98,
+        "missing_correct": 84,
+        "missing_established": 0,
+        "missing_unanswered": 14,
+        "malformed_n": 42,
+        "malformed_correct": 42,
+        "malformed_established": 0,
+        "malformed_unanswered": 0,
+        "positive_n": 98,
+        "positive_correct": 98,
+        "positive_established": 98,
+        "positive_unanswered": 0
+      },
+      "by_claim": {
+        "call_binding": {
+          "n": 42,
+          "killed": 42,
+          "correct": 42,
+          "claim_attributed": 42
+        },
+        "decision_correspondence": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 56
+        },
+        "declared_effect_observed": {
+          "n": 126,
+          "killed": 126,
+          "correct": 112,
+          "claim_attributed": 56
+        },
+        "evidence_digest_integrity": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        },
+        "observation_after_dispatch": {
+          "n": 70,
+          "killed": 70,
+          "correct": 70,
+          "claim_attributed": 70
+        },
+        "single_dispatch": {
+          "n": 56,
+          "killed": 56,
+          "correct": 56,
+          "claim_attributed": 56
+        }
+      },
+      "by_operator": {
+        "cb_operation_id_case": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_other_operation": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "cb_record_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "dc_denied_but_applied": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_escalate_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_executed_missing": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_not_approved": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "dc_not_executed_but_observed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_half": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_claim_plus_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observation_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "de_observed_off": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_off_tenth_milli": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_observed_value_missing": {
+          "n": 14,
+          "correct": 0,
+          "UNANSWERED": 14
+        },
+        "de_twin_other_zone": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "de_twin_rejected": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_ascii_escaped": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_one_char": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_digest_uppercase": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "ed_evidence_changed": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_dispatch_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_dispatch_time_null": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_fifteen_minutes_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "oa_observation_time_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "oa_one_second_early": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "pc_evidence_key_order": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_extra_reviewer_field": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_identity": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_integer_setpoint": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_non_ascii_evidence": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_an_hour_later": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "pc_observed_at_dispatch": {
+          "n": 14,
+          "correct": 14,
+          "ESTABLISHED": 14
+        },
+        "sd_missing": {
+          "n": 14,
+          "correct": 14,
+          "NOT_ESTABLISHED": 14
+        },
+        "sd_string_one": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_twice": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        },
+        "sd_zero": {
+          "n": 14,
+          "correct": 14,
+          "CONTRADICTED": 14
+        }
+      },
+      "wrong": [
+        {
+          "case_id": "de_observed_value_missing--058b7010-c30d-45dc-8bc5-32c4bcb13621",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--32017832-7ca7-4a7c-a536-1baa6e55bb9b",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--4493f318-bd94-4ceb-b121-df6a43647105",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--660d90d1-a81e-46ad-8a53-aa6c34bae05b",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--70955102-63de-4774-945e-a29dd7695bca",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--8575304f-dabd-48f6-bb02-97a14e26db8e",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--98911633-4f75-411c-9788-0465e989fb27",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--a4dc26c1-1f0f-446a-8896-6f7f7ce4f985",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--b21f5293-cebf-4695-851f-073d76daaa5c",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--b5d71b2b-befc-42ae-a997-59e63cc1a7c3",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--ba481798-af65-4adf-af06-bbe48174051a",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--cd443442-801f-4328-88a7-45d0feafbf1d",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--eb7f5d9d-5693-400f-b86e-e213cebaacf3",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        },
+        {
+          "case_id": "de_observed_value_missing--fa13c608-411d-46ce-a2b9-3575fc13f845",
+          "operator": "de_observed_value_missing",
+          "expected": [
+            "NOT_ESTABLISHED"
+          ],
+          "got": "UNANSWERED",
+          "reason": null
+        }
+      ],
+      "runtime_ms": 186.9,
+      "exit": 1,
+      "whole_set_ran": false,
+      "crashed_operators": [
+        "de_observed_value_missing"
+      ],
+      "vs_reference": {
+        "only_this_edge_correct": [],
+        "only_reference_correct": [
+          "de_observed_value_missing--058b7010-c30d-45dc-8bc5-32c4bcb13621",
+          "de_observed_value_missing--32017832-7ca7-4a7c-a536-1baa6e55bb9b",
+          "de_observed_value_missing--4493f318-bd94-4ceb-b121-df6a43647105",
+          "de_observed_value_missing--660d90d1-a81e-46ad-8a53-aa6c34bae05b",
+          "de_observed_value_missing--70955102-63de-4774-945e-a29dd7695bca",
+          "de_observed_value_missing--8575304f-dabd-48f6-bb02-97a14e26db8e",
+          "de_observed_value_missing--98911633-4f75-411c-9788-0465e989fb27",
+          "de_observed_value_missing--a4dc26c1-1f0f-446a-8896-6f7f7ce4f985",
+          "de_observed_value_missing--b21f5293-cebf-4695-851f-073d76daaa5c",
+          "de_observed_value_missing--b5d71b2b-befc-42ae-a997-59e63cc1a7c3",
+          "de_observed_value_missing--ba481798-af65-4adf-af06-bbe48174051a",
+          "de_observed_value_missing--cd443442-801f-4328-88a7-45d0feafbf1d",
+          "de_observed_value_missing--eb7f5d9d-5693-400f-b86e-e213cebaacf3",
+          "de_observed_value_missing--fa13c608-411d-46ce-a2b9-3575fc13f845"
+        ]
+      }
+    }
+  },
+  "pipeline_layer": {
+    "seeds": 14,
+    "operators": {
+      "p_capture_missing_manifest_ok": {
+        "class": "positive",
+        "expected": [
+          "ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_evidence_edited_after_capture": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_section_edited_no_capture": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_observer_record_tampered": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_observer_disagrees_with_readback": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_double_execution": {
+        "class": "negative",
+        "expected": [
+          "CONTRADICTED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "CONTRADICTED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_observer_record_removed": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_lifecycle_incomplete": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_readback_missing": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      },
+      "p_twin_record_missing": {
+        "class": "missing",
+        "expected": [
+          "NOT_ESTABLISHED"
+        ],
+        "edges": {
+          "template-reference-verifier": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          },
+          "agent-evidence-vectors-axes": {
+            "ran": true,
+            "trails": 14,
+            "counted": {
+              "NOT_ESTABLISHED": 14
+            },
+            "correct": 14
+          }
+        }
+      }
+    }
+  },
+  "benchmark": {
+    "sizes": [
+      100,
+      1000,
+      5000
+    ],
+    "repeats": 3,
+    "edges": {
+      "template-reference-verifier": [
+        {
+          "cases": 100,
+          "ok": true,
+          "median_ms": 108.2,
+          "ms_per_case": 1.082,
+          "cases_per_s": 924.3,
+          "runs_ms": [
+            149.1,
+            108.2,
+            105.1
+          ]
+        },
+        {
+          "cases": 1000,
+          "ok": true,
+          "median_ms": 394.2,
+          "ms_per_case": 0.394,
+          "cases_per_s": 2536.8,
+          "runs_ms": [
+            388.8,
+            394.2,
+            398.9
+          ]
+        },
+        {
+          "cases": 5000,
+          "ok": true,
+          "median_ms": 1635.1,
+          "ms_per_case": 0.327,
+          "cases_per_s": 3058.0,
+          "runs_ms": [
+            1635.1,
+            1661.5,
+            1611.0
+          ]
+        }
+      ],
+      "agent-evidence-vectors-axes": [
+        {
+          "cases": 100,
+          "ok": true,
+          "median_ms": 124.5,
+          "ms_per_case": 1.245,
+          "cases_per_s": 803.2,
+          "runs_ms": [
+            122.7,
+            124.5,
+            127.7
+          ]
+        },
+        {
+          "cases": 1000,
+          "ok": true,
+          "median_ms": 527.0,
+          "ms_per_case": 0.527,
+          "cases_per_s": 1897.4,
+          "runs_ms": [
+            513.1,
+            527.0,
+            528.0
+          ]
+        },
+        {
+          "cases": 5000,
+          "ok": true,
+          "median_ms": 2303.9,
+          "ms_per_case": 0.461,
+          "cases_per_s": 2170.2,
+          "runs_ms": [
+            2323.8,
+            2303.9,
+            2296.5
+          ]
+        }
+      ]
+    }
+  },
+  "note": "Expected verdicts come from each operator and the case contract, written before any edge ran. Scores hold for these operators on these simulated trails; they are not a guarantee.",
+  "testbed_commit": "a419c737a6378afb6d485fd8cd7f5a120bdf0eb9"
+}

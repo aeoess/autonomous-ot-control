@@ -1,0 +1,151 @@
+{
+  "edges": {
+    "schema": "ot-edge-pass/v1",
+    "run_id": "observer-e2e-20261028T012704Z",
+    "cases": 14,
+    "skipped": {},
+    "case_set_manifest_sha256": "393ddadb180a96d20998f9bef1e7f59042dd6f99574c92493ae8cb42be035c3a",
+    "edges": [
+      {
+        "edge_id": "template-reference-verifier",
+        "project": "autonomous-ot-control reference verifier (template)",
+        "evaluator": {
+          "kind": "reference",
+          "imports_reference_verifier": false,
+          "imports_testbed_code": false,
+          "language": "python"
+        },
+        "available": true,
+        "fixtures_sha256_matches": true,
+        "answered": 14,
+        "unanswered": [],
+        "counts": {
+          "ESTABLISHED": 14
+        },
+        "counts_on_recorded_inputs": {
+          "ESTABLISHED": 14
+        },
+        "counts_strict_vantage": {
+          "NOT_ESTABLISHED": 14
+        },
+        "findings": []
+      },
+      {
+        "edge_id": "agent-evidence-vectors-axes",
+        "project": "agent-evidence-vectors (invocation axes)",
+        "evaluator": {
+          "kind": "second_implementation",
+          "imports_reference_verifier": false,
+          "imports_testbed_code": false,
+          "language": "python"
+        },
+        "available": true,
+        "fixtures_sha256_matches": true,
+        "answered": 14,
+        "unanswered": [],
+        "counts": {
+          "ESTABLISHED": 14
+        },
+        "counts_on_recorded_inputs": {
+          "ESTABLISHED": 14
+        },
+        "counts_strict_vantage": {
+          "NOT_ESTABLISHED": 14
+        },
+        "findings": []
+      }
+    ],
+    "inputs": {
+      "by_claim": {
+        "call_binding": {
+          "twin operation record": 14
+        },
+        "decision_correspondence": {
+          "ledger row: REMORA decision and reviewer": 14
+        },
+        "declared_effect_observed": {
+          "REMORA effect_verification readback (vantage same_deployment)": 14
+        },
+        "evidence_digest_integrity": {
+          "ledger capture digest": 14
+        },
+        "observation_after_dispatch": {
+          "observer record sim_time_s (sealed)": 14
+        },
+        "single_dispatch": {
+          "REMORA lifecycle: 1 execution_result event(s)": 14
+        }
+      },
+      "vantages": {
+        "same_deployment": 14
+      },
+      "findings": []
+    },
+    "note": "Offline edges beside the run (ADR-004): their verdicts never change the run's outcome. counts are the edges' own verdicts; counts_on_recorded_inputs counts an ESTABLISHED only when every claim's input was recorded when it happened, and an input that contradicts its record as CONTRADICTED; counts_strict_vantage also requires an independent observation vantage. A non-ESTABLISHED verdict on a live trail is a finding about the run, its records or the edge.",
+    "usage": "usage.json"
+  },
+  "usage": {
+    "schema": "ot-edge-usage/v1",
+    "run_id": "observer-e2e-20261028T012704Z",
+    "input_digest": "393ddadb180a96d20998f9bef1e7f59042dd6f99574c92493ae8cb42be035c3a",
+    "cases": 14,
+    "ground_truth": "none: live trails, expected positive; confirmed, unique and false findings need a ground truth and are null (sealed fixture sets are counted in their run records)",
+    "reference_edge": "template-reference-verifier",
+    "edges": [
+      {
+        "edge_id": "template-reference-verifier",
+        "project": "autonomous-ot-control reference verifier (template)",
+        "maintainer": "darklordVirtual",
+        "pin": "in-tree",
+        "edge_digest": "5eb632045059c6499658a8b96f005a131f0f552410554352cb50eab3c90d955e",
+        "verifier_runs": 1,
+        "run_ok": true,
+        "exit": 0,
+        "runtime_ms": 91.6,
+        "cases_sent": 14,
+        "cases_processed": 14,
+        "verdicts": {
+          "ESTABLISHED": 14
+        },
+        "verdicts_on_recorded_inputs": {
+          "ESTABLISHED": 14
+        },
+        "not_established": 0,
+        "findings": [],
+        "findings_confirmed": null,
+        "unique_findings": null,
+        "false_findings": null
+      },
+      {
+        "edge_id": "agent-evidence-vectors-axes",
+        "project": "agent-evidence-vectors (invocation axes)",
+        "maintainer": "astrogilda",
+        "pin": "agent-evidence-vectors==0.28.0 (invocation_axes/reader.py, sha256 a86c2c4830af011f3707c8164ca1350c9b965d2a960967bff83c79532df54938)",
+        "edge_digest": "16d099f0c87a79b71242b4e638879ade11fb38096caba71d35acc6763d7dfc43",
+        "verifier_runs": 1,
+        "run_ok": true,
+        "exit": 0,
+        "runtime_ms": 86.4,
+        "cases_sent": 14,
+        "cases_processed": 14,
+        "verdicts": {
+          "ESTABLISHED": 14
+        },
+        "verdicts_on_recorded_inputs": {
+          "ESTABLISHED": 14
+        },
+        "not_established": 0,
+        "findings": [],
+        "vs_reference": {
+          "compared": 14,
+          "agree": 14,
+          "edge_only_findings": [],
+          "reference_only_findings": []
+        },
+        "findings_confirmed": null,
+        "unique_findings": null,
+        "false_findings": null
+      }
+    ]
+  }
+}
