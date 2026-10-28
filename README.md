@@ -127,7 +127,8 @@ aeoess/agent-governance-vocabulary#177, the discussion that motivated this.
 
 - Probity's `agent-evidence-vectors-axes` edge: a second implementation run on
   its own host, 12/12 established and 6/6 faults caught on `v1`, derived
-  `L4_INDEPENDENT_HOST_RUN` (PR #22).
+  `L4_INDEPENDENT_HOST_RUN` (PR #22). How it is used and where its numbers
+  are: [docs/federation/edges/agent-evidence-vectors-axes.md](docs/federation/edges/agent-evidence-vectors-axes.md).
 - argentum-core's clean-room run of the reference verifier on `v1`,
   `L1_REPRODUCTION` (PR #25).
 - Altru.dev's bounded `runner_validity` report, recorded as reviewed.

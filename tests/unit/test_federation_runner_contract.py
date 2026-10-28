@@ -299,6 +299,8 @@ def test_registered_edges_match_registry_manifests_and_records():
         assert e["fixture_sets"] == m.get("fixture_sets") and e.get("licence") == m.get("licence")
         assert e.get("pin") == m["pin"]["value"]
         assert (ROOT / e["records"]).is_dir() and (ROOT / e["results"]).is_file()
+        if e.get("usage_doc"):
+            assert (ROOT / e["usage_doc"]).is_file() and eid in (ROOT / e["usage_doc"]).read_text("utf-8")
         best = e.get("best_record")
         if best:
             rec = json.loads((ROOT / best["record"]).read_text("utf-8"))

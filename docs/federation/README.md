@@ -188,6 +188,8 @@ operator and host; no public run URL), and it is listed under
 It agreed to **v1 only** (`"fixture_sets": ["v1"]`), so v2 is not run against
 it unless its maintainer opts in. `runner.edge_pass` also runs it over every
 governed arm's exported trails, beside the run and never changing it. It is
+described for users in [edges/agent-evidence-vectors-axes.md](edges/agent-evidence-vectors-axes.md)
+(how it is used, where its numbers are, how to check it). It is
 the one accepted exception to the rule below: the PR ships an unchanged,
 hash-verified copy of the upstream `invocation_axes` reader with its licence
 file, because the reader is stdlib-only and the sandbox has no network.
