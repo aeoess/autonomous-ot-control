@@ -68,7 +68,7 @@ docker build -q -f deploy/Dockerfile.remora-ot \
 
 # The signed work-order table is rewritten from the shipped one on every bootstrap; a previous run's table
 # (written by the authority container's user) is removed first.
-rm -f deploy/.generated/ot_intents.json deploy/.generated/work_order_keys.json
+rm -f deploy/.generated/ot_intents.json deploy/.generated/work_order_keys.json  # the keys file: pre-pinning leftover
 
 # Sign with the image's own REMORA, offline: no network, none of the runtime's
 # environment (docker run, not compose run, so no service env is injected).
@@ -83,7 +83,7 @@ out="$(docker run --rm --network none \
 
 while IFS='=' read -r key val; do
   case "$key" in
-    REMORA_TOOLSPEC_VERIFY_KEYS|REMORA_TOOLSPEC_PINNED_DIGEST|REMORA_LIMITS_TRUSTED_KEYS)
+    REMORA_TOOLSPEC_VERIFY_KEYS|REMORA_TOOLSPEC_PINNED_DIGEST|REMORA_LIMITS_TRUSTED_KEYS|REMORA_OT_WORK_ORDER_TRUSTED_KEYS)
       set_value "$key" "$val" ;;
     *) echo "governed-bootstrap: unexpected signer output: ${key}" >&2; exit 1 ;;
   esac
@@ -91,6 +91,6 @@ done <<< "$out"
 
 # Work orders REMORA reads on every assess: the shipped ones, signed above by the work-order authority key
 # (SR-05). Day plans are added by the authority container; an entry nobody signed is not a work order.
-chmod 644 deploy/.generated/ot_intents.json deploy/.generated/work_order_keys.json
+chmod 644 deploy/.generated/ot_intents.json
 
 echo "governed-bootstrap: .env, deploy/.keys/ and deploy/.generated/ are ready (all gitignored)."

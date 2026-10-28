@@ -127,15 +127,16 @@ def build_semantic_bundle() -> SemanticBundle:
 
 
 def _trusted_work_order_keys() -> dict[str, str] | None:
-    """The work-order authority's public keys (SR-05), or None when this deployment has none configured."""
-    path = os.environ.get("REMORA_OT_WORK_ORDER_KEYS", "").strip()
-    if not path:
+    """The work-order authority's public keys (SR-05), pinned in the environment at bootstrap, or None when this
+    deployment has none configured. Never read from the intent table's directory, which others can write."""
+    value = os.environ.get("REMORA_OT_WORK_ORDER_TRUSTED_KEYS", "").strip()
+    if not value:
         return None
-    from adapter.work_orders import load_trusted
+    from adapter.work_orders import parse_trusted_env
     try:
-        return load_trusted(Path(path))
-    except (OSError, ValueError):
-        return {}  # configured but unreadable: no entry verifies, so no write is grounded (fail closed)
+        return parse_trusted_env(value)
+    except ValueError:
+        return {}  # configured but malformed: no entry verifies, so no write is grounded (fail closed)
 
 
 def resolve_intent(intent_ref: str) -> ResolvedIntent | None:

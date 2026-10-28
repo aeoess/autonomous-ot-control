@@ -144,7 +144,7 @@ def _intent_hash(ref: str) -> str | None:
 
 
 def op_decide(a: dict[str, Any]) -> dict[str, Any]:
-    from adapter.work_orders import load_trusted
+    from adapter.work_orders import parse_trusted_env
     from remora.policy.observation import canonical_tool_call_hash
 
     item, pid, call = a["item_id"], a["proposal_id"], a.get("call") or {}
@@ -156,7 +156,7 @@ def op_decide(a: dict[str, Any]) -> dict[str, Any]:
         ok, reason = bound(assessed, item, call, canonical_tool_call_hash, _intent_hash)
         if ok:
             intents = json.loads(Path(os.environ["REMORA_INTENT_SOURCE_FILE"]).read_text("utf-8"))
-            trusted = load_trusted(Path(os.environ["REMORA_OT_WORK_ORDER_KEYS"]))
+            trusted = parse_trusted_env(os.environ["REMORA_OT_WORK_ORDER_TRUSTED_KEYS"])
             sim_day = str(_twin("/v1/status")["sim_utc"])[:10]
             spec = json.loads(TOOLSPEC.read_text("utf-8"))
             max_delta = float(next(t for t in spec["tools"]
